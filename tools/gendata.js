@@ -86,12 +86,34 @@ function print(str) {
 var locmap = {}
 
 // 0=offmap, 1-N=map locales, 100-M=calendar boxes
-var locales = [null]
+var locales = []
 var ways = []
 var waterways = []
 var trackways = []
 
 const scale = 1
+
+const vp_map = {
+	archbishopric: 3,
+	city: 2,
+	fort: 1,
+	bishopric: 2,
+	castle: 1,
+	traderoute: 1,
+	town: 0.5,
+	region: 0.5,
+}
+
+const wall_map = {
+	archbishopric: 3,
+	city: 3,
+	fort: 3,
+	traderoute: 0,
+	bishopric: 4,
+	castle: 4,
+	town: 0,
+	region: 0,
+}
 
 function defloc(region, stronghold, type, name) {
 	let [x, y, w, h] = boxes[name]
@@ -100,7 +122,9 @@ function defloc(region, stronghold, type, name) {
 	w = Math.round(w * scale)
 	h = Math.round(h * scale)
 	locmap[name] = locales.length
-	locales.push({ name, type, stronghold, region, ways: [], box: { x, y, w, h } })
+	let vp = vp_map[type]
+	let walls = wall_map[type]
+	locales.push({ name, type, stronghold, walls, vp, region, ways: [], box: { x, y, w, h } })
 }
 
 function defway(type, list) {
@@ -289,9 +313,7 @@ let lords = [
 		forces: {
 			knights: 1,
 			sergeants: 2,
-			light_horse: 0,
 			men_at_arms: 1,
-			militia: 0,
 		},
 		assets: {
 			transport: 2,
@@ -314,9 +336,7 @@ let lords = [
 		forces: {
 			knights: 1,
 			sergeants: 1,
-			light_horse: 0,
 			men_at_arms: 1,
-			militia: 0,
 		},
 		assets: {
 			ship: 1,
@@ -340,9 +360,8 @@ let lords = [
 		forces: {
 			knights: 1,
 			sergeants: 1,
-			light_horse: 0,
-			men_at_arms: 2,
-			militia: 0,
+			men_at_arms: 1,
+			militia: 1,
 		},
 		assets: {
 			transport: 1,
@@ -366,9 +385,8 @@ let lords = [
 		forces: {
 			knights: 1,
 			sergeants: 1,
-			light_horse: 3,
-			men_at_arms: 0,
-			militia: 0,
+			men_at_arms: 2,
+			militia: 1,
 		},
 		assets: {
 			ship: 2,
@@ -391,9 +409,7 @@ let lords = [
 		forces: {
 			knights: 1,
 			sergeants: 1,
-			light_horse: 0,
 			men_at_arms: 1,
-			militia: 0,
 		},
 		assets: {
 			transport: 1,
@@ -415,10 +431,8 @@ let lords = [
 		command: 2,
 		forces: {
 			knights: 1,
-			sergeants: 0,
 			light_horse: 1,
 			men_at_arms: 1,
-			militia: 0,
 		},
 		assets: {
 			transport: 1,
@@ -440,10 +454,7 @@ let lords = [
 		command: 3,
 		forces: {
 			knights: 3,
-			sergeants: 0,
-			light_horse: 0,
 			men_at_arms: 2,
-			militia: 0,
 		},
 		assets: {
 			transport: 2,
@@ -464,10 +475,7 @@ let lords = [
 		command: 2,
 		forces: {
 			knights: 3,
-			sergeants: 0,
-			light_horse: 0,
 			men_at_arms: 2,
-			militia: 0,
 		},
 		assets: {
 			transport: 2,
@@ -487,7 +495,6 @@ let lords = [
 		lordship: 2,
 		command: 2,
 		forces: {
-			knights: 0,
 			sergeants: 1,
 			light_horse: 1,
 			men_at_arms: 2,
@@ -513,7 +520,6 @@ let lords = [
 		command: 2,
 		forces: {
 			knights: 1,
-			sergeants: 0,
 			light_horse: 1,
 			men_at_arms: 1,
 			militia: 1,
@@ -538,10 +544,7 @@ let lords = [
 		lordship: 1,
 		command: 2,
 		forces: {
-			knights: 0,
-			sergeants: 0,
 			light_horse: 1,
-			men_at_arms: 0,
 			militia: 4,
 		},
 		assets: {
@@ -562,11 +565,9 @@ let lords = [
 		lordship: 2,
 		command: 3,
 		forces: {
-			knights: 0,
 			sergeants: 1,
 			light_horse: 1,
 			men_at_arms: 2,
-			militia: 0,
 		},
 		assets: {
 			transport: 1,
@@ -576,6 +577,114 @@ let lords = [
 	},
 
 ]
+
+let AOW = {}
+let cards = []
+
+function cmpnum(a,b) { return a - b }
+
+function arts_of_war_event(name, event) {
+	let c = { name, event, capability: null, lords: null }
+	cards.push(c)
+	AOW[name] = c
+}
+
+function arts_of_war_capability(name, capability, lord_names) {
+	AOW[name].capability = capability
+	if (lord_names === "ALL") {
+		AOW[name].lords = null
+	}
+	else if (lord_names === "any") {
+		let side = name[0] === 'T' ? "Teutonic" : "Russian"
+		lord_names = lords.filter(l => l.side === side).map(l => l.name)
+		AOW[name].lords = lord_names.map(n => lords.findIndex(l => l.name === n)).sort(cmpnum)
+	}
+	else {
+		AOW[name].lords = lord_names.map(n => lords.findIndex(l => l.name === n)).sort(cmpnum)
+	}
+}
+
+arts_of_war_event("T1", "Grand Prince")
+arts_of_war_event("T2", "Torzhok")
+arts_of_war_event("T3", "Vodian Treachery")
+arts_of_war_event("T4", "Bridge")
+arts_of_war_event("T5", "Marsh")
+arts_of_war_event("T6", "Ambush")
+arts_of_war_event("T7", "Tverdilo")
+arts_of_war_event("T8", "Teutonic Fervor")
+arts_of_war_event("T9", "Hill")
+arts_of_war_event("T10", "Field Organ")
+arts_of_war_event("T11", "Pope Gregory")
+arts_of_war_event("T12", "Khan Baty")
+arts_of_war_event("T13", "Heinrich Sees the Curia")
+arts_of_war_event("T14", "Bountiful Harvest")
+arts_of_war_event("T15", "Mindaugas")
+arts_of_war_event("T16", "Famine")
+arts_of_war_event("T17", "Dietrich von Grüningen")
+arts_of_war_event("T18", "Swedish Crusade")
+arts_of_war_event("TNo", "No Event")
+arts_of_war_event("TNo", "No Event")
+arts_of_war_event("TNo", "No Event")
+
+arts_of_war_capability("T1", "Treaty of Stensby", [ "Heinrich", "Knud & Abel" ])
+arts_of_war_capability("T2", "Raiders", "any")
+arts_of_war_capability("T3", "Converts", "any")
+arts_of_war_capability("T4", "Balistarii", "any")
+arts_of_war_capability("T5", "Balistarii", "any")
+arts_of_war_capability("T6", "Balistarii", "any")
+arts_of_war_capability("T7", "Warrior Monks", [ "Andreas", "Rudolf" ])
+arts_of_war_capability("T8", "Hillforts", "ALL")
+arts_of_war_capability("T9", "Halbbrüder", [ "Andreas", "Rudolf" ])
+arts_of_war_capability("T10", "Halbbrüder", [ "Andreas", "Rudolf" ])
+arts_of_war_capability("T11", "Crusade", [ "Andreas", "Rudolf" ])
+arts_of_war_capability("T12", "Ordensburgen", "ALL")
+arts_of_war_capability("T13", "William of Modena", "ALL")
+arts_of_war_capability("T14", "Trebuchets", "any")
+arts_of_war_capability("T15", "Warrior Monks", [ "Andreas", "Rudolf" ])
+arts_of_war_capability("T16", "Ransom", "ALL")
+arts_of_war_capability("T17", "Stonemasons", "any")
+arts_of_war_capability("T18", "Cogs", [ "Heinrich", "Knud & Abel", "Andreas" ])
+
+arts_of_war_event("R1", "Bridge")
+arts_of_war_event("R2", "Marsh")
+arts_of_war_event("R3", "Pogost")
+arts_of_war_event("R4", "Raven's Rock")
+arts_of_war_event("R5", "Hill")
+arts_of_war_event("R6", "Ambush")
+arts_of_war_event("R7", "Famine")
+arts_of_war_event("R8", "Prince of Polotsk")
+arts_of_war_event("R9", "Osilian Revolt")
+arts_of_war_event("R10", "Batu Khan")
+arts_of_war_event("R11", "Valdemar")
+arts_of_war_event("R12", "Mindaugas")
+arts_of_war_event("R13", "Pelgui")
+arts_of_war_event("R14", "Prussian Revolt")
+arts_of_war_event("R15", "Death of the Pope")
+arts_of_war_event("R16", "Tempest")
+arts_of_war_event("R17", "Dietrich von Grüningen")
+arts_of_war_event("R18", "Bountiful Harvest")
+arts_of_war_event("RNo", "No Event")
+arts_of_war_event("RNo", "No Event")
+arts_of_war_event("RNo", "No Event")
+
+arts_of_war_capability("R1", "Luchniki", [ "Vladislav", "Karelians", "Gavrilo", "Domash" ])
+arts_of_war_capability("R2", "Luchniki", [ "Vladislav", "Karelians", "Gavrilo", "Domash" ])
+arts_of_war_capability("R3", "Streltsy", [ "Aleksandr", "Andrey", "Domash", "Gavrilo", "Vladislav" ]) // NOT Karelians
+arts_of_war_capability("R4", "Smerdi", "ALL")
+arts_of_war_capability("R5", "Druzhina", [ "Aleksandr", "Andrey", "Gavrilo" ])
+arts_of_war_capability("R6", "Druzhina", [ "Aleksandr", "Andrey", "Gavrilo" ])
+arts_of_war_capability("R7", "Ransom", "ALL")
+arts_of_war_capability("R8", "Black Sea Trade", "ALL")
+arts_of_war_capability("R9", "Baltic Sea Trade", "ALL")
+arts_of_war_capability("R10", "Steppe Warriors", [ "Aleksandr", "Andrey" ])
+arts_of_war_capability("R11", "House of Suzdal", [ "Aleksandr", "Andrey" ])
+arts_of_war_capability("R12", "Raiders", "any")
+arts_of_war_capability("R13", "Streltsy", [ "Aleksandr", "Andrey", "Domash", "Gavrilo", "Vladislav" ]) // NOT Karelians
+arts_of_war_capability("R14", "Raiders", "any")
+arts_of_war_capability("R15", "Archbishopric", "any")
+arts_of_war_capability("R16", "Lodya", "any")
+arts_of_war_capability("R17", "Veliky Knyaz", "any")
+arts_of_war_capability("R18", "Stone Kremlin", "any")
 
 let vassals = []
 for (let lord of lords)
@@ -698,8 +807,9 @@ dumplist("locales", locales)
 dumplist("ways", ways)
 dumplist("lords", lords)
 dumplist("vassals", vassals)
+dumplist("cards", cards)
 print("}")
 print("if (typeof module !== 'undefined') module.exports = data")
 
-fs.writeFileSync("build_counters3.sh", script.join("\n") + "\n")
-fs.writeFileSync("../data.js", data.join("\n") + "\n")
+fs.writeFileSync("tools/build_counters3.sh", script.join("\n") + "\n")
+fs.writeFileSync("data.js", data.join("\n") + "\n")

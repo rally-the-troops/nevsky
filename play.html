@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<!-- vim:set nowrap: -->
+<html>
+<head>
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1">
+<meta charset="utf-8">
+<title>NEVSKY</title>
+<link rel="icon" href="favicon.png">
+<link rel="stylesheet" href="/fonts/fonts.css">
+<link rel="stylesheet" href="/common/play.css">
+<script defer src="/common/play.js"></script>
+<script defer src="data.js"></script>
+<script defer src="play.js"></script>
+<style>
+
+main { background-color: dimgray; }
+#roles { background-color: gray; }
+header { background-color: silver; }
+header.your_turn { background-color: orange; }
+#role_Teutons .role_name { background-color: #e1e6e8; }
+#role_Russians .role_name { background-color: #e1d6c1; }
+#turn_info { background-color: gainsboro; }
+.role_supply { float: right; }
+
+#log { background-color: whitesmoke; }
+#log .h1 { background-color: silver; font-weight: bold; padding-top:2px; padding-bottom:2px; text-align: center; }
+#log .h2 { background-color: gainsboro; padding-top:2px; padding-bottom:2px; text-align: center; }
+#log .h3 { background-color: lavender; padding-top:2px; padding-bottom:2px; text-align: center; }
+#log > .i { padding-left: 20px; }
+#log > .ii { padding-left: 32px; }
+#log > div > .i { padding-left: 12px; }
+#log .card_tip { font-style: italic; }
+#log .card_tip:hover { text-decoration: underline; }
+#log .locale_tip:hover { cursor: pointer; text-decoration: underline; }
+
+.action {
+	cursor: pointer;
+}
+
+#log {
+	font-variant-numeric: tabular-nums;
+}
+
+/* DIALOGS */
+
+#arts_of_war {
+	background-color: white;
+	border: 1px solid black;
+	position: fixed;
+	top: 80px;
+	left: 36px;
+	box-shadow: 0px 5px 10px 0px rgba(0,0,0,0.5);
+	z-index: 50;
+	user-select: none;
+}
+
+#arts_of_war_header {
+	font-weight: bold;
+	cursor: move;
+	border-bottom: 1px solid black;
+	background-color: lightsteelblue;
+	padding: 3px 1em;
+}
+
+#arts_of_war_list {
+	padding: 12px;
+	width: calc(186px * 4 + 12px * 3 + 12px);
+	height: 400px;
+	background-color: slategray;
+	display: flex;
+	justify-content: center;
+	flex-wrap: wrap;
+	overflow-y: scroll;
+	gap: 12px;
+}
+
+/* MATS */
+
+.court {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	margin: 16px auto;
+	gap: 16px;
+}
+
+.mat {
+	position: relative;
+	width: 364px;
+	height: 500px;
+	z-index: 1;
+}
+
+.mat .background {
+	position: absolute;
+	width: 360px;
+	height: 360px;
+	border-radius: 12px;
+	border-width: 2px;
+	border-style: solid;
+	background-color: #d1c07e;
+	background-position: center;
+	background-size: 360px 360px;
+	background-repeat: no-repeat;
+	z-index: 4;
+}
+
+.mat.selected .background {
+	box-shadow: 0 0 0 1px #584800, 0 0 0 3px yellow;
+}
+
+.mat .c1, .mat .c2 {
+	position: absolute;
+	width: 186px;
+	height: 261px;
+	background-color: green;
+}
+
+.mat .c1 { z-index: 3; top: 238px; left: 4px; }
+.mat .c2 { z-index: 2; top: 234px; right: 4px; }
+
+body.shift .mat .card:hover {
+	z-index: 200;
+}
+
+.mat .forces, .mat .routed, .mat .assets, .mat .vassals {
+	position: absolute;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: start;
+	justify-items: center;
+	align-content: center;
+	align-items: center;
+	gap: 4px 6px;
+	z-index: 5;
+	//background-color: #f004;
+}
+
+.mat .forces {
+	justify-content: center;
+}
+
+.mat .forces {
+	gap: 2px;
+}
+
+.mat .forces { top: 90px; left: 60px; width: 240px; height: 96px; }
+.mat .routed { top: 194px; left: 12px; width: 336px; height: 48px; }
+.mat .assets { top: 249px; left: 18px; width: 324px; height: 96px; }
+
+.mat.teutonic.andreas .background { background-image:url(images/mat_teutonic_andreas.png) }
+.mat.teutonic.heinrich .background { background-image:url(images/mat_teutonic_heinrich.png) }
+.mat.teutonic.hermann .background { background-image:url(images/mat_teutonic_hermann.png) }
+.mat.teutonic.knud_and_abel .background { background-image:url(images/mat_teutonic_knud_and_abel.png) }
+.mat.teutonic.rudolf .background { background-image:url(images/mat_teutonic_rudolf.png) }
+.mat.teutonic.yaroslav .background { background-image:url(images/mat_teutonic_yaroslav.png) }
+
+.mat.russian.aleksandr .background { background-image:url(images/mat_russian_aleksandr.png) }
+.mat.russian.andrey .background { background-image:url(images/mat_russian_andrey.png) }
+.mat.russian.domash .background { background-image:url(images/mat_russian_domash.png) }
+.mat.russian.gavrilo .background { background-image:url(images/mat_russian_gavrilo.png) }
+.mat.russian.karelians .background { background-image:url(images/mat_russian_karelians.png) }
+.mat.russian.vladislav .background { background-image:url(images/mat_russian_vladislav.png) }
+
+/* TUCKED CARDS */
+
+.tuck_under_map {
+	margin: 0 auto 36px auto;
+	width: 1275px;
+	min-height: 132px;
+	display: grid;
+	grid-template-columns: auto auto;
+}
+
+.tuck_under_map .card {
+	height: 132px;
+	background-position: 0 100%;
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
+	z-index: 1;
+}
+
+.tuck_under_map .card:hover {
+	height: 253px;
+	margin-bottom: -132px;
+	z-index: 2;
+}
+
+#p1_global, #p2_global {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+#p1_global {
+	margin-left: 24px;
+	justify-content: start;
+}
+
+#p2_global {
+	margin-right: 24px;
+	justify-content: end;
+}
+
+/* ASSETS */
+
+.asset {
+	width: 42px;
+	height: 42px;
+	background-size: cover;
+	border: 2px solid transparent;
+	border-radius: 8px;
+	box-shadow: 0 0 0 1px #444, 0 1px 4px #0008;
+}
+
+.asset.action {
+	box-shadow: 0 0 0 1px #444, 0 0 0 3px white;
+}
+
+.asset.selected {
+	box-shadow: 0 0 0 1px #444, 0 0 0 3px yellow;
+}
+
+.asset.boat.x1 { background-image: url(images/asset_boat_x1.png); }
+.asset.boat.x2 { background-image: url(images/asset_boat_x2.png) }
+.asset.boat.x4 { background-image: url(images/asset_boat_x4.png) }
+.asset.cart.x1 { background-image: url(images/asset_cart_x1.png); }
+.asset.cart.x2 { background-image: url(images/asset_cart_x2.png) }
+.asset.cart.x4 { background-image: url(images/asset_cart_x4.png) }
+.asset.coin.x1 { background-image: url(images/asset_coin_x1.png); }
+.asset.coin.x2 { background-image: url(images/asset_coin_x2.png) }
+.asset.coin.x3 { background-image: url(images/asset_coin_x3.png) }
+.asset.coin.x4 { background-image: url(images/asset_coin_x4.png) }
+.asset.loot.x1 { background-image: url(images/asset_loot_x1.png); }
+.asset.loot.x2 { background-image: url(images/asset_loot_x2.png) }
+.asset.loot.x3 { background-image: url(images/asset_loot_x3.png) }
+.asset.loot.x4 { background-image: url(images/asset_loot_x4.png) }
+.asset.prov.x1 { background-image: url(images/asset_prov_x1.png); }
+.asset.prov.x2 { background-image: url(images/asset_prov_x2.png) }
+.asset.prov.x3 { background-image: url(images/asset_prov_x3.png) }
+.asset.prov.x4 { background-image: url(images/asset_prov_x4.png) }
+.asset.ship.x1 { background-image: url(images/asset_ship_x1.png); }
+.asset.ship.x2 { background-image: url(images/asset_ship_x2.png) }
+.asset.ship.x4 { background-image: url(images/asset_ship_x4.png) }
+.asset.sled.x1 { background-image: url(images/asset_sled_x1.png); }
+.asset.sled.x2 { background-image: url(images/asset_sled_x2.png) }
+.asset.sled.x4 { background-image: url(images/asset_sled_x4.png) }
+
+.marker {
+	border: 2px solid aqua;
+	border-radius: 8px;
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+}
+
+.marker.square {
+	width: 42px;
+	height: 42px;
+}
+
+.marker.small {
+	width: 36px;
+	height: 36px;
+	border-radius: 6px;
+}
+
+.marker.rectangle {
+	width: 90px;
+	height: 42px;
+}
+
+.marker.circle {
+	width: 51px;
+	height: 51px;
+	background-size: 51px 51px;
+	border-radius: 50%;
+}
+
+.marker.pursuit.rot180 {
+	transform: rotate(180deg);
+	border-color: #a68c61 #e7cb9e #e7cb9e #a68c61;
+	box-shadow: 0 0 0 1px #4e370a, -1px -2px 4px #0008;
+}
+
+.marker.turn.levy { background-image: url(images/marker_levy.png) }
+.marker.turn.campaign { background-image: url(images/marker_campaign.png) }
+.marker.storm { background-image: url(images/marker_storm.png) }
+.marker.battle { background-image: url(images/marker_battle.png) }
+.marker.conquered.teutonic { background-image: url(images/marker_conquered_teutonic.png) }
+.marker.conquered.russian { background-image: url(images/marker_conquered_russian.png) }
+.marker.ravaged.teutonic { background-image: url(images/marker_ravaged_teutonic.png) }
+.marker.ravaged.russian { background-image: url(images/marker_ravaged_russian.png) }
+.marker.siege.teutonic { background-image: url(images/marker_siege_teutonic.png) }
+.marker.siege.russian { background-image: url(images/marker_siege_russian.png) }
+.marker.victory.teutonic { background-image: url(images/marker_victory_teutonic.png) }
+.marker.victory.russian { background-image: url(images/marker_victory_russian.png) }
+.marker.victory.half.teutonic { background-image: url(images/marker_victory_half_teutonic.png) }
+.marker.victory.half.russian { background-image: url(images/marker_victory_half_russian.png) }
+.marker.pursuit.teutonic { background-image: url(images/marker_pursuit_teutonic.png) }
+.marker.pursuit.russian { background-image: url(images/marker_pursuit_russian.png) }
+.marker.castle.russian { background-image: url(images/marker_castle_russian.png) }
+.marker.castle.teutonic { background-image: url(images/marker_castle_teutonic.png) }
+.marker.sea_trade_blocked { background-image: url(images/marker_sea_trade_blocked.a.png) }
+
+.marker.number.teutonic.n1 { background-image: url(images/marker_1_teutonic.png) }
+.marker.number.teutonic.n2 { background-image: url(images/marker_2_teutonic.png) }
+.marker.number.teutonic.n3 { background-image: url(images/marker_3_teutonic.png) }
+.marker.number.teutonic.n4 { background-image: url(images/marker_4_teutonic.png) }
+.marker.number.teutonic.n5 { background-image: url(images/marker_5_teutonic.png) }
+.marker.number.teutonic.n6 { background-image: url(images/marker_6_teutonic.png) }
+.marker.number.russian.n1 { background-image: url(images/marker_1_russian.png) }
+.marker.number.russian.n2 { background-image: url(images/marker_2_russian.png) }
+.marker.number.russian.n3 { background-image: url(images/marker_3_russian.png) }
+.marker.number.russian.n4 { background-image: url(images/marker_4_russian.png) }
+.marker.number.russian.n5 { background-image: url(images/marker_5_russian.png) }
+.marker.number.russian.n6 { background-image: url(images/marker_6_russian.png) }
+
+/* UNITS */
+
+.unit {
+	background-size: contain;
+	background-repeat: no-repeat;
+	filter: drop-shadow(0px 2px 2px #0004);
+}
+
+.unit.action {
+	filter:
+		drop-shadow(2px 0px 0px white)
+		drop-shadow(0px 2px 0px white)
+		drop-shadow(0px -2px 0px white)
+		drop-shadow(-2px 0px 0px white);
+}
+
+.unit.knights, .unit.sergeants, .unit.light_horse, .unit.asiatic_horse {
+	width: 24px;
+	height: 28px;
+	width: 30px;
+	height: 35px;
+}
+
+.unit.men_at_arms, .unit.militia, .unit.serfs {
+	width: 34px;
+	height: 28px;
+	width: 43px;
+	height: 35px;
+}
+
+.unit.knights { background-image: url(images/unit_knights.svg) }
+.unit.sergeants { background-image: url(images/unit_sergeants.svg) }
+.unit.light_horse { background-image: url(images/unit_light_horse.svg) }
+.unit.asiatic_horse { background-image: url(images/unit_asiatic_horse.svg) }
+.unit.men_at_arms { background-image: url(images/unit_men_at_arms.svg) }
+.unit.militia { background-image: url(images/unit_militia.svg) }
+.unit.serfs { background-image: url(images/unit_serfs.svg) }
+
+/* CARDS */
+
+.hand {
+	margin: 24px;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	min-height: 350px;
+	max-width: 1275px;
+	gap: 16px;
+}
+
+.card {
+	background-size: 186px 261px;
+	width: 186px;
+	height: 261px;
+	border-radius: 8px;
+	transition: 100ms;
+}
+
+.card_info {
+	border-bottom: 1px solid black;
+}
+
+.card_info .card {
+	margin: 12px auto;
+}
+
+.card.disabled {
+	filter: grayscale(100%) brightness(66%);
+}
+
+/* MAP */
+
+#mapwrap {
+	width: 1275px;
+	height: 1650px;
+	box-shadow: 0px 1px 10px #0008;
+	z-index: 3;
+}
+
+#map {
+	background-repeat: no-repeat;
+	background-size: cover;
+	width: 1275px;
+	height: 1650px;
+	overflow: clip;
+}
+
+#map { background-image: url(map75.jpg) }
+@media (min-resolution: 97dpi) {
+	#map { background-image: url(map150.jpg) }
+}
+
+.box {
+	position: absolute;
+	border: 3px solid transparent;
+}
+
+.veche_border {
+	position: absolute;
+}
+
+.box.calendar {
+}
+
+.box.victory {
+	border-radius: 50%;
+}
+
+.box.turn {
+	border-radius: 50%;
+}
+
+.box.way.action {
+	border-color: dodgerblue;
+}
+
+.box.way.crossroads.action {
+	border-color: saddlebrown;
+}
+
+.box.way.crossroads { border-radius: 36px; }
+.box.way.wirz { border-radius: 36px 36px 75% 75% }
+.box.way.peipus-east { border-radius: 75% 36px 75% 36px }
+.box.way.peipus-north { border-radius: 36px 36px 36px 75%  }
+
+.locale {
+	position: absolute;
+	border: 3px solid transparent;
+}
+
+.locale.action {
+	border-color: white;
+	//box-shadow: 0 0 6px white, inset 0 0 6px 0px white;
+}
+
+.locale.region {
+	border-radius: 50%;
+}
+
+.locale.town {
+	border-radius: 8px;
+}
+
+.locale_extra {
+	position: absolute;
+}
+
+.locale_extra.action {
+	box-shadow: 0 0 8px 2px white, inset 0 0 12px 2px white;
+}
+
+.locale_extra.traderoute { border-radius: 50% 30% 10% 10% }
+.locale_extra.town { border-radius: 50% 50% 0 0 }
+.locale_extra.fort { border-radius: 30% 30% 0 0 }
+.locale_extra.bishopric { border-radius: 50% 50% 20% 20% }
+.locale_extra.city { border-radius: 50% 50% 0 0 }
+.locale_extra.archbishopric { border-radius: 50% 50% 25% 25%; }
+
+.locale.tip, .locale_extra.tip {
+	background-color: #ff06;
+	box-shadow: 0 0 8px #ff06;
+}
+
+#veche { position: absolute; }
+
+.veche_label {
+	pointer-events: none;
+	border: 3px solid transparent;
+}
+
+.veche_border {
+	pointer-events: none;
+}
+
+#veche { left: 1046px; top: 1460px; width: 215px; height: 161px; }
+#veche_border_w { left: 1046px; top: 1460px; width: 50px; height: 157px; }
+#veche_border_e { left: 1208px; top: 1460px; width: 50px; height: 157px; }
+#veche_border_sw { left: 1046px; top: 1618px; width: 59px; height: 0; }
+#veche_border_se { left: 1197px; top: 1618px; width: 64px; height: 0; }
+
+#veche_label_top { left: 1097px; top: 1457px; width: 107px; height: 20px; }
+#veche_label_bottom { left: 1104px; top: 1605px; width: 89px; height: 13px; }
+
+#veche_border_w { border-top: 3px solid transparent; border-left: 3px solid transparent; }
+#veche_border_e { border-top: 3px solid transparent; border-right: 3px solid transparent; }
+#veche_border_sw { border-bottom: 3px solid transparent; }
+#veche_border_se { border-bottom: 3px solid transparent; }
+
+#veche.action {
+	box-shadow: 0 0 8px white;
+}
+
+#veche.action ~ .veche_label {
+	box-shadow: 0 0 8px white;
+	border-color: white;
+}
+
+#veche.action ~ .veche_border {
+	border-color: white;
+}
+
+#vp2.stack:not(.half) ~ #vp1.stack:not(.half) { transform: translate(0px,-36px); }
+#vp2.stack.half ~ #vp1.stack.half { transform: translate(0px,-36px); }
+#vp2.stack.half ~ #vp1.stack:not(.half) { transform: translate(-12px,-30px); }
+#vp2.stack:not(.half) ~ #vp1.stack.half { transform: translate(12px,-30px); }
+
+.marker.victory, .marker.turn {
+	position: absolute;
+}
+
+.v0 { top: 132px; left: 2px; }
+
+.v1, .v2, .v3, .v4, .v5, .v6, .v7, .v8, .t1, .t2, .t3, .t4, .t5, .t6, .t7, .t8 { top: 46px }
+.v9, .v10, .v11, .v12, .v13, .v14, .v15, .v16, .t9, .t10, .t11, .t12, .t13, .t14, .t15, .t16 { top: 284px }
+
+.v1, .v9 { left: 44px }
+.v2, .v10 { left: 196px }
+.v3, .v11 { left: 362px }
+.v4, .v12 { left: 514px }
+.v5, .v13 { left: 680px }
+.v6, .v14 { left: 832px }
+.v7, .v15 { left: 999px }
+.v8, .v16 { left: 1151px }
+
+.t1, .t9 { left: 100px }
+.t2, .t10 { left: 252px }
+.t3, .t11 { left: 418px }
+.t4, .t12 { left: 570px }
+.t5, .t13 { left: 737px }
+.t6, .t14 { left: 888px }
+.t7, .t15 { left: 1055px }
+.t8, .t16 { left: 1207px }
+
+/* 100dpi
+.v1, .v2, .v3, .v4, .v5, .v6, .v7, .v8, .t1, .t2, .t3, .t4, .t5, .t6, .t7, .t8 { top: 68px; }
+.v9, .v10, .v11, .v12, .v13, .v14, .v15, .v16, .t9, .t10, .t11, .t12, .t13, .t14, .t15, .t16 { top: 386px; }
+.v1, .v9 { left: 65px }
+.v2, .v10 { left: 269px }
+.v3, .v11 { left: 490px }
+.v4, .v12 { left: 693px }
+.v5, .v13 { left: 914px }
+.v6, .v14 { left: 1117px }
+.v7, .v15 { left: 1339px }
+.v8, .v16 { left: 1542px }
+.t1, .t9 { left: 141px }
+.t2, .t10 { left: 344px }
+.t3, .t11 { left: 566px }
+.t4, .t12 { left: 769px }
+.t5, .t13 { left: 990px }
+.t6, .t14 { left: 1193px }
+.t7, .t15 { left: 1415px }
+.t8, .t16 { left: 1617px }
+*/
+
+/* PIECES */
+
+#legate, .cylinder, .service_marker {
+	transition-property: top, left;
+	transition-duration: 700ms;
+	transition-timing-function: ease;
+}
+
+#legate {
+	position: absolute;
+	width: 32px;
+	height: 64px;
+	background-image: url(images/legate.svg);
+	top: 815px;
+	left: 200px;
+	filter: drop-shadow(0px 2px 4px #0004);
+}
+
+#legate.action {
+	filter:
+		drop-shadow(2px 0px 0px white)
+		drop-shadow(0px 2px 0px white)
+		drop-shadow(0px -2px 0px white)
+		drop-shadow(-2px 0px 0px white);
+}
+
+.cylinder {
+	position: absolute;
+	width: 44px;
+	height: 48px;
+	background-size: 44px 48px;
+	filter: drop-shadow(0px 2px 4px #0004);
+}
+
+.cylinder.action {
+	filter:
+		drop-shadow(2px 0px 0px white)
+		drop-shadow(0px 2px 0px white)
+		drop-shadow(0px -2px 0px white)
+		drop-shadow(-2px 0px 0px white);
+}
+
+.cylinder.selected {
+	filter:
+		drop-shadow(2px 0px 0px yellow)
+		drop-shadow(0px 2px 0px yellow)
+		drop-shadow(0px -2px 0px yellow)
+		drop-shadow(-2px 0px 0px yellow);
+}
+
+.cylinder.andreas { background-image: url(images/lord_teutonic_1.svg) }
+.cylinder.hermann.marshal { background-image: url(images/lord_teutonic_2.svg) }
+.cylinder.hermann { background-image: url(images/lord_teutonic_3.svg) }
+.cylinder.heinrich { background-image: url(images/lord_teutonic_4.svg) }
+.cylinder.rudolf { background-image: url(images/lord_teutonic_5.svg) }
+.cylinder.knud_and_abel { background-image: url(images/lord_teutonic_6.svg) }
+.cylinder.yaroslav { background-image: url(images/lord_teutonic_7.svg) }
+
+.cylinder.aleksandr { background-image: url(images/lord_russian_1.svg) }
+.cylinder.andrey { background-image: url(images/lord_russian_2.svg) }
+.cylinder.domash { background-image: url(images/lord_russian_3.svg) }
+.cylinder.gavrilo { background-image: url(images/lord_russian_4.svg) }
+.cylinder.vladislav { background-image: url(images/lord_russian_5.svg) }
+.cylinder.karelians { background-image: url(images/lord_russian_6.svg) }
+.cylinder.andrey.marshal { background-image: url(images/lord_russian_7.svg) }
+
+.marker.teutonic,
+.service_marker.teutonic.lord {
+	background-color: #444;
+	border-color: #555 #222 #222 #555;
+	box-shadow: 0 0 0 1px #111, 0 2px 4px #0008;
+}
+
+.marker.russian,
+.service_marker.russian.lord {
+	background-color: #fff;
+	border-color: #eee #ccc #ccc #eee;
+	box-shadow: 0 0 0 1px #555, 0 2px 4px #0008;
+}
+
+.service_marker {
+	background-repeat: no-repeat;
+	width: 90px;
+	height: 42px;
+	border-radius: 8px;
+	box-shadow: 0 1px 6px #0008;
+	border-width: 2px;
+	border-style: solid;
+}
+
+#pieces .service_marker {
+	position: absolute;
+}
+
+.service_marker.teutonic.lord.action,
+.service_marker.teutonic.vassal.action {
+	box-shadow: 0 0 0 3px white;
+}
+
+.service_marker.russian.lord.action,
+.service_marker.russian.vassal.action {
+	box-shadow: 0 0 0 3px pink;
+}
+
+.service_marker.teutonic.lord.selected,
+.service_marker.teutonic.vassal.selected,
+.service_marker.russian.lord.selected,
+.service_marker.russian.vassal.selected {
+	box-shadow: 0 0 0 3px yellow;
+}
+
+.service_marker.lord { background-size: 180px 252px }
+.service_marker.vassal { background-size: 180px 630px }
+
+.service_marker.lord.teutonic { background-image:url(images/service_lords_teutonic.png) }
+.service_marker.lord.russian { background-image:url(images/service_lords_russian.png) }
+.service_marker.vassal.teutonic { background-image:url(images/service_vassals_teutonic.png) }
+.service_marker.vassal.russian { background-image:url(images/service_vassals_russian.png) }
+
+.service_marker.image0{background-position:0 -0px}
+.service_marker.image1{background-position:0 -42px}
+.service_marker.image2{background-position:0 -84px}
+.service_marker.image3{background-position:0 -126px}
+.service_marker.image4{background-position:0 -168px}
+.service_marker.image5{background-position:0 -210px}
+.service_marker.image6{background-position:0 -252px}
+.service_marker.image7{background-position:0 -294px}
+.service_marker.image8{background-position:0 -336px}
+.service_marker.image9{background-position:0 -378px}
+.service_marker.image10{background-position:0 -420px}
+.service_marker.image11{background-position:0 -462px}
+.service_marker.image12{background-position:0 -504px}
+.service_marker.image13{background-position:0 -546px}
+.service_marker.image14{background-position:0 -588px}
+.service_marker.image0:hover{background-position:100% -0px}
+.service_marker.image1:hover{background-position:100% -42px}
+.service_marker.image2:hover{background-position:100% -84px}
+.service_marker.image3:hover{background-position:100% -126px}
+.service_marker.image4:hover{background-position:100% -168px}
+.service_marker.image5:hover{background-position:100% -210px}
+.service_marker.image6:hover{background-position:100% -252px}
+.service_marker.image7:hover{background-position:100% -294px}
+.service_marker.image8:hover{background-position:100% -336px}
+.service_marker.image9:hover{background-position:100% -378px}
+.service_marker.image10:hover{background-position:100% -420px}
+.service_marker.image11:hover{background-position:100% -462px}
+.service_marker.image12:hover{background-position:100% -504px}
+.service_marker.image13:hover{background-position:100% -546px}
+.service_marker.image14:hover{background-position:100% -588px}
+
+body.shift .service_marker:hover { transform: scale(2); z-index: 200; }
+body.shift .cylinder:hover { transform: scale(2); z-index: 200; }
+body.shift .marker:hover { transform: scale(2); z-index: 200; }
+
+/* BACKGROUND COLORS AND BORDERS */
+/* :r !node tools/colors.mjs */
+
+.mat .background { background-color: #d1c07e; border-color: #f2e19d #b1a05f #b1a05f #f2e19d; box-shadow: 0 0 0 1px #584800, 1px 2px 4px #0008; }
+.card.teutonic { background-color: #e1e6e8; border-color: #fbffff #c1c5c7 #c1c5c7 #fbffff; box-shadow: 0 0 0 1px #666a6c, 1px 2px 4px #0008; }
+.card.russian { background-color: #e1d6c1; border-color: #fff7e1 #c1b6a1 #c1b6a1 #fff7e1; box-shadow: 0 0 0 1px #665c4a, 1px 2px 4px #0008; }
+.service_marker.teutonic.vassal { background-color: #777474; border-color: #959292 #5a5858 #5a5858 #959292; box-shadow: 0 0 0 1px #0f0d0d, 1px 2px 4px #0008; }
+.service_marker.russian.vassal { background-color: #f0ead8; border-color: #ffffed #cfc9b8 #cfc9b8 #ffffed; box-shadow: 0 0 0 1px #736e5e, 1px 2px 4px #0008; }
+.asset.sled { background-color: #e5dcc1; border-color: #fffde2 #c5bca1 #c5bca1 #fffde2; box-shadow: 0 0 0 1px #69614a, 1px 2px 4px #0008; }
+.asset.boat { background-color: #adceed; border-color: #cdefff #8eaecc #8eaecc #cdefff; box-shadow: 0 0 0 1px #38556f, 1px 2px 4px #0008; }
+.asset.cart.x1 { background-color: #daba8b; border-color: #fbdaaa #ba9b6d #ba9b6d #fbdaaa; box-shadow: 0 0 0 1px #5f4315, 1px 2px 4px #0008; }
+.asset.cart.x2 { background-color: #d1a973; border-color: #f2c992 #b18a55 #b18a55 #f2c992; box-shadow: 0 0 0 1px #563400, 1px 2px 4px #0008; }
+.asset.cart.x4 { background-color: #c4975b; border-color: #e5b67a #a4793c #a4793c #e5b67a; box-shadow: 0 0 0 1px #4b2500, 1px 2px 4px #0008; }
+.asset.coin.x1 { background-color: #d2d5d4; border-color: #f3f6f5 #b2b5b4 #b2b5b4 #f3f6f5; box-shadow: 0 0 0 1px #595c5b, 1px 2px 4px #0008; }
+.asset.coin.x2 { background-color: #d2d5d4; border-color: #f3f6f5 #b2b5b4 #b2b5b4 #f3f6f5; box-shadow: 0 0 0 1px #595c5b, 1px 2px 4px #0008; }
+.asset.coin.x3 { background-color: #b3b5b4; border-color: #d3d5d4 #949695 #949695 #d3d5d4; box-shadow: 0 0 0 1px #3f4040, 1px 2px 4px #0008; }
+.asset.coin.x4 { background-color: #b3b5b4; border-color: #d3d5d4 #949695 #949695 #d3d5d4; box-shadow: 0 0 0 1px #3f4040, 1px 2px 4px #0008; }
+.asset.prov.x1 { background-color: #ffe293; border-color: #fffdad #dec173 #dec173 #fffdad; box-shadow: 0 0 0 1px #80650a, 1px 2px 4px #0008; }
+.asset.prov.x2 { background-color: #ffe293; border-color: #fffdad #dec173 #dec173 #fffdad; box-shadow: 0 0 0 1px #80650a, 1px 2px 4px #0008; }
+.asset.prov.x3 { background-color: #ffcd66; border-color: #ffee88 #dead43 #dead43 #ffee88; box-shadow: 0 0 0 1px #7f5200, 1px 2px 4px #0008; }
+.asset.prov.x4 { background-color: #ffcd66; border-color: #ffee88 #dead43 #dead43 #ffee88; box-shadow: 0 0 0 1px #7f5200, 1px 2px 4px #0008; }
+.asset.ship.x1 { background-color: #79b7e4; border-color: #98d7ff #5a98c3 #5a98c3 #98d7ff; box-shadow: 0 0 0 1px #004066, 1px 2px 4px #0008; }
+.asset.ship.x2 { background-color: #79b7e4; border-color: #98d7ff #5a98c3 #5a98c3 #98d7ff; box-shadow: 0 0 0 1px #004066, 1px 2px 4px #0008; }
+.asset.ship.x4 { background-color: #5da9dd; border-color: #7dc9ff #3d8abc #3d8abc #7dc9ff; box-shadow: 0 0 0 1px #00335f, 1px 2px 4px #0008; }
+.asset.loot.x1 { background-color: #f0b64f; border-color: #ffd771 #cf9628 #cf9628 #ffd771; box-shadow: 0 0 0 1px #703d00, 1px 2px 4px #0008; }
+.asset.loot.x2 { background-color: #eda44c; border-color: #ffc46e #cb8526 #cb8526 #ffc46e; box-shadow: 0 0 0 1px #6c2c00, 1px 2px 4px #0008; }
+.asset.loot.x3 { background-color: #eb924a; border-color: #ffb26b #c97326 #c97326 #ffb26b; box-shadow: 0 0 0 1px #681800, 1px 2px 4px #0008; }
+.asset.loot.x4 { background-color: #e1884a; border-color: #ffa86a #bf6928 #bf6928 #ffa86a; box-shadow: 0 0 0 1px #5f0c00, 1px 2px 4px #0008; }
+.marker.battle { background-color: #d0bf7d; border-color: #f1e09c #b09f5e #b09f5e #f1e09c; box-shadow: 0 0 0 1px #574700, 1px 2px 4px #0008; }
+.marker.storm { background-color: #d0bf7d; border-color: #f1e09c #b09f5e #b09f5e #f1e09c; box-shadow: 0 0 0 1px #574700, 1px 2px 4px #0008; }
+.marker.pursuit { background-color: #c6ab7f; border-color: #e7cb9e #a68c61 #a68c61 #e7cb9e; box-shadow: 0 0 0 1px #4e370a, 1px 2px 4px #0008; }
+.marker.turn.campaign { background-color: #6a8aa8; border-color: #88a9c8 #4d6c89 #4d6c89 #88a9c8; box-shadow: 0 0 0 1px #001c34, 1px 2px 4px #0008; }
+.marker.turn.levy { background-color: #967348; border-color: #b59165 #78562b #78562b #b59165; box-shadow: 0 0 0 1px #240800, 1px 2px 4px #0008; }
+.marker.teutonic.victory { background-color: #ffd400; border-color: #fff64b #deb300 #deb300 #fff64b; box-shadow: 0 0 0 1px #805600, 1px 2px 4px #0008; }
+.marker.teutonic.siege { background-color: #a39382; border-color: #c3b2a0 #857565 #857565 #c3b2a0; box-shadow: 0 0 0 1px #312416, 1px 2px 4px #0008; }
+.marker.russian.conquered { background-color: #649655; border-color: #82b573 #477838 #477838 #82b573; box-shadow: 0 0 0 1px #002500, 1px 2px 4px #0008; }
+.marker.russian.enemy_lords_removed { background-color: #ffd400; border-color: #fff64b #deb300 #deb300 #fff64b; box-shadow: 0 0 0 1px #805600, 1px 2px 4px #0008; }
+.marker.russian.victory { background-color: #2d8b47; border-color: #4faa64 #006d2a #006d2a #4faa64; box-shadow: 0 0 0 1px #001a00, 1px 2px 4px #0008; }
+.marker.walls { background-color: #e3dedc; border-color: #fffefc #c3bebc #c3bebc #fffefc; box-shadow: 0 0 0 1px #686362, 1px 2px 4px #0008; }
+.marker.russian.number { background-color: #c6992f; border-color: #e7b954 #a67a00 #a67a00 #e7b954; box-shadow: 0 0 0 1px #4d2400, 1px 2px 4px #0008; }
+.marker.teutonic.number { background-color: #a02532; border-color: #c2474e #7e0017 #7e0017 #c2474e; box-shadow: 0 0 0 1px #1a0000, 1px 2px 4px #0008; }
+
+/* CARD IMAGES */
+
+.card.russian.aow_back{background-image:url(cards.1x/aow_russian_back.jpg)}
+.card.teutonic.aow_back{background-image:url(cards.1x/aow_teutonic_back.jpg)}
+
+.card.aow_0{background-image:url(cards.1x/aow_teutonic_01.jpg)}
+.card.aow_1{background-image:url(cards.1x/aow_teutonic_02.jpg)}
+.card.aow_2{background-image:url(cards.1x/aow_teutonic_03.jpg)}
+.card.aow_3{background-image:url(cards.1x/aow_teutonic_04.jpg)}
+.card.aow_4{background-image:url(cards.1x/aow_teutonic_05.jpg)}
+.card.aow_5{background-image:url(cards.1x/aow_teutonic_06.jpg)}
+.card.aow_6{background-image:url(cards.1x/aow_teutonic_07.jpg)}
+.card.aow_7{background-image:url(cards.1x/aow_teutonic_08.jpg)}
+.card.aow_8{background-image:url(cards.1x/aow_teutonic_09.jpg)}
+.card.aow_9{background-image:url(cards.1x/aow_teutonic_10.jpg)}
+.card.aow_10{background-image:url(cards.1x/aow_teutonic_11.jpg)}
+.card.aow_11{background-image:url(cards.1x/aow_teutonic_12.jpg)}
+.card.aow_12{background-image:url(cards.1x/aow_teutonic_13.jpg)}
+.card.aow_13{background-image:url(cards.1x/aow_teutonic_14.jpg)}
+.card.aow_14{background-image:url(cards.1x/aow_teutonic_15.jpg)}
+.card.aow_15{background-image:url(cards.1x/aow_teutonic_16.jpg)}
+.card.aow_16{background-image:url(cards.1x/aow_teutonic_17.jpg)}
+.card.aow_17{background-image:url(cards.1x/aow_teutonic_18.jpg)}
+.card.aow_18{background-image:url(cards.1x/aow_teutonic_none.jpg)}
+.card.aow_19{background-image:url(cards.1x/aow_teutonic_none.jpg)}
+.card.aow_20{background-image:url(cards.1x/aow_teutonic_none.jpg)}
+
+.card.aow_21{background-image:url(cards.1x/aow_russian_01.jpg)}
+.card.aow_22{background-image:url(cards.1x/aow_russian_02.jpg)}
+.card.aow_23{background-image:url(cards.1x/aow_russian_03.jpg)}
+.card.aow_24{background-image:url(cards.1x/aow_russian_04.jpg)}
+.card.aow_25{background-image:url(cards.1x/aow_russian_05.jpg)}
+.card.aow_26{background-image:url(cards.1x/aow_russian_06.jpg)}
+.card.aow_27{background-image:url(cards.1x/aow_russian_07.jpg)}
+.card.aow_28{background-image:url(cards.1x/aow_russian_08.jpg)}
+.card.aow_29{background-image:url(cards.1x/aow_russian_09.jpg)}
+.card.aow_30{background-image:url(cards.1x/aow_russian_10.jpg)}
+.card.aow_31{background-image:url(cards.1x/aow_russian_11.jpg)}
+.card.aow_32{background-image:url(cards.1x/aow_russian_12.jpg)}
+.card.aow_33{background-image:url(cards.1x/aow_russian_13.jpg)}
+.card.aow_34{background-image:url(cards.1x/aow_russian_14.jpg)}
+.card.aow_35{background-image:url(cards.1x/aow_russian_15.jpg)}
+.card.aow_36{background-image:url(cards.1x/aow_russian_16.jpg)}
+.card.aow_37{background-image:url(cards.1x/aow_russian_17.jpg)}
+.card.aow_38{background-image:url(cards.1x/aow_russian_18.jpg)}
+.card.aow_39{background-image:url(cards.1x/aow_russian_none.jpg)}
+.card.aow_40{background-image:url(cards.1x/aow_russian_none.jpg)}
+.card.aow_41{background-image:url(cards.1x/aow_russian_none.jpg)}
+
+.card.cc_russian_back{background-image:url(cards.1x/cc_russian_back.jpg)}
+.card.cc_russian_aleksandr{background-image:url(cards.1x/cc_russian_aleksandr.jpg)}
+.card.cc_russian_andrey{background-image:url(cards.1x/cc_russian_andrey.jpg)}
+.card.cc_russian_domash{background-image:url(cards.1x/cc_russian_domash.jpg)}
+.card.cc_russian_gavrilo{background-image:url(cards.1x/cc_russian_gavrilo.jpg)}
+.card.cc_russian_karelians{background-image:url(cards.1x/cc_russian_karelians.jpg)}
+.card.cc_russian_vladislav{background-image:url(cards.1x/cc_russian_vladislav.jpg)}
+.card.cc_russian_pass{background-image:url(cards.1x/cc_russian_pass.jpg)}
+
+.card.cc_teutonic_back{background-image:url(cards.1x/cc_teutonic_back.jpg)}
+.card.cc_teutonic_andreas{background-image:url(cards.1x/cc_teutonic_andreas.jpg)}
+.card.cc_teutonic_heinrich{background-image:url(cards.1x/cc_teutonic_heinrich.jpg)}
+.card.cc_teutonic_hermann{background-image:url(cards.1x/cc_teutonic_hermann.jpg)}
+.card.cc_teutonic_knud_and_abel{background-image:url(cards.1x/cc_teutonic_knud_and_abel.jpg)}
+.card.cc_teutonic_rudolf{background-image:url(cards.1x/cc_teutonic_rudolf.jpg)}
+.card.cc_teutonic_yaroslav{background-image:url(cards.1x/cc_teutonic_yaroslav.jpg)}
+.card.cc_teutonic_pass{background-image:url(cards.1x/cc_teutonic_pass.jpg)}
+
+@media (min-resolution: 97dpi) {
+.card.russian.aow_back{background-image:url(cards.1x/aow_russian_back.jpg)}
+.card.teutonic.aow_back{background-image:url(cards.1x/aow_teutonic_back.jpg)}
+.card.aow_0{background-image:url(cards.1x/aow_russian_01.jpg)}
+.card.aow_1{background-image:url(cards.1x/aow_russian_02.jpg)}
+.card.aow_2{background-image:url(cards.1x/aow_russian_03.jpg)}
+.card.aow_3{background-image:url(cards.1x/aow_russian_04.jpg)}
+.card.aow_4{background-image:url(cards.1x/aow_russian_05.jpg)}
+.card.aow_5{background-image:url(cards.1x/aow_russian_06.jpg)}
+.card.aow_6{background-image:url(cards.1x/aow_russian_07.jpg)}
+.card.aow_7{background-image:url(cards.1x/aow_russian_08.jpg)}
+.card.aow_8{background-image:url(cards.1x/aow_russian_09.jpg)}
+.card.aow_9{background-image:url(cards.1x/aow_russian_10.jpg)}
+.card.aow_10{background-image:url(cards.1x/aow_russian_11.jpg)}
+.card.aow_11{background-image:url(cards.1x/aow_russian_12.jpg)}
+.card.aow_12{background-image:url(cards.1x/aow_russian_13.jpg)}
+.card.aow_13{background-image:url(cards.1x/aow_russian_14.jpg)}
+.card.aow_14{background-image:url(cards.1x/aow_russian_15.jpg)}
+.card.aow_15{background-image:url(cards.1x/aow_russian_16.jpg)}
+.card.aow_16{background-image:url(cards.1x/aow_russian_17.jpg)}
+.card.aow_17{background-image:url(cards.1x/aow_russian_18.jpg)}
+.card.aow_18{background-image:url(cards.1x/aow_russian_none.jpg)}
+.card.aow_19{background-image:url(cards.1x/aow_russian_none.jpg)}
+.card.aow_20{background-image:url(cards.1x/aow_russian_none.jpg)}
+.card.aow_21{background-image:url(cards.1x/aow_teutonic_01.jpg)}
+.card.aow_22{background-image:url(cards.1x/aow_teutonic_02.jpg)}
+.card.aow_23{background-image:url(cards.1x/aow_teutonic_03.jpg)}
+.card.aow_24{background-image:url(cards.1x/aow_teutonic_04.jpg)}
+.card.aow_25{background-image:url(cards.1x/aow_teutonic_05.jpg)}
+.card.aow_26{background-image:url(cards.1x/aow_teutonic_06.jpg)}
+.card.aow_27{background-image:url(cards.1x/aow_teutonic_07.jpg)}
+.card.aow_28{background-image:url(cards.1x/aow_teutonic_08.jpg)}
+.card.aow_29{background-image:url(cards.1x/aow_teutonic_09.jpg)}
+.card.aow_30{background-image:url(cards.1x/aow_teutonic_10.jpg)}
+.card.aow_31{background-image:url(cards.1x/aow_teutonic_11.jpg)}
+.card.aow_32{background-image:url(cards.1x/aow_teutonic_12.jpg)}
+.card.aow_33{background-image:url(cards.1x/aow_teutonic_13.jpg)}
+.card.aow_34{background-image:url(cards.1x/aow_teutonic_14.jpg)}
+.card.aow_35{background-image:url(cards.1x/aow_teutonic_15.jpg)}
+.card.aow_36{background-image:url(cards.1x/aow_teutonic_16.jpg)}
+.card.aow_37{background-image:url(cards.1x/aow_teutonic_17.jpg)}
+.card.aow_38{background-image:url(cards.1x/aow_teutonic_18.jpg)}
+.card.aow_39{background-image:url(cards.1x/aow_teutonic_none.jpg)}
+.card.aow_40{background-image:url(cards.1x/aow_teutonic_none.jpg)}
+.card.aow_41{background-image:url(cards.1x/aow_teutonic_none.jpg)}
+
+.card.cc_russian_back{background-image:url(cards.2x/cc_russian_back.jpg)}
+.card.cc_russian_aleksandr{background-image:url(cards.2x/cc_russian_aleksandr.jpg)}
+.card.cc_russian_andrey{background-image:url(cards.2x/cc_russian_andrey.jpg)}
+.card.cc_russian_domash{background-image:url(cards.2x/cc_russian_domash.jpg)}
+.card.cc_russian_gavrilo{background-image:url(cards.2x/cc_russian_gavrilo.jpg)}
+.card.cc_russian_karelians{background-image:url(cards.2x/cc_russian_karelians.jpg)}
+.card.cc_russian_vladislav{background-image:url(cards.2x/cc_russian_vladislav.jpg)}
+.card.cc_russian_pass{background-image:url(cards.2x/cc_russian_pass.jpg)}
+.card.cc_teutonic_back{background-image:url(cards.2x/cc_teutonic_back.jpg)}
+.card.cc_teutonic_andreas{background-image:url(cards.2x/cc_teutonic_andreas.jpg)}
+.card.cc_teutonic_heinrich{background-image:url(cards.2x/cc_teutonic_heinrich.jpg)}
+.card.cc_teutonic_hermann{background-image:url(cards.2x/cc_teutonic_hermann.jpg)}
+.card.cc_teutonic_knud_and_abel{background-image:url(cards.2x/cc_teutonic_knud_and_abel.jpg)}
+.card.cc_teutonic_rudolf{background-image:url(cards.2x/cc_teutonic_rudolf.jpg)}
+.card.cc_teutonic_yaroslav{background-image:url(cards.2x/cc_teutonic_yaroslav.jpg)}
+.card.cc_teutonic_pass{background-image:url(cards.2x/cc_teutonic_pass.jpg)}
+}
+
+</style>
+</head>
+<body>
+
+<div id="arts_of_war" class="hide">
+<div id="arts_of_war_header">Arts of War</div>
+<div id="arts_of_war_list"></div>
+</div>
+
+<header>
+	<div id="toolbar">
+		<div class="menu">
+			<div class="menu_title"><img src="/images/cog.svg"></div>
+			<div class="menu_popup">
+				<a class="menu_item" target="_blanK" href="/nevsky/info/rules.html">Rules of Play</a>
+				<a class="menu_item" target="_blanK" href="/nevsky/info/pac.html">Reference Sheets</a>
+				<a class="menu_item" target="_blanK" href="/nevsky/info/cards.html">Arts of War</a>
+				<div class="resign menu_separator"></div>
+				<div class="resign menu_item" onclick="confirm_resign()">Resign</div>
+				<div class="debug menu_separator"></div>
+				<div class="debug menu_item" onclick="send_save()">&#x1F41E; Save</div>
+				<div class="debug menu_item" onclick="send_restore()">&#x1F41E; Restore</div>
+				<div class="debug menu_item" onclick="send_restart('Pleskau')">&#x26a0; Pleskau</div>
+				<div class="debug menu_item" onclick="send_restart('Watland')">&#x26a0; Watland</div>
+				<div class="debug menu_item" onclick="send_restart('Peipus')">&#x26a0; Peipus</div>
+				<div class="debug menu_item" onclick="send_restart('Quickstart')">&#x26a0; Quickstart</div>
+			</div>
+		</div>
+		<div class="icon_button" onclick="toggle_pieces()"><img src="/images/earth-africa-europe.svg"></div>
+		<div class="icon_button" onclick="toggle_log()"><img src="/images/scroll-quill.svg"></div>
+	</div>
+	<div id="prompt"></div>
+	<div id="actions"></div>
+</header>
+
+<aside>
+	<div id="roles">
+		<div class="role" id="role_Teutons">
+			<div class="role_name">
+				Teutons
+				<div class="role_user">-</div>
+			</div>
+		</div>
+		<div class="role" id="role_Russians">
+			<div class="role_name">
+				Russians
+				<div class="role_user">-</div>
+			</div>
+		</div>
+		<div class="card_info"><div id="last_card" class="card russian cc_russian_back"></div></div>
+	</div>
+	<div id="log"></div>
+</aside>
+
+<main>
+<div id="mapwrap">
+<div id="map">
+
+<div id="veche"></div>
+<div class="box veche_label" id="veche_label_top"></div>
+<div class="box veche_label" id="veche_label_bottom"></div>
+<div class="veche_border" id="veche_border_w"></div>
+<div class="veche_border" id="veche_border_e"></div>
+<div class="veche_border" id="veche_border_sw"></div>
+<div class="veche_border" id="veche_border_se"></div>
+
+<div id="locales"></div>
+<div id="boxes"></div>
+
+<div id="pieces">
+	<div id="turn" class="marker circle turn levy t1"></div>
+	<div id="vp2" class="marker circle victory russian v0 stack"></div>
+	<div id="vp1" class="marker circle victory teutonic v0 stack"></div>
+	<div id="legate"></div>
+</div>
+
+</div>
+</div>
+
+<div class="tuck_under_map">
+<div id="p1_global" class="global"></div>
+<div id="p2_global" class="global"></div>
+</div>
+
+<div id="p1_court" class="court"></div>
+<div id="p2_court" class="court"></div>
+<div id="hand" class="hand"></div>
+
+</main>
+
+<footer id="status"></footer>
+
+</body>
