@@ -24,6 +24,31 @@ const SLED = 4
 const BOAT = 5
 const SHIP = 6
 
+const SUMMER = 0
+const EARLY_WINTER = 1
+const LATE_WINTER = 2
+const RASPUTITSA = 3
+
+const SEASONS = [
+	null,
+	SUMMER, SUMMER, EARLY_WINTER, EARLY_WINTER, LATE_WINTER, LATE_WINTER, RASPUTITSA, RASPUTITSA,
+	SUMMER, SUMMER, EARLY_WINTER, EARLY_WINTER, LATE_WINTER, LATE_WINTER, RASPUTITSA, RASPUTITSA,
+	null
+]
+
+function current_season() {
+	return SEASONS[view.turn >> 1]
+}
+
+function max_plan_length() {
+	switch (current_season()) {
+	case SUMMER: return 6
+	case EARLY_WINTER: return 4
+	case LATE_WINTER: return 4
+	case RASPUTITSA: return 5
+	}
+}
+
 function pack1_get(word, n) {
 	return (word >>> n) & 1
 }
@@ -35,6 +60,10 @@ function pack4_get(word, n) {
 
 function is_lord_action(lord) {
 	return !!(view.actions && view.actions.lord && view.actions.lord.includes(lord))
+}
+
+function is_plan_action(lord) {
+	return !!(view.actions && view.actions.plan && view.actions.plan.includes(lord))
 }
 
 function is_service_action(lord) {
@@ -60,6 +89,34 @@ const first_p1_locale = 0
 const last_p1_locale = 23
 const first_p2_locale = 24
 const last_p2_locale = 52
+
+let used_cache = {}
+let unused_cache = {}
+
+function get_cached_element(className) {
+	if (!(className in unused_cache)) {
+		unused_cache[className] = []
+		used_cache[className] = []
+	}
+	if (unused_cache[className].length > 0) {
+		let elt = unused_cache[className].pop()
+		used_cache[className].push(elt)
+		return elt
+	}
+	let elt = document.createElement("div")
+	elt.className = className
+	used_cache[className].push(elt)
+	return elt
+}
+
+function restart_cache() {
+	for (let k in used_cache) {
+		let u = used_cache[k]
+		let uu = unused_cache[k]
+		while (u.length > 0)
+			uu.push(u.pop())
+	}
+}
 
 function is_p1_locale(loc) {
 	return loc >= first_p1_locale && loc <= last_p1_locale
@@ -197,6 +254,11 @@ const ui = {
 	arts_of_war: [],
 	boxes: {},
 	veche: document.getElementById("veche"),
+	plan_dialog: document.getElementById("plan"),
+	plan_list: document.getElementById("plan_list"),
+	plan_actions: document.getElementById("plan_actions"),
+	plan_list_cards: [],
+	plan_action_cards: [],
 	arts_of_war_dialog: document.getElementById("arts_of_war"),
 	arts_of_war_list: document.getElementById("arts_of_war_list"),
 	p1_global: document.getElementById("p1_global"),
@@ -240,56 +302,63 @@ function toggle_pieces() {
 
 function on_click_locale(evt) {
 	if (evt.button === 0) {
-		let id = evt.target.my_locale
+		let id = evt.target.my_id
 		send_action('locale', id)
 	}
 }
 
 function on_focus_locale(evt) {
-	let id = evt.target.my_locale
+	let id = evt.target.my_id
 	document.getElementById("status").textContent = `(${id}) ${data.locales[id].name} - ${data.locales[id].type}`
 }
 
 function on_click_cylinder(evt) {
 	if (evt.button === 0) {
-		let id = evt.target.my_lord
+		let id = evt.target.my_id
 		send_action('lord', id)
 	}
 }
 
 function on_click_arts_of_war(evt) {
 	if (evt.button === 0) {
-		let id = evt.target.my_arts_of_war
+		let id = evt.target.my_id
 		send_action('arts_of_war', id)
 	}
 }
 
+function on_click_plan(evt) {
+	if (evt.button === 0) {
+		let id = evt.target.my_id
+		send_action('plan', id)
+	}
+}
+
 function on_focus_cylinder(evt) {
-	let id = evt.target.my_lord
+	let id = evt.target.my_id
 	document.getElementById("status").textContent = `(${id}) ${data.lords[id].full_name} [${data.lords[id].command}] - ${data.lords[id].title}`
 }
 
 function on_click_lord_service_marker(evt) {
 	if (evt.button === 0) {
-		let id = evt.target.my_lord
+		let id = evt.target.my_id
 		send_action('lord_service', id)
 	}
 }
 
 function on_focus_lord_service_marker(evt) {
-	let id = evt.target.my_lord
+	let id = evt.target.my_id
 	document.getElementById("status").textContent = `(${id}) ${data.lords[id].full_name} - ${data.lords[id].title}`
 }
 
 function on_click_vassal_service_marker(evt) {
 	if (evt.button === 0) {
-		let id = evt.target.my_vassal
+		let id = evt.target.my_id
 		send_action('vassal', id)
 	}
 }
 
 function on_focus_vassal_service_marker(evt) {
-	let id = evt.target.my_vassal
+	let id = evt.target.my_id
 	let vassal = data.vassals[id]
 	let lord = data.lords[vassal.lord]
 	document.getElementById("status").textContent = `(${id}) ${lord.name} / ${vassal.name}`
@@ -521,6 +590,57 @@ function update_locale(loc) {
 		ui.locale_extra[loc].classList.toggle("action", is_locale_action(loc))
 }
 
+function update_plan() {
+	if (view.plan) {
+		ui.plan_dialog.classList.remove("hide")
+		for (let i = 0; i < 6; ++i) {
+			if (i < view.plan.length) {
+				let lord = view.plan[i]
+				if (lord < 0) {
+					if (player === "Teutons")
+						ui.plan_list_cards[i].className = "card teutonic cc_pass"
+					else
+						ui.plan_list_cards[i].className = "card russian cc_pass"
+				} else {
+					if (lord < 6)
+						ui.plan_list_cards[i].className = "card teutonic cc_lord_" + lord
+					else
+						ui.plan_list_cards[i].className = "card russian cc_lord_" + lord
+				}
+			} else if (i < max_plan_length()) {
+				if (player === "Teutons")
+					ui.plan_list_cards[i].className = "card teutonic cc_back"
+				else
+					ui.plan_list_cards[i].className = "card russian cc_back"
+			} else {
+				ui.plan_list_cards[i].className = "hide"
+			}
+		}
+		for (let lord = 0; lord < 12; ++lord) {
+			if (is_plan_action(lord)) {
+				ui.plan_action_cards[lord].classList.add("action")
+				ui.plan_action_cards[lord].classList.remove("disabled")
+			} else {
+				ui.plan_action_cards[lord].classList.remove("action")
+				ui.plan_action_cards[lord].classList.add("disabled")
+			}
+		}
+		if (is_plan_action(-1)) {
+			ui.plan_action_pass_p1.classList.add("action")
+			ui.plan_action_pass_p1.classList.remove("disabled")
+			ui.plan_action_pass_p2.classList.add("action")
+			ui.plan_action_pass_p2.classList.remove("disabled")
+		} else {
+			ui.plan_action_pass_p1.classList.remove("action")
+			ui.plan_action_pass_p1.classList.add("disabled")
+			ui.plan_action_pass_p2.classList.remove("action")
+			ui.plan_action_pass_p2.classList.add("disabled")
+		}
+	} else {
+		ui.plan_dialog.classList.add("hide")
+	}
+}
+
 function update_arts_of_war() {
 	if (view.actions && view.actions.arts_of_war) {
 		ui.arts_of_war_dialog.classList.remove("hide")
@@ -570,6 +690,8 @@ function update_arts_of_war() {
 }
 
 function on_update() {
+	restart_cache()
+
 	locale_layout.fill(0)
 	calendar_layout.fill(0)
 
@@ -633,6 +755,7 @@ function on_update() {
 			ui.vp2.className = `marker circle victory russian v${vp2>>1}`
 	}
 
+	update_plan()
 	update_arts_of_war()
 
 	action_button("ship", "Ship")
@@ -644,6 +767,7 @@ function on_update() {
 
 	action_button("done", "Done")
 	action_button("unfed", "Unfed")
+	action_button("end_plan", "End plan")
 	action_button("end_feed", "End feed")
 	action_button("end_pay", "End pay")
 	action_button("end_disband", "End disband")
@@ -681,8 +805,39 @@ function build_lord_mat(lord, ix, side, name) {
 function build_arts_of_war(side, c) {
 	let card = ui.arts_of_war[c] = document.createElement("div")
 	card.className = `card ${side} aow_${c}`
-	card.my_arts_of_war = c
+	card.my_id = c
 	card.addEventListener("mousedown", on_click_arts_of_war)
+}
+
+function build_plan() {
+	let elt
+	for (let i = 0; i < 6; ++i) {
+		elt = document.createElement("div")
+		elt.className = "hide"
+		ui.plan_list_cards.push(elt)
+		ui.plan_list.appendChild(elt)
+	}
+	for (let lord = 0; lord < 12; ++lord) {
+		let side = lord < 6 ? "teutonic" : "russian"
+		elt = document.createElement("div")
+		elt.className = `card ${side} cc_lord_${lord}`
+		elt.my_id = lord
+		elt.addEventListener("mousedown", on_click_plan)
+		ui.plan_action_cards.push(elt)
+		ui.plan_actions.appendChild(elt)
+	}
+
+	ui.plan_action_pass_p1 = elt = document.createElement("div")
+	elt.className = `card teutonic cc_pass`
+	elt.my_id = -1
+	elt.addEventListener("mousedown", on_click_plan)
+	ui.plan_actions.appendChild(elt)
+
+	ui.plan_action_pass_p2 = elt = document.createElement("div")
+	elt.className = `card russian cc_pass`
+	elt.my_id = -1
+	elt.addEventListener("mousedown", on_click_plan)
+	ui.plan_actions.appendChild(elt)
 }
 
 function build_map() {
@@ -715,7 +870,7 @@ function build_map() {
 		e.style.top = y + "px"
 		e.style.width = w + "px"
 		e.style.height = h + "px"
-		e.my_locale = ix
+		e.my_id = ix
 		e.addEventListener("mousedown", on_click_locale)
 		e.addEventListener("mouseenter", on_focus_locale)
 		e.addEventListener("mouseleave", on_blur)
@@ -731,7 +886,7 @@ function build_map() {
 			e.style.left = (cx - ew/2) + "px"
 			e.style.width = ew + "px"
 			e.style.height = eh + "px"
-			e.my_locale = ix
+			e.my_id = ix
 			e.addEventListener("mousedown", on_click_locale)
 			e.addEventListener("mouseenter", on_focus_locale)
 			e.addEventListener("mouseleave", on_blur)
@@ -744,7 +899,7 @@ function build_map() {
 	data.lords.forEach((lord, ix) => {
 		let e = ui.lord_cylinder[ix] = document.createElement("div")
 		e.className = "cylinder lord " + clean_name(lord.side) + " " + clean_name(lord.name) + " hide"
-		e.my_lord = ix
+		e.my_id = ix
 		e.addEventListener("mousedown", on_click_cylinder)
 		e.addEventListener("mouseenter", on_focus_cylinder)
 		e.addEventListener("mouseleave", on_blur)
@@ -752,7 +907,7 @@ function build_map() {
 
 		e = ui.lord_service[ix] = document.createElement("div")
 		e.className = "service_marker lord image" + lord.image + " " + clean_name(lord.side) + " " + clean_name(lord.name) + " hide"
-		e.my_lord = ix
+		e.my_id = ix
 		e.addEventListener("mousedown", on_click_lord_service_marker)
 		e.addEventListener("mouseenter", on_focus_lord_service_marker)
 		e.addEventListener("mouseleave", on_blur)
@@ -767,7 +922,7 @@ function build_map() {
 		let lord = data.lords[vassal.lord]
 		let e = ui.vassal_service[ix] = document.createElement("div")
 		e.className = "service_marker vassal image" + vassal.image + " " + clean_name(lord.side) + " " + clean_name(vassal.name) + " hide"
-		e.my_vassal = ix
+		e.my_id = ix
 		e.addEventListener("mousedown", on_click_vassal_service_marker)
 		e.addEventListener("mouseenter", on_focus_vassal_service_marker)
 		e.addEventListener("mouseleave", on_blur)
@@ -788,6 +943,8 @@ function build_map() {
 		document.getElementById("boxes").appendChild(e)
 	}
 
+	build_plan()
+
 	for (let c = 0; c < 21; ++c)
 		build_arts_of_war("teutonic", c)
 	for (let c = 21; c < 42; ++c)
@@ -797,4 +954,5 @@ function build_map() {
 build_map()
 // drag_element_with_mouse("#battle", "#battle_header")
 drag_element_with_mouse("#arts_of_war", "#arts_of_war_header")
+drag_element_with_mouse("#plan", "#plan_header")
 scroll_with_middle_mouse("main")

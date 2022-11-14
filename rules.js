@@ -171,6 +171,11 @@ function current_turn_name() {
 
 // === GAME STATE ===
 
+const first_p1_lord = 0
+const last_p1_lord = 5
+const first_p2_lord = 6
+const last_p2_lord = 11
+
 let first_friendly_lord = 0
 let last_friendly_lord = 5
 let first_enemy_lord = 6
@@ -182,11 +187,16 @@ function update_aliases() {
 		last_friendly_lord = 5
 		first_enemy_lord = 6
 		last_enemy_lord = 11
-	} else {
+	} else if (game.active === P2) {
 		first_friendly_lord = 6
 		last_friendly_lord = 11
 		first_enemy_lord = 0
 		last_enemy_lord = 5
+	} else {
+		first_friendly_lord = -1
+		last_friendly_lord = -1
+		first_enemy_lord = -1
+		last_enemy_lord = -1
 	}
 }
 
@@ -211,7 +221,7 @@ function pop_state() {
 function set_active(new_active) {
 	if (game.active !== new_active) {
 		game.active = new_active
-		update_active_aliases()
+		update_aliases()
 	}
 }
 
@@ -696,6 +706,8 @@ function setup_pleskau_quickstart() {
 	add_lord_assets(LORD_GAVRILO, CART, 1)
 	add_lord_assets(LORD_VLADISLAV, BOAT, 1)
 
+	log_h1("Levy " + current_turn_name())
+
 	log_h2("Teutons Muster")
 
 	log_h3("Knud & Abel")
@@ -742,10 +754,12 @@ function setup_pleskau_quickstart() {
 
 	game.veche_coin += 1
 
+	goto_campaign_plan()
+
 	game.p1_plan = [ LORD_YAROSLAV, LORD_RUDOLF, LORD_HERMANN, LORD_HERMANN, LORD_RUDOLF, LORD_HERMANN ]
 	game.p2_plan = [ LORD_GAVRILO, LORD_VLADISLAV, LORD_DOMASH, LORD_GAVRILO, LORD_DOMASH, LORD_DOMASH ]
 
-	goto_command_activation()
+	// goto_command_activation()
 }
 
 states.setup_lords = {
@@ -811,10 +825,10 @@ function goto_levy_muster() {
 function end_levy_muster() {
 	game.lords.moved = 0
 	set_active_enemy()
-	if (game.active === P1)
-		goto_levy_call_to_arms()
-	else
+	if (game.active === P2)
 		goto_levy_muster()
+	else
+		goto_levy_call_to_arms()
 }
 
 states.levy_muster = {
@@ -1059,13 +1073,80 @@ function end_levy_call_to_arms() {
 // === CAMPAIGN: PLAN ===
 
 function goto_campaign_plan() {
-	game.active = BOTH
+	game.turn++
+
+	log_h1("Campaign " + current_turn_name())
+
+	set_active(BOTH)
 	game.state = 'campaign_plan'
 	game.p1_plan = []
 	game.p2_plan = []
+
+	// TODO: define lieutenants
+}
+
+function max_plan_length() {
+	switch (current_season()) {
+	case SUMMER: return 6
+	case EARLY_WINTER: return 4
+	case LATE_WINTER: return 4
+	case RASPUTITSA: return 5
+	}
+}
+
+function count_cards_in_plan(plan, lord) {
+	let n = 0
+	for (let c of plan)
+		if (c === lord)
+			++n
+	return n
 }
 
 states.campaign_plan = {
+	prompt(current) {
+		view.prompt = "Create your plan."
+		let plan = (current === P1) ? game.p1_plan : game.p2_plan
+		view.plan = plan
+		if (plan.length < max_plan_length()) {
+			view.actions.end_plan = 0
+			if (count_cards_in_plan(plan, -1) < 3)
+				gen_action_plan(-1)
+			for (let lord = 0; lord <= last_lord; ++lord) {
+				console.log("campaign_plan", lord, current)
+				if (lord >= first_p1_lord && lord <= last_p1_lord && current !== P1)
+					continue
+				if (lord >= first_p2_lord && lord <= last_p2_lord && current !== P2)
+					continue
+				if (is_lord_on_map(lord) && count_cards_in_plan(plan, lord) < 3)
+					gen_action_plan(lord)
+			}
+		} else {
+			view.actions.end_plan = 1
+		}
+		if (plan.length > 0)
+			view.actions.undo = 1
+		else
+			view.actions.undo = 0
+	},
+	plan(lord, current) {
+		let plan = (current === P1) ? game.p1_plan : game.p2_plan
+		plan.push(lord)
+	},
+	undo(_, current) {
+		let plan = (current === P1) ? game.p1_plan : game.p2_plan
+		plan.length--
+	},
+	end_plan(_, current) {
+		console.log("active", game.active)
+		if (game.active === BOTH) {
+			if (current === P1)
+				set_active(P2)
+			else
+				set_active(P1)
+		} else {
+			end_campaign_plan()
+		}
+	},
 }
 
 function end_campaign_plan() {
@@ -1076,23 +1157,41 @@ function end_campaign_plan() {
 // === CAMPAIGN: COMMAND ACTIVATION ===
 
 function goto_command_activation() {
-	if (game.active === P1)
-		game.command = game.p1_plan.shift()
-	else
-		game.command = game.p2_plan.shift()
-	if (game.command === undefined) {
+	if (game.p2_plan.length === 0) {
 		game.command = NOBODY
 		goto_end_campaign()
+		return
+	}
+
+	if (game.p2_plan.length > game.p1_plan.length) {
+		set_active(P2)
+		game.command = game.p2_plan.shift()
 	} else {
-		game.who = game.command
+		set_active(P1)
+		game.command = game.p1_plan.shift()
+	}
+
+	if (game.command === -1) {
+		log_h2("Pass")
+		goto_command_activation()
+	} else {
 		goto_actions()
 	}
+}
+
+function goto_end_campaign() {
+	// TODO: end game check
+	game.turn++
+	goto_levy_arts_of_war()
 }
 
 // === CAMPAIGN: ACTIONS ===
 
 function goto_actions() {
+	log_h2(lord_name[game.command])
+
 	game.state = 'actions'
+	game.who = game.command
 	game.count = data.lords[game.command].command
 }
 
@@ -1106,13 +1205,17 @@ states.actions = {
 		view.prompt = `${lord_name[game.who]} has ${game.count}x actions.`
 		view.actions.end_actions = 1
 	},
+	end_actions() {
+		clear_undo()
+		end_actions()
+	},
 }
 
 // === CAMPAIGN: FEED ===
 
 function has_friendly_lord_who_moved_or_fought() {
-	for (let lord of game.moved)
-		if (is_friendly_lord(lord))
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (get_lord_moved(lord))
 			return true
 	return false
 }
@@ -1126,8 +1229,8 @@ function goto_feed() {
 states.feed = {
 	prompt() {
 		view.prompt = "You must Feed your who Moved or Fought."
-		for (let lord of game.moved)
-			if (is_friendly_lord(lord))
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+			if (get_lord_moved(lord))
 				gen_action_lord(lord)
 		view.actions.end_feed = 1
 	},
@@ -1170,7 +1273,9 @@ states.feed_lord = {
 
 function end_feed() {
 	set_active_enemy()
-	if (game.active === P1)
+	if (game.active === P2)
+		goto_feed()
+	else
 		goto_pay()
 }
 
@@ -1230,7 +1335,9 @@ states.pay_lord = {
 
 function end_pay() {
 	set_active_enemy()
-	if (game.active === P1)
+	if (game.active === P2)
+		goto_pay()
+	else
 		goto_disband()
 }
 
@@ -1253,7 +1360,9 @@ states.disband = {
 
 function end_disband() {
 	set_active_enemy()
-	if (game.active === P1) {
+	if (game.active === P2) {
+		goto_disband()
+	} else {
 		if (is_levy_phase())
 			goto_levy_muster()
 		else
@@ -1265,7 +1374,6 @@ function end_disband() {
 
 function goto_remove_markers() {
 	game.lords.moved = 0
-	set_active_enemy()
 	goto_command_activation()
 }
 
@@ -1371,6 +1479,10 @@ function gen_action_arts_of_war(c) {
 	gen_action('arts_of_war', c)
 }
 
+function gen_action_plan(lord) {
+	gen_action('plan', lord)
+}
+
 exports.view = function(state, current) {
 	load_state(state)
 
@@ -1389,13 +1501,14 @@ exports.view = function(state, current) {
 		ravaged: game.ravaged,
 		castles: game.castles,
 		command: game.command,
+		plan: null,
 		who: game.who,
 		where: game.where,
 	}
 
 	if (game.state === 'game_over') {
 		view.prompt = game.victory
-	} else if (current === 'Observer' || (current !== game.active && current !== BOTH)) {
+	} else if (current === 'Observer' || (game.active !== current && game.active !== BOTH)) {
 		let inactive = states[game.state].inactive || game.state
 		view.prompt = `Waiting for ${game.active} \u2014 ${inactive}...`
 	} else {
