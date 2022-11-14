@@ -25,7 +25,8 @@ header.your_turn { background-color: orange; }
 #log { background-color: whitesmoke; }
 #log .h1 { background-color: silver; font-weight: bold; padding-top:2px; padding-bottom:2px; text-align: center; }
 #log .h2 { background-color: gainsboro; padding-top:2px; padding-bottom:2px; text-align: center; }
-#log .h3 { background-color: lavender; padding-top:2px; padding-bottom:2px; text-align: center; }
+#log .h3 { text-decoration: underline; }
+#log .h4 { text-decoration: underline; }
 #log > .i { padding-left: 20px; }
 #log > .ii { padding-left: 32px; }
 #log > div > .i { padding-left: 12px; }
@@ -123,7 +124,7 @@ body.shift .mat .card:hover {
 	z-index: 200;
 }
 
-.mat .forces, .mat .routed, .mat .assets, .mat .vassals {
+.mat .forces, .mat .routed, .mat .assets, .mat .vassals, #veche {
 	position: absolute;
 	display: flex;
 	flex-wrap: wrap;
@@ -136,7 +137,7 @@ body.shift .mat .card:hover {
 	//background-color: #f004;
 }
 
-.mat .forces {
+.mat .forces, #veche {
 	justify-content: center;
 }
 
@@ -473,7 +474,7 @@ body.shift .mat .card:hover {
 .locale_extra.fort { border-radius: 30% 30% 0 0 }
 .locale_extra.bishopric { border-radius: 50% 50% 20% 20% }
 .locale_extra.city { border-radius: 50% 50% 0 0 }
-.locale_extra.archbishopric { border-radius: 50% 50% 25% 25%; }
+.locale_extra.novgorod { border-radius: 50% 50% 25% 25%; }
 
 .locale.tip, .locale_extra.tip {
 	background-color: #ff06;
@@ -573,7 +574,7 @@ body.shift .mat .card:hover {
 
 /* PIECES */
 
-#legate, .cylinder, .service_marker {
+#legate, .cylinder, .service_marker, .marker {
 	transition-property: top, left;
 	transition-duration: 700ms;
 	transition-timing-function: ease;
@@ -816,23 +817,25 @@ body.shift .marker:hover { transform: scale(2); z-index: 200; }
 .card.aow_40{background-image:url(cards.1x/aow_russian_none.jpg)}
 .card.aow_41{background-image:url(cards.1x/aow_russian_none.jpg)}
 
-.card.cc_russian_back{background-image:url(cards.1x/cc_russian_back.jpg)}
-.card.cc_russian_aleksandr{background-image:url(cards.1x/cc_russian_aleksandr.jpg)}
-.card.cc_russian_andrey{background-image:url(cards.1x/cc_russian_andrey.jpg)}
-.card.cc_russian_domash{background-image:url(cards.1x/cc_russian_domash.jpg)}
-.card.cc_russian_gavrilo{background-image:url(cards.1x/cc_russian_gavrilo.jpg)}
-.card.cc_russian_karelians{background-image:url(cards.1x/cc_russian_karelians.jpg)}
-.card.cc_russian_vladislav{background-image:url(cards.1x/cc_russian_vladislav.jpg)}
-.card.cc_russian_pass{background-image:url(cards.1x/cc_russian_pass.jpg)}
+.card.teutonic.cc_back{background-image:url(cards.1x/cc_teutonic_back.jpg)}
+.card.russian.cc_back{background-image:url(cards.1x/cc_russian_back.jpg)}
 
-.card.cc_teutonic_back{background-image:url(cards.1x/cc_teutonic_back.jpg)}
-.card.cc_teutonic_andreas{background-image:url(cards.1x/cc_teutonic_andreas.jpg)}
-.card.cc_teutonic_heinrich{background-image:url(cards.1x/cc_teutonic_heinrich.jpg)}
-.card.cc_teutonic_hermann{background-image:url(cards.1x/cc_teutonic_hermann.jpg)}
-.card.cc_teutonic_knud_and_abel{background-image:url(cards.1x/cc_teutonic_knud_and_abel.jpg)}
-.card.cc_teutonic_rudolf{background-image:url(cards.1x/cc_teutonic_rudolf.jpg)}
-.card.cc_teutonic_yaroslav{background-image:url(cards.1x/cc_teutonic_yaroslav.jpg)}
-.card.cc_teutonic_pass{background-image:url(cards.1x/cc_teutonic_pass.jpg)}
+.card.teutonic.cc_pass{background-image:url(cards.1x/cc_teutonic_pass.jpg)}
+.card.russian.cc_pass{background-image:url(cards.1x/cc_russian_pass.jpg)}
+
+.card.cc_lord_0{background-image:url(cards.1x/cc_teutonic_andreas.jpg)}
+.card.cc_lord_1{background-image:url(cards.1x/cc_teutonic_heinrich.jpg)}
+.card.cc_lord_2{background-image:url(cards.1x/cc_teutonic_hermann.jpg)}
+.card.cc_lord_3{background-image:url(cards.1x/cc_teutonic_knud_and_abel.jpg)}
+.card.cc_lord_4{background-image:url(cards.1x/cc_teutonic_rudolf.jpg)}
+.card.cc_lord_5{background-image:url(cards.1x/cc_teutonic_yaroslav.jpg)}
+
+.card.cc_lord_6{background-image:url(cards.1x/cc_russian_aleksandr.jpg)}
+.card.cc_lord_7{background-image:url(cards.1x/cc_russian_andrey.jpg)}
+.card.cc_lord_8{background-image:url(cards.1x/cc_russian_domash.jpg)}
+.card.cc_lord_9{background-image:url(cards.1x/cc_russian_gavrilo.jpg)}
+.card.cc_lord_10{background-image:url(cards.1x/cc_russian_karelians.jpg)}
+.card.cc_lord_11{background-image:url(cards.1x/cc_russian_vladislav.jpg)}
 
 @media (min-resolution: 97dpi) {
 .card.russian.aow_back{background-image:url(cards.1x/aow_russian_back.jpg)}
@@ -920,10 +923,13 @@ body.shift .marker:hover { transform: scale(2); z-index: 200; }
 				<div class="debug menu_separator"></div>
 				<div class="debug menu_item" onclick="send_save()">&#x1F41E; Save</div>
 				<div class="debug menu_item" onclick="send_restore()">&#x1F41E; Restore</div>
+				<div class="debug menu_item" onclick="send_restart('Pleskau (Quickstart)')">&#x26a0; Pleskau (Quickstart)</div>
 				<div class="debug menu_item" onclick="send_restart('Pleskau')">&#x26a0; Pleskau</div>
 				<div class="debug menu_item" onclick="send_restart('Watland')">&#x26a0; Watland</div>
 				<div class="debug menu_item" onclick="send_restart('Peipus')">&#x26a0; Peipus</div>
-				<div class="debug menu_item" onclick="send_restart('Quickstart')">&#x26a0; Quickstart</div>
+				<div class="debug menu_item" onclick="send_restart('Return of the Prince')">&#x26a0; Return of the Prince</div>
+				<div class="debug menu_item" onclick="send_restart('Return of the Prince (Nicolle)')">&#x26a0; Return of the Prince (Nicolle)</div>
+				<div class="debug menu_item" onclick="send_restart('Crusade on Novgorod')">&#x26a0; Crusade on Novgorod</div>
 			</div>
 		</div>
 		<div class="icon_button" onclick="toggle_pieces()"><img src="/images/earth-africa-europe.svg"></div>
@@ -947,7 +953,7 @@ body.shift .marker:hover { transform: scale(2); z-index: 200; }
 				<div class="role_user">-</div>
 			</div>
 		</div>
-		<div class="card_info"><div id="last_card" class="card russian cc_russian_back"></div></div>
+		<div class="card_info"><div id="command" class="card teutonic aow_back"></div></div>
 	</div>
 	<div id="log"></div>
 </aside>

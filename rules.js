@@ -1,5 +1,8 @@
 "use strict"
 
+const TODO = false
+
+const BOTH = "Both"
 const TEUTONS = "Teutons"
 const RUSSIANS = "Russians"
 
@@ -27,7 +30,7 @@ exports.scenarios = [
 	"Watland",
 	"Peipus",
 	"Return of the Prince",
-	"Return of the Prince (Nicolle Variant)",
+	"Return of the Prince (Nicolle)",
 	"Crusade on Novgorod",
 	"Pleskau (Quickstart)",
 ]
@@ -52,15 +55,22 @@ const SHIP = 6
 
 const data = require("./data.js")
 
+function find_arts_of_war(name) { return data.cards.findIndex(x => x.name === name) }
 function find_lord(name) { return data.lords.findIndex(x => x.name === name) }
-function find_locale(name) { return data.locales.findIndex(x => x?.name === name) }
+function find_locale(name) { return data.locales.findIndex(x => x.name === name) }
 
 const lord_name = data.lords.map(lord => lord.name)
+const vassal_name = data.vassals.map(vassal => vassal.name)
 
 const lord_count = data.lords.length
 const vassal_count = data.vassals.length
 const last_vassal = vassal_count - 1
 const last_lord = lord_count - 1
+
+const first_p1_locale = 0
+const last_p1_locale = 23
+const first_p2_locale = 24
+const last_p2_locale = 52
 
 const LORD_ANDREAS = find_lord("Andreas")
 const LORD_HEINRICH = find_lord("Heinrich")
@@ -100,6 +110,10 @@ const LOC_PORKHOV = find_locale("Porkhov")
 const LOC_VELIKIYE_LUKI = find_locale("Velikiye Luki")
 
 const LOC_DUBROVNO = find_locale("Dubrovno")
+const LOC_VOD = find_locale("Vod")
+const LOC_ZHELTSY = find_locale("Zheltsy")
+const LOC_TESOVO = find_locale("Tesovo")
+const LOC_SABLIA = find_locale("Sablia")
 
 const NOBODY = -1
 const NOWHERE = -1
@@ -113,11 +127,14 @@ const LATE_WINTER = 2
 const RASPUTITSA = 3
 
 const SEASONS = [
+	null,
 	SUMMER, SUMMER, EARLY_WINTER, EARLY_WINTER, LATE_WINTER, LATE_WINTER, RASPUTITSA, RASPUTITSA,
 	SUMMER, SUMMER, EARLY_WINTER, EARLY_WINTER, LATE_WINTER, LATE_WINTER, RASPUTITSA, RASPUTITSA,
+	null
 ]
 
 const TURN_NAME = [
+	null,
 	"1 - Summer 1240",
 	"2 - Summer 1240",
 	"3 - Early Winter 1240",
@@ -134,6 +151,7 @@ const TURN_NAME = [
 	"14 - Late Winter 1242",
 	"15 - Rasputitsa 1242",
 	"16 - Rasputitsa 1242",
+	null
 ]
 
 const USABLE_TRANSPORT = [
@@ -245,7 +263,13 @@ function set_lord_locale(lord, locale) {
 }
 
 function set_lord_service(lord, service) {
+	if (service < 0) service = 0
+	if (service > 16) service = 16
 	game.lords.service[lord] = service
+}
+
+function add_lord_service(lord, n) {
+	set_lord_service(lord, get_lord_service(lord) + n)
 }
 
 function set_lord_assets(lord, n, x) {
@@ -298,6 +322,24 @@ function set_lord_vassal_service(lord, n, x) {
 
 // === GAME STATE HELPERS ===
 
+function count_lord_forces(lord) {
+	return get_lord_forces(lord, KNIGHTS)
+		+ get_lord_forces(lord, SERGEANTS)
+		+ get_lord_forces(lord, LIGHT_HORSE)
+		+ get_lord_forces(lord, ASIATIC_HORSE)
+		+ get_lord_forces(lord, MEN_AT_ARMS)
+		+ get_lord_forces(lord, MILITIA)
+		+ get_lord_forces(lord, SERFS)
+}
+
+function is_campaign_phase() {
+	return (game.turn & 1) === 1
+}
+
+function is_levy_phase() {
+	return (game.turn & 1) === 0
+}
+
 function is_card_in_use(c) {
 	if (set_has(game.global_cards, c))
 		return true
@@ -329,6 +371,14 @@ function is_vassal_ready(vassal) {
 	return game.vassals[vassal] === 0
 }
 
+function is_friendly_lord(lord) {
+	return lord >= first_friendly_lord && lord <= last_friendly_lord
+}
+
+function is_enemy_lord(lord) {
+	return lord >= first_enemy_lord && lord <= last_enemy_lord
+}
+
 function is_lord_at_friendly_locale(lord) {
 	let loc = get_lord_locale(lord)
 	return is_friendly_locale(loc)
@@ -353,10 +403,8 @@ function can_add_transport(who, what) {
 	return get_lord_assets(who, what) < 8
 }
 
-function roll_die(reason) {
-	let die = random(6) + 1
-	log(`Rolled ${die}${reason}.`)
-	return die
+function roll_die() {
+	return random(6) + 1
 }
 
 // === SETUP ===
@@ -397,6 +445,8 @@ function muster_lord(lord, locale, service) {
 
 function muster_vassal(lord, vassal) {
 	let info = data.vassals[vassal]
+
+	logi(`${vassal_name[vassal]}`)
 
 	game.vassals[vassal] = 1
 
@@ -442,8 +492,10 @@ exports.setup = function (seed, scenario, options) {
 		veche_coin: 0,
 		conquered: [],
 		ravaged: [],
+		castles: [],
 		global_cards: [],
 
+		command: NOBODY,
 		who: NOBODY,
 		where: NOWHERE,
 		what: NOTHING,
@@ -467,14 +519,14 @@ exports.setup = function (seed, scenario, options) {
 	case "Return of the Prince":
 		setup_return_of_the_prince()
 		break
-	case "Return of the Prince (Nicolle Variant)":
+	case "Return of the Prince (Nicolle)":
 		setup_return_of_the_prince_nicolle()
 		break
 	case "Crusade on Novgorod":
 		setup_crusade_on_novgorod()
 		break
 	case "Pleskau (Quickstart)":
-		setup_quickstart()
+		setup_pleskau_quickstart()
 		break
 	}
 
@@ -483,23 +535,22 @@ exports.setup = function (seed, scenario, options) {
 
 function setup_pleskau() {
 	game.turn = 1 << 1
+
 	game.veche_vp = 1
+
 	muster_lord(LORD_HERMANN, LOC_DORPAT, 4)
 	muster_lord(LORD_KNUD_ABEL, LOC_REVAL, 3)
 	muster_lord(LORD_YAROSLAV, LOC_ODENPAH, 2)
 	muster_lord(LORD_GAVRILO, LOC_PSKOV, 4)
 	muster_lord(LORD_VLADISLAV, LOC_NEVA, 3)
+
 	setup_lord_on_calendar(LORD_RUDOLF, 1)
 	setup_lord_on_calendar(LORD_DOMASH, 1)
 }
 
-function setup_quickstart() {
-	setup_pleskau()
-	// TODO: automated muster
-}
-
 function setup_watland() {
 	game.turn = 4 << 1
+
 	game.veche_vp = 1
 	game.veche_coin = 1
 
@@ -522,6 +573,181 @@ function setup_watland() {
 	setup_lord_on_calendar(LORD_HERMANN, 8)
 }
 
+function setup_peipus() {
+	game.turn = 13 << 1
+
+	game.veche_vp = 4
+	game.veche_coin = 3
+
+	set_add(game.castles, LOC_KOPORYE)
+	set_add(game.conquered, LOC_IZBORSK)
+	set_add(game.conquered, LOC_PSKOV)
+	set_add(game.ravaged, LOC_VOD)
+	set_add(game.ravaged, LOC_ZHELTSY)
+	set_add(game.ravaged, LOC_TESOVO)
+	set_add(game.ravaged, LOC_SABLIA)
+	set_add(game.ravaged, LOC_PSKOV)
+	set_add(game.ravaged, LOC_DUBROVNO)
+
+	muster_lord(LORD_HERMANN, LOC_DORPAT, 16)
+	muster_lord(LORD_YAROSLAV, LOC_PSKOV, 14)
+	muster_lord(LORD_ALEKSANDR, LOC_NOVGOROD, 16)
+	muster_lord(LORD_ANDREY, LOC_NOVGOROD, 16)
+	muster_lord(LORD_DOMASH, LOC_NOVGOROD, 16)
+	muster_lord(LORD_KARELIANS, LOC_NOVGOROD, 14)
+
+	setup_lord_on_calendar(LORD_HEINRICH, 13)
+	setup_lord_on_calendar(LORD_KNUD_ABEL, 13)
+	setup_lord_on_calendar(LORD_RUDOLF, 13)
+	setup_lord_on_calendar(LORD_GAVRILO, 13)
+	setup_lord_on_calendar(LORD_VLADISLAV, 15)
+}
+
+function setup_return_of_the_prince() {
+	game.turn = 9 << 1
+
+	game.veche_vp = 3
+	game.veche_coin = 2
+
+	set_add(game.castles, LOC_KOPORYE)
+	set_add(game.conquered, LOC_KAIBOLOVO)
+	set_add(game.conquered, LOC_KOPORYE)
+	set_add(game.conquered, LOC_IZBORSK)
+	set_add(game.conquered, LOC_PSKOV)
+	set_add(game.ravaged, LOC_VOD)
+	set_add(game.ravaged, LOC_ZHELTSY)
+	set_add(game.ravaged, LOC_TESOVO)
+	set_add(game.ravaged, LOC_SABLIA)
+	set_add(game.ravaged, LOC_PSKOV)
+	set_add(game.ravaged, LOC_DUBROVNO)
+
+	muster_lord(LORD_ANDREAS, LOC_KOPORYE, 12)
+	muster_lord(LORD_ALEKSANDR, LOC_NOVGOROD, 14)
+
+	setup_lord_on_calendar(LORD_HERMANN, 9)
+	setup_lord_on_calendar(LORD_RUDOLF, 9)
+	setup_lord_on_calendar(LORD_YAROSLAV, 9)
+	setup_lord_on_calendar(LORD_ANDREY, 9)
+	setup_lord_on_calendar(LORD_KARELIANS, 9)
+	setup_lord_on_calendar(LORD_VLADISLAV, 10)
+	setup_lord_on_calendar(LORD_HEINRICH, 11)
+	setup_lord_on_calendar(LORD_KNUD_ABEL, 11)
+	setup_lord_on_calendar(LORD_DOMASH, 11)
+	setup_lord_on_calendar(LORD_GAVRILO, 13)
+}
+
+function setup_return_of_the_prince_nicolle() {
+	game.turn = 9 << 1
+
+	game.veche_vp = 3
+	game.veche_coin = 2
+
+	set_add(game.castles, LOC_KOPORYE)
+	set_add(game.conquered, LOC_KAIBOLOVO)
+	set_add(game.conquered, LOC_KOPORYE)
+	set_add(game.ravaged, LOC_VOD)
+	set_add(game.ravaged, LOC_ZHELTSY)
+	set_add(game.ravaged, LOC_TESOVO)
+	set_add(game.ravaged, LOC_SABLIA)
+
+	muster_lord(LORD_ANDREAS, LOC_RIGA, 12)
+	muster_lord(LORD_HERMANN, LOC_DORPAT, 12)
+	muster_lord(LORD_KNUD_ABEL, LOC_KOPORYE, 11)
+	muster_lord(LORD_ALEKSANDR, LOC_NOVGOROD, 14)
+	muster_lord(LORD_GAVRILO, LOC_PSKOV, 12)
+
+	setup_lord_on_calendar(LORD_RUDOLF, 9)
+	setup_lord_on_calendar(LORD_YAROSLAV, 9)
+	setup_lord_on_calendar(LORD_ANDREY, 9)
+	setup_lord_on_calendar(LORD_KARELIANS, 9)
+	setup_lord_on_calendar(LORD_VLADISLAV, 10)
+	setup_lord_on_calendar(LORD_HEINRICH, 11)
+	setup_lord_on_calendar(LORD_DOMASH, 11)
+}
+
+function setup_crusade_on_novgorod() {
+	game.turn = 1 << 1
+
+	game.veche_vp = 1
+	game.veche_coin = 0
+
+	muster_lord(LORD_HERMANN, LOC_DORPAT, 4)
+	muster_lord(LORD_KNUD_ABEL, LOC_REVAL, 3)
+	muster_lord(LORD_YAROSLAV, LOC_ODENPAH, 2)
+	muster_lord(LORD_GAVRILO, LOC_PSKOV, 4)
+	muster_lord(LORD_VLADISLAV, LOC_NEVA, 3)
+
+	setup_lord_on_calendar(LORD_ANDREAS, 1)
+	setup_lord_on_calendar(LORD_HEINRICH, 1)
+	setup_lord_on_calendar(LORD_RUDOLF, 1)
+	setup_lord_on_calendar(LORD_DOMASH, 1)
+	setup_lord_on_calendar(LORD_KARELIANS, 3)
+	setup_lord_on_calendar(LORD_ALEKSANDR, 5)
+	setup_lord_on_calendar(LORD_ANDREY, 5)
+}
+
+function setup_pleskau_quickstart() {
+	setup_pleskau()
+
+	add_lord_assets(LORD_HERMANN, CART, 1)
+	add_lord_assets(LORD_YAROSLAV, CART, 1)
+
+	add_lord_assets(LORD_GAVRILO, BOAT, 1)
+	add_lord_assets(LORD_GAVRILO, CART, 1)
+	add_lord_assets(LORD_VLADISLAV, BOAT, 1)
+
+	log_h2("Teutons Muster")
+
+	log_h3("Knud & Abel")
+	logi(`Rudolf at %${LOC_WENDEN}`)
+	muster_lord(LORD_RUDOLF, LOC_WENDEN)
+	logii("Cart")
+	add_lord_assets(LORD_RUDOLF, CART, 1)
+
+	logi("Boat")
+	add_lord_assets(LORD_KNUD_ABEL, BOAT, 1)
+
+	log_h3("Hermann")
+	muster_vassal(LORD_HERMANN, data.lords[LORD_HERMANN].vassals[0])
+	logi("Capability T4")
+	set_lord_capability(LORD_HERMANN, 0, find_arts_of_war("T4"))
+	logi("Capability T14")
+	set_lord_capability(LORD_HERMANN, 1, find_arts_of_war("T14"))
+
+	log_h3("Yaroslav")
+	logi("Capability T3")
+	set_lord_capability(LORD_YAROSLAV, 0, find_arts_of_war("T3"))
+
+	set_add(game.global_cards, find_arts_of_war("T13"))
+	game.legate = LOC_DORPAT
+
+	log_h2("Russians Muster")
+
+	log_h3("Vladislav")
+	logi("Capability R8")
+	set_add(game.global_cards, find_arts_of_war("R8"))
+	logi(`Domash at %${LOC_NOVGOROD}`)
+	muster_lord(LORD_DOMASH, LOC_NOVGOROD)
+	logii("Boat")
+	add_lord_assets(LORD_DOMASH, BOAT, 2)
+	logii("Cart")
+	add_lord_assets(LORD_DOMASH, CART, 2)
+
+	log_h3("Gavrilo")
+	muster_vassal(LORD_GAVRILO, data.lords[LORD_GAVRILO].vassals[0])
+	logi("Capability R2")
+	set_lord_capability(LORD_GAVRILO, 0, find_arts_of_war("R2"))
+	logi("Capability R6")
+	set_lord_capability(LORD_GAVRILO, 1, find_arts_of_war("R6"))
+
+	game.veche_coin += 1
+
+	game.p1_plan = [ LORD_YAROSLAV, LORD_RUDOLF, LORD_HERMANN, LORD_HERMANN, LORD_RUDOLF, LORD_HERMANN ]
+	game.p2_plan = [ LORD_GAVRILO, LORD_VLADISLAV, LORD_DOMASH, LORD_GAVRILO, LORD_DOMASH, LORD_DOMASH ]
+
+	goto_command_activation()
+}
+
 states.setup_lords = {
 	prompt() {
 		view.prompt = "Setup your Lords."
@@ -541,6 +767,7 @@ states.setup_lords = {
 	},
 	lord(lord) {
 		push_undo()
+		log(`${lord_name[lord]} at %${get_lord_locale(lord)}`)
 		push_state('muster_lord_transport')
 		set_lord_moved(lord, 1)
 		game.who = lord
@@ -548,19 +775,15 @@ states.setup_lords = {
 	},
 	end_setup() {
 		clear_undo()
-		end_setup()
+		end_setup_lords()
 	},
 }
 
 function end_setup_lords() {
-	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-		set_lord_moved(lord, 0)
-	if (game.active === P1) {
-		set_active_enemy()
-	} else {
-		set_active_enemy()
+	game.lords.moved = 0
+	set_active_enemy()
+	if (game.active === P1)
 		goto_levy_arts_of_war()
-	}
 }
 
 // === LEVY: ARTS OF WAR ===
@@ -571,56 +794,27 @@ function goto_levy_arts_of_war() {
 	end_levy_arts_of_war()
 }
 
-function end_levy_arts_of_war() {
-	goto_levy_pay()
-}
-
 states.levy_arts_of_war = {
 }
 
-// === LEVY: PAY ===
-
-function goto_levy_pay() {
-	game.state = 'levy_pay'
-	end_levy_pay()
-}
-
-function end_levy_pay() {
-	goto_levy_disband()
-}
-
-states.levy_pay = {
-}
-
-// === LEVY: DISBAND ===
-
-function goto_levy_disband() {
-	game.state = 'levy_disband'
-	end_levy_disband()
-}
-
-function end_levy_disband() {
-	goto_levy_muster()
-}
-
-states.levy_disband = {
+function end_levy_arts_of_war() {
+	goto_pay()
 }
 
 // === LEVY: MUSTER ===
 
 function goto_levy_muster() {
+	log_h2(game.active + " Muster")
 	game.state = 'levy_muster'
 }
 
 function end_levy_muster() {
-	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-		set_lord_moved(lord, 0)
-	if (game.active === P1) {
-		set_active_enemy()
-	} else {
-		set_active_enemy()
+	game.lords.moved = 0
+	set_active_enemy()
+	if (game.active === P1)
 		goto_levy_call_to_arms()
-	}
+	else
+		goto_levy_muster()
 }
 
 states.levy_muster = {
@@ -640,6 +834,7 @@ states.levy_muster = {
 	},
 	lord(lord) {
 		push_undo()
+		log_h3(`${lord_name[lord]} at %${get_lord_locale(lord)}`)
 		push_state('levy_muster_lord')
 		game.who = lord
 		game.count = data.lords[lord].lordship
@@ -659,9 +854,9 @@ states.levy_muster_lord = {
 
 			// Roll to muster Ready Lord at Seat
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
-				if (lord === ALEKSANDR)
+				if (lord === LORD_ALEKSANDR)
 					continue
-				if (lord === ANDREY && game.who !== ALEKSANDR)
+				if (lord === LORD_ANDREY && game.who !== LORD_ALEKSANDR)
 					continue
 				if (is_lord_ready(lord))
 					// TODO: has available seat
@@ -698,40 +893,46 @@ states.levy_muster_lord = {
 	lord(other) {
 		clear_undo()
 		--game.count
-		let die = roll_die(` to muster ${lord_name[other]}`)
-		// TODO: roll for lord
-		if (die <= data.lords[other].fealty) {
-			logi(`Success!`)
+		let die = roll_die()
+		let fealty = data.lords[other].fealty
+		if (die <= fealty) {
+			logi(`${lord_name[other]} rolled ${die} <= ${fealty}`)
 			push_state('muster_lord_at_seat')
 			game.who = other
 		} else {
-			logi(`Failed.`)
+			logi(`${lord_name[other]} rolled ${die} > ${fealty}`)
+			logii(`failed`)
 		}
 	},
 
 	vassal(vassal) {
 		push_undo()
+		logi(vassal_names[vassal])
 		--game.count
 		muster_vassal(game.who, vassal)
 	},
 
 	ship() {
 		push_undo()
+		logi("Ship")
 		--game.count
 		add_lord_assets(game.who, SHIP, 1)
 	},
 	boat() {
 		push_undo()
+		logi("Boat")
 		--game.count
 		add_lord_assets(game.who, BOAT, 1)
 	},
 	cart() {
 		push_undo()
+		logi("Cart")
 		--game.count
 		add_lord_assets(game.who, CART, 1)
 	},
 	sled() {
 		push_undo()
+		logi("Sled")
 		--game.count
 		add_lord_assets(game.who, SLED, 1)
 	},
@@ -757,7 +958,7 @@ states.muster_lord_at_seat = {
 	},
 	locale(loc) {
 		push_undo()
-		logi(`Mustered at %${loc}.`)
+		logii(`at %${loc}`)
 		set_lord_moved(game.who, 1)
 		muster_lord(game.who, loc)
 		game.state = 'muster_lord_transport'
@@ -783,24 +984,28 @@ states.muster_lord_transport = {
 	},
 	ship() {
 		push_undo()
+		logii("Ship")
 		add_lord_assets(game.who, SHIP, 1)
 		if (--game.count === 0)
 			pop_state()
 	},
 	boat() {
 		push_undo()
+		logii("Boat")
 		add_lord_assets(game.who, BOAT, 1)
 		if (--game.count === 0)
 			pop_state()
 	},
 	cart() {
 		push_undo()
+		logii("Cart")
 		add_lord_assets(game.who, CART, 1)
 		if (--game.count === 0)
 			pop_state()
 	},
 	sled() {
 		push_undo()
+		logii("Sled")
 		add_lord_assets(game.who, SLED, 1)
 		if (--game.count === 0)
 			pop_state()
@@ -819,6 +1024,7 @@ states.muster_capability = {
 	},
 	arts_of_war(c) {
 		push_undo()
+		logi(`Capability #${c}`)
 		if (!data.cards[c].lords) {
 			set_add(game.global_cards, c)
 		} else {
@@ -843,17 +1049,224 @@ function goto_levy_call_to_arms() {
 	end_levy_call_to_arms()
 }
 
+states.levy_call_to_arms = {
+}
+
 function end_levy_call_to_arms() {
 	goto_campaign_plan()
 }
 
-states.levy_call_to_arms = {
-}
-
-// === CAMPAIGN ===
+// === CAMPAIGN: PLAN ===
 
 function goto_campaign_plan() {
+	game.active = BOTH
 	game.state = 'campaign_plan'
+	game.p1_plan = []
+	game.p2_plan = []
+}
+
+states.campaign_plan = {
+}
+
+function end_campaign_plan() {
+	set_active(P1)
+	goto_command_activation()
+}
+
+// === CAMPAIGN: COMMAND ACTIVATION ===
+
+function goto_command_activation() {
+	if (game.active === P1)
+		game.command = game.p1_plan.shift()
+	else
+		game.command = game.p2_plan.shift()
+	if (game.command === undefined) {
+		game.command = NOBODY
+		goto_end_campaign()
+	} else {
+		game.who = game.command
+		goto_actions()
+	}
+}
+
+// === CAMPAIGN: ACTIONS ===
+
+function goto_actions() {
+	game.state = 'actions'
+	game.count = data.lords[game.command].command
+}
+
+function end_actions() {
+	set_active(P1)
+	goto_feed()
+}
+
+states.actions = {
+	prompt() {
+		view.prompt = `${lord_name[game.who]} has ${game.count}x actions.`
+		view.actions.end_actions = 1
+	},
+}
+
+// === CAMPAIGN: FEED ===
+
+function has_friendly_lord_who_moved_or_fought() {
+	for (let lord of game.moved)
+		if (is_friendly_lord(lord))
+			return true
+	return false
+}
+
+function goto_feed() {
+	game.state = 'feed'
+	if (!has_friendly_lord_who_moved_or_fought())
+		end_feed()
+}
+
+states.feed = {
+	prompt() {
+		view.prompt = "You must Feed your who Moved or Fought."
+		for (let lord of game.moved)
+			if (is_friendly_lord(lord))
+				gen_action_lord(lord)
+		view.actions.end_feed = 1
+	},
+	lord(lord) {
+		push_undo()
+		game.who = lord
+		game.count = (count_lord_forces(lord) / 6 | 0) + 1
+		game.state = 'feed_lord'
+	},
+	end_feed() {
+		clear_undo()
+		end_feed()
+	},
+}
+
+states.feed_lord = {
+	prompt() {
+		view.prompt = "You must Feed ${lord_name[game.who]} ${game.count}x Loot or Provender."
+		// TODO: find loot or prov!
+		view.actions.unfed = 1
+	},
+	loot(lord) {
+		logi(`Fed ${lord_name[game.who]} with Loot from ${lord_name[lord]}.`)
+		add_lord_assets(lord, LOOT, -1)
+		if (--game.count === 0)
+			game.state = 'feed'
+	},
+	prov(lord) {
+		logi(`Fed ${lord_name[game.who]} with Provender from ${lord_name[lord]}.`)
+		add_lord_assets(lord, PROV, -1)
+		if (--game.count === 0)
+			game.state = 'feed'
+	},
+	unfed() {
+		logi(`Did not feed ${lord_name[game.who]}.`)
+		add_lord_service(game.who, -1)
+		game.state = 'feed'
+	},
+}
+
+function end_feed() {
+	set_active_enemy()
+	if (game.active === P1)
+		goto_pay()
+}
+
+// === LEVY & CAMPAIGN: PAY ===
+
+function goto_pay() {
+	game.state = 'pay'
+	if (TODO)
+		end_pay()
+}
+
+states.pay = {
+	prompt() {
+		view.prompt = "You may Pay your Lords."
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+			if (is_lord_on_map(lord))
+				gen_action_lord(lord)
+		view.actions.end_pay = 1
+	},
+	lord(lord) {
+		push_undo()
+		push_state('pay_lord')
+		game.who = lord
+	},
+	end_pay() {
+		end_pay()
+	},
+}
+
+states.pay_lord = {
+	prompt() {
+		view.prompt = `You may Pay ${lord_name[game.who]} with Coin or Loot.`
+		if (game.active === RUSSIANS) {
+			if (game.veche_coin > 0)
+				view.actions.veche_coin = 1
+		}
+	},
+	loot(lord) {
+		logi(`Paid ${lord_name[game.who]} with Loot from ${lord_name[lord]}.`)
+		add_lord_assets(lord, LOOT, -1)
+		add_lord_service(game.who, 1)
+		pop_state()
+	},
+	coin(lord) {
+		logi(`Paid ${lord_name[game.who]} with Coin from ${lord_name[lord]}.`)
+		add_lord_assets(lord, COIN, -1)
+		add_lord_service(game.who, 1)
+		pop_state()
+	},
+	veche_coin() {
+		logi(`Paid ${lord_name[game.who]} with Coin from Veche.`)
+		game.veche_coin --
+		add_lord_service(game.who, 1)
+		pop_state()
+	}
+}
+
+function end_pay() {
+	set_active_enemy()
+	if (game.active === P1)
+		goto_disband()
+}
+
+// === LEVY & CAMPAIGN: DISBAND ===
+
+function goto_disband() {
+	game.state = 'disband'
+	// TODO
+}
+
+states.disband = {
+	prompt() {
+		view.prompt = "You must Disband Lords at their Service limit."
+		view.actions.end_disband = 1
+	},
+	end_disband() {
+		end_disband()
+	},
+}
+
+function end_disband() {
+	set_active_enemy()
+	if (game.active === P1) {
+		if (is_levy_phase())
+			goto_levy_muster()
+		else
+			goto_remove_markers()
+	}
+}
+
+// === CAMPAIGN: REMOVE MARKERS ===
+
+function goto_remove_markers() {
+	game.lords.moved = 0
+	set_active_enemy()
+	goto_command_activation()
 }
 
 // === GAME OVER ===
@@ -905,6 +1318,10 @@ function logi(msg) {
 	game.log.push(">" + msg)
 }
 
+function logii(msg) {
+	game.log.push(">>" + msg)
+}
+
 function log_h1(msg) {
 	log_br()
 	log(".h1 " + msg)
@@ -920,7 +1337,6 @@ function log_h2(msg) {
 function log_h3(msg) {
 	log_br()
 	log(".h3 " + msg)
-	log_br()
 }
 
 function log_h4(msg) {
@@ -956,8 +1372,11 @@ function gen_action_arts_of_war(c) {
 }
 
 exports.view = function(state, current) {
-	game = state
+	load_state(state)
+
 	view = {
+		prompt: null,
+		actions: null,
 		log: game.log,
 		turn: game.turn,
 		lords: game.lords,
@@ -968,18 +1387,21 @@ exports.view = function(state, current) {
 		global_cards: game.global_cards,
 		conquered: game.conquered,
 		ravaged: game.ravaged,
+		castles: game.castles,
+		command: game.command,
 		who: game.who,
 		where: game.where,
 	}
+
 	if (game.state === 'game_over') {
 		view.prompt = game.victory
-	} else if (current === 'Observer' || game.active !== current) {
+	} else if (current === 'Observer' || (current !== game.active && current !== BOTH)) {
 		let inactive = states[game.state].inactive || game.state
 		view.prompt = `Waiting for ${game.active} \u2014 ${inactive}...`
 	} else {
 		view.actions = {}
 		if (states[game.state])
-			states[game.state].prompt()
+			states[game.state].prompt(current)
 		else
 			view.prompt = "Unknown state: " + game.state
 		if (view.actions.undo === undefined) {
@@ -997,7 +1419,7 @@ exports.action = function (state, current, action, arg) {
 	Object.seal(game) // XXX: don't allow adding properties
 	let S = states[game.state]
 	if (S && action in S) {
-		S[action](arg)
+		S[action](arg, current)
 	} else {
 		if (action === 'undo' && game.undo && game.undo.length > 0)
 			pop_undo()

@@ -94,18 +94,18 @@ var trackways = []
 const scale = 1
 
 const vp_map = {
-	archbishopric: 3,
+	novgorod: 3,
 	city: 2,
 	fort: 1,
 	bishopric: 2,
 	castle: 1,
 	traderoute: 1,
-	town: 0.5,
-	region: 0.5,
+	town: 0,
+	region: 0,
 }
 
 const wall_map = {
-	archbishopric: 3,
+	novgorod: 3,
 	city: 3,
 	fort: 3,
 	traderoute: 0,
@@ -114,6 +114,9 @@ const wall_map = {
 	town: 0,
 	region: 0,
 }
+
+let conquerable = []
+let strongholds = []
 
 function defloc(region, stronghold, type, name) {
 	let [x, y, w, h] = boxes[name]
@@ -124,6 +127,10 @@ function defloc(region, stronghold, type, name) {
 	locmap[name] = locales.length
 	let vp = vp_map[type]
 	let walls = wall_map[type]
+	if (vp > 0)
+		conquerable.push(locales.length)
+	if (stronghold > 0)
+		strongholds.push(locales.length)
 	locales.push({ name, type, stronghold, walls, vp, region, ways: [], box: { x, y, w, h } })
 }
 
@@ -174,7 +181,7 @@ defloc("Crusader Livonia", 0, "region", "Tolowa")
 defloc("Crusader Livonia", 0, "region", "Ugaunia")
 defloc("Crusader Livonia", 0, "region", "Waiga")
 
-defloc("Novgorodan Rus", 3, "archbishopric", "Novgorod")
+defloc("Novgorodan Rus", 3, "novgorod", "Novgorod")
 defloc("Novgorodan Rus", 3, "city", "Ladoga")
 defloc("Novgorodan Rus", 3, "city", "Pskov")
 defloc("Novgorodan Rus", 3, "city", "Rusa")
@@ -622,9 +629,9 @@ arts_of_war_event("T15", "Mindaugas")
 arts_of_war_event("T16", "Famine")
 arts_of_war_event("T17", "Dietrich von Grüningen")
 arts_of_war_event("T18", "Swedish Crusade")
-arts_of_war_event("TNo", "No Event")
-arts_of_war_event("TNo", "No Event")
-arts_of_war_event("TNo", "No Event")
+arts_of_war_event("T0", "No Event")
+arts_of_war_event("T0", "No Event")
+arts_of_war_event("T0", "No Event")
 
 arts_of_war_capability("T1", "Treaty of Stensby", [ "Heinrich", "Knud & Abel" ])
 arts_of_war_capability("T2", "Raiders", "any")
@@ -663,9 +670,9 @@ arts_of_war_event("R15", "Death of the Pope")
 arts_of_war_event("R16", "Tempest")
 arts_of_war_event("R17", "Dietrich von Grüningen")
 arts_of_war_event("R18", "Bountiful Harvest")
-arts_of_war_event("RNo", "No Event")
-arts_of_war_event("RNo", "No Event")
-arts_of_war_event("RNo", "No Event")
+arts_of_war_event("R0", "No Event")
+arts_of_war_event("R0", "No Event")
+arts_of_war_event("R0", "No Event")
 
 arts_of_war_capability("R1", "Luchniki", [ "Vladislav", "Karelians", "Gavrilo", "Domash" ])
 arts_of_war_capability("R2", "Luchniki", [ "Vladislav", "Karelians", "Gavrilo", "Domash" ])
@@ -803,6 +810,8 @@ script.push("montage -mode concatenate -tile 2x " + vassal_service.Russian.join(
 
 print("const data = {")
 print("seaports:" + JSON.stringify(seaports) + ",")
+print("conquerable:" + JSON.stringify(conquerable) + ",")
+print("strongholds:" + JSON.stringify(strongholds) + ",")
 dumplist("locales", locales)
 dumplist("ways", ways)
 dumplist("lords", lords)

@@ -6,6 +6,24 @@ const round = Math.round
 const floor = Math.floor
 const ceil = Math.ceil
 
+// unit types
+const KNIGHTS = 0
+const SERGEANTS = 1
+const LIGHT_HORSE = 2
+const ASIATIC_HORSE = 3
+const MEN_AT_ARMS = 4
+const MILITIA = 5
+const SERFS = 6
+
+// asset types
+const PROV = 0
+const COIN = 1
+const LOOT = 2
+const CART = 3
+const SLED = 4
+const BOAT = 5
+const SHIP = 6
+
 function pack1_get(word, n) {
 	return (word >>> n) & 1
 }
@@ -38,37 +56,43 @@ const asset_type_count = 7
 const asset_type_name = [ "prov", "coin", "loot", "cart", "sled", "boat", "ship" ]
 const asset_type_x3 = [ 1, 1, 1, 0, 0, 0, 0 ]
 
-const first_teutonic_region = 0
-const last_teutonic_region = 23
-const first_russian_region = 24
-const last_russian_region = 52
+const first_p1_locale = 0
+const last_p1_locale = 23
+const first_p2_locale = 24
+const last_p2_locale = 52
 
-function is_teutonic_region(loc) {
-	return loc >= first_teutonic_region && loc <= last_teutonic_region
+function is_p1_locale(loc) {
+	return loc >= first_p1_locale && loc <= last_p1_locale
 }
 
-function is_russian_region(loc) {
-	return loc >= first_russian_region && loc <= last_russian_region
+function is_p2_locale(loc) {
+	return loc >= first_p2_locale && loc <= last_p2_locale
 }
 
-function count_teutonic_vp() {
+function count_vp1() {
 	let vp = 0
+	for (let loc of view.castles)
+		if (is_p2_locale(loc))
+			vp += 2
 	for (let loc of view.conquered)
-		if (is_russian_region(loc))
+		if (is_p2_locale(loc))
 			vp += data.locales[loc].vp << 1
 	for (let loc of view.ravaged)
-		if (is_russian_region(loc))
+		if (is_p2_locale(loc))
 			vp += 1
 	return vp
 }
 
-function count_russian_vp() {
+function count_vp2() {
 	let vp = view.veche_vp * 2
+	for (let loc of view.castles)
+		if (is_p1_locale(loc))
+			vp += 2
 	for (let loc of view.conquered)
-		if (is_teutonic_region(loc))
+		if (is_p1_locale(loc))
 			vp += data.locales[loc].vp << 1
 	for (let loc of view.ravaged)
-		if (is_teutonic_region(loc))
+		if (is_p1_locale(loc))
 			vp += 1
 	return vp
 }
@@ -177,6 +201,7 @@ const ui = {
 	arts_of_war_list: document.getElementById("arts_of_war_list"),
 	p1_global: document.getElementById("p1_global"),
 	p2_global: document.getElementById("p2_global"),
+	command: document.getElementById("command"),
 	turn: document.getElementById("turn"),
 	vp1: document.getElementById("vp1"),
 	vp2: document.getElementById("vp2"),
@@ -196,7 +221,7 @@ const extra_size_100 = {
 	traderoute: [ 72, 42 ],
 	bishopric: [ 84, 60 ],
 	city: [ 132, 72 ],
-	archbishopric: [ 156, 96 ],
+	novgorod: [ 156, 96 ],
 }
 
 const extra_size = {
@@ -206,7 +231,7 @@ const extra_size = {
 	traderoute: [ 54, 32 ],
 	bishopric: [ 63, 45 ],
 	city: [ 100, 54 ],
-	archbishopric: [ 117, 72 ],
+	novgorod: [ 117, 72 ],
 }
 
 function toggle_pieces() {
@@ -233,7 +258,6 @@ function on_click_cylinder(evt) {
 }
 
 function on_click_arts_of_war(evt) {
-console.log("AOW CLICK", evt.target.dataset.arts_of_war)
 	if (evt.button === 0) {
 		let id = evt.target.dataset.arts_of_war | 0
 		send_action('arts_of_war', id)
@@ -380,6 +404,11 @@ function add_asset(parent, type, n) {
 	build_div(parent, "asset " + asset_type_name[type] + " x"+n, "asset", type)
 }
 
+function add_veche_vp(parent) {
+	// TODO: reuse pool of elements?
+	build_div(parent, "marker square conquered russian")
+}
+
 function update_forces(parent, forces) {
 	parent.replaceChildren()
 	for (let i = 0; i < force_type_count; ++i) {
@@ -465,6 +494,29 @@ function update_lord(ix) {
 	ui.lord_mat[ix].classList.toggle("selected", ix === view.who)
 }
 
+function update_veche() {
+	ui.veche.replaceChildren()
+
+	console.log("update_veche", view.veche_coin, view.veche_vp)
+
+	let n = view.veche_coin
+	while (n >= 3) {
+		add_asset(ui.veche, COIN, 3)
+		n -= 3
+	}
+	while (n >= 2) {
+		add_asset(ui.veche, COIN, 2)
+		n -= 2
+	}
+	while (n >= 1) {
+		add_asset(ui.veche, COIN, 1)
+		n -= 1
+	}
+
+	for (let i = 0; i < view.veche_vp; ++i)
+		add_veche_vp(ui.veche)
+}
+
 function update_locale(loc) {
 	ui.locale[loc].classList.toggle("action", is_locale_action(loc))
 	if (ui.locale_extra[loc])
@@ -534,8 +586,26 @@ function on_update() {
 		}
 	}
 
-	for (let loc = 0; loc < data.locales.length; ++loc) {
+	for (let loc = 0; loc < data.locales.length; ++loc)
 		update_locale(loc)
+
+	update_veche()
+
+	if ((view.turn & 1) === 0) {
+		if (player === "Russians")
+			ui.command.className = `card russian aow_back`
+		else
+			ui.command.className = `card teutonic aow_back`
+	} else if (view.command < 0) {
+		if (player === "Russians")
+			ui.command.className = `card russian cc_back`
+		else
+			ui.command.className = `card teutonic cc_back`
+	} else {
+		if (view.command < 6)
+			ui.command.className = `card russian cc_lord_${view.command}`
+		else
+			ui.command.className = `card teutonic cc_lord_${view.command}`
 	}
 
 	if (view.turn & 1)
@@ -543,8 +613,8 @@ function on_update() {
 	else
 		ui.turn.className = `marker circle turn levy t${view.turn>>1}`
 
-	let vp1 = count_teutonic_vp()
-	let vp2 = count_russian_vp()
+	let vp1 = count_vp1()
+	let vp2 = count_vp2()
 	if ((vp1 >> 1) === (vp2 >> 1)) {
 		if (vp1 & 1)
 			ui.vp1.className = `marker circle victory teutonic stack v${vp1>>1} half`
@@ -575,9 +645,15 @@ function on_update() {
 	action_button("capability", "Capability")
 
 	action_button("done", "Done")
+	action_button("unfed", "Unfed")
+	action_button("end_feed", "End feed")
+	action_button("end_pay", "End pay")
+	action_button("end_disband", "End disband")
+	action_button("end_actions", "End actions")
 	action_button("end_levy", "End levy")
 	action_button("end_muster", "End muster")
 	action_button("end_setup", "End setup")
+
 	action_button("undo", "Undo")
 }
 
