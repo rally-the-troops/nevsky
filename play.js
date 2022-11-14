@@ -240,56 +240,56 @@ function toggle_pieces() {
 
 function on_click_locale(evt) {
 	if (evt.button === 0) {
-		let id = evt.target.dataset.locale | 0
+		let id = evt.target.my_locale
 		send_action('locale', id)
 	}
 }
 
 function on_focus_locale(evt) {
-	let id = evt.target.dataset.locale | 0
+	let id = evt.target.my_locale
 	document.getElementById("status").textContent = `(${id}) ${data.locales[id].name} - ${data.locales[id].type}`
 }
 
 function on_click_cylinder(evt) {
 	if (evt.button === 0) {
-		let id = evt.target.dataset.lord | 0
+		let id = evt.target.my_lord
 		send_action('lord', id)
 	}
 }
 
 function on_click_arts_of_war(evt) {
 	if (evt.button === 0) {
-		let id = evt.target.dataset.arts_of_war | 0
+		let id = evt.target.my_arts_of_war
 		send_action('arts_of_war', id)
 	}
 }
 
 function on_focus_cylinder(evt) {
-	let id = evt.target.dataset.lord | 0
+	let id = evt.target.my_lord
 	document.getElementById("status").textContent = `(${id}) ${data.lords[id].full_name} [${data.lords[id].command}] - ${data.lords[id].title}`
 }
 
 function on_click_lord_service_marker(evt) {
 	if (evt.button === 0) {
-		let id = evt.target.dataset.lord | 0
+		let id = evt.target.my_lord
 		send_action('lord_service', id)
 	}
 }
 
 function on_focus_lord_service_marker(evt) {
-	let id = evt.target.dataset.lord | 0
+	let id = evt.target.my_lord
 	document.getElementById("status").textContent = `(${id}) ${data.lords[id].full_name} - ${data.lords[id].title}`
 }
 
 function on_click_vassal_service_marker(evt) {
 	if (evt.button === 0) {
-		let id = evt.target.dataset.vassal | 0
+		let id = evt.target.my_vassal
 		send_action('vassal', id)
 	}
 }
 
 function on_focus_vassal_service_marker(evt) {
-	let id = evt.target.dataset.vassal | 0
+	let id = evt.target.my_vassal
 	let vassal = data.vassals[id]
 	let lord = data.lords[vassal.lord]
 	document.getElementById("status").textContent = `(${id}) ${lord.name} / ${vassal.name}`
@@ -497,8 +497,6 @@ function update_lord(ix) {
 function update_veche() {
 	ui.veche.replaceChildren()
 
-	console.log("update_veche", view.veche_coin, view.veche_vp)
-
 	let n = view.veche_coin
 	while (n >= 3) {
 		add_asset(ui.veche, COIN, 3)
@@ -683,7 +681,7 @@ function build_lord_mat(lord, ix, side, name) {
 function build_arts_of_war(side, c) {
 	let card = ui.arts_of_war[c] = document.createElement("div")
 	card.className = `card ${side} aow_${c}`
-	card.dataset.arts_of_war = c
+	card.my_arts_of_war = c
 	card.addEventListener("mousedown", on_click_arts_of_war)
 }
 
@@ -692,7 +690,6 @@ function build_map() {
 		let e = ui.locale[ix] = document.createElement("div")
 		let region = clean_name(locale.region)
 		e.className = "locale " + locale.type + " " + region
-		// XXX e.classList.add("action")
 		let x = round(locale.box.x * MAP_DPI / 300)
 		let y = round(locale.box.y * MAP_DPI / 300)
 		let w = floor((locale.box.x+locale.box.w) * MAP_DPI / 300) - x
@@ -718,7 +715,7 @@ function build_map() {
 		e.style.top = y + "px"
 		e.style.width = w + "px"
 		e.style.height = h + "px"
-		e.dataset.locale = ix
+		e.my_locale = ix
 		e.addEventListener("mousedown", on_click_locale)
 		e.addEventListener("mouseenter", on_focus_locale)
 		e.addEventListener("mouseleave", on_blur)
@@ -727,7 +724,6 @@ function build_map() {
 		if (locale.type !== 'region') {
 			e = ui.locale_extra[ix] = document.createElement("div")
 			e.className = "locale_extra " + locale.type + " " + region
-			// XXX e.classList.add("action")
 			let cx = x + (w >> 1) + 4
 			let ew = extra_size[locale.type][0]
 			let eh = extra_size[locale.type][1]
@@ -735,7 +731,7 @@ function build_map() {
 			e.style.left = (cx - ew/2) + "px"
 			e.style.width = ew + "px"
 			e.style.height = eh + "px"
-			e.dataset.locale = ix
+			e.my_locale = ix
 			e.addEventListener("mousedown", on_click_locale)
 			e.addEventListener("mouseenter", on_focus_locale)
 			e.addEventListener("mouseleave", on_blur)
@@ -748,7 +744,7 @@ function build_map() {
 	data.lords.forEach((lord, ix) => {
 		let e = ui.lord_cylinder[ix] = document.createElement("div")
 		e.className = "cylinder lord " + clean_name(lord.side) + " " + clean_name(lord.name) + " hide"
-		e.dataset.lord = ix
+		e.my_lord = ix
 		e.addEventListener("mousedown", on_click_cylinder)
 		e.addEventListener("mouseenter", on_focus_cylinder)
 		e.addEventListener("mouseleave", on_blur)
@@ -756,7 +752,7 @@ function build_map() {
 
 		e = ui.lord_service[ix] = document.createElement("div")
 		e.className = "service_marker lord image" + lord.image + " " + clean_name(lord.side) + " " + clean_name(lord.name) + " hide"
-		e.dataset.lord = ix
+		e.my_lord = ix
 		e.addEventListener("mousedown", on_click_lord_service_marker)
 		e.addEventListener("mouseenter", on_focus_lord_service_marker)
 		e.addEventListener("mouseleave", on_blur)
@@ -771,7 +767,7 @@ function build_map() {
 		let lord = data.lords[vassal.lord]
 		let e = ui.vassal_service[ix] = document.createElement("div")
 		e.className = "service_marker vassal image" + vassal.image + " " + clean_name(lord.side) + " " + clean_name(vassal.name) + " hide"
-		e.dataset.vassal = ix
+		e.my_vassal = ix
 		e.addEventListener("mousedown", on_click_vassal_service_marker)
 		e.addEventListener("mouseenter", on_focus_vassal_service_marker)
 		e.addEventListener("mouseleave", on_blur)
@@ -785,7 +781,6 @@ function build_map() {
 		let h = round(original_boxes[name][3] * MAP_DPI / 300) - 8
 		let e = ui.boxes[name] = document.createElement("div")
 		e.className = "box " + name
-		// XXX e.classList.add("action")
 		e.style.left = x + "px"
 		e.style.top = y + "px"
 		e.style.width = w + "px"
