@@ -972,7 +972,6 @@ states.levy_muster_lord = {
 	capability() {
 		push_undo()
 		push_state('muster_capability')
-		resume_levy_muster_lord()
 	},
 
 	done() {
@@ -1047,22 +1046,39 @@ states.muster_lord_transport = {
 	},
 }
 
+function lord_has_capability(lord, c) {
+	let name = data.cards[c].capability
+	console.log("has cap?", c, name)
+	let c1 = get_lord_capability(lord, 0)
+	if (c1 >= 0 && data.cards[c1].capability === name)
+		return true
+	let c2 = get_lord_capability(lord, 1)
+	if (c2 >= 0 && data.cards[c2].capability === name)
+		return true
+	return false
+}
+
 states.muster_capability = {
 	prompt() {
 		view.prompt = `Select a new capability for ${lord_name[game.who]}.`
+		view.show_arts_of_war = 1
 		for_each_friendly_arts_of_war(c => {
 			if (!is_card_in_use(c)) {
-				if (!data.cards[c].lords || set_has(data.cards[c].lords, game.who))
-					gen_action_arts_of_war(c)
+				if (!data.cards[c].lords || set_has(data.cards[c].lords, game.who)) {
+					if (data.cards[c].this_lord) {
+						if (!lord_has_capability(game.who, c))
+							gen_action_arts_of_war(c)
+					} else {
+						gen_action_arts_of_war(c)
+					}
+				}
 			}
 		})
 	},
 	arts_of_war(c) {
 		push_undo()
 		logi(`Capability #${c}`)
-		if (!data.cards[c].lords) {
-			set_add(game.capabilities, c)
-		} else {
+		if (data.cards[c].this_lord) {
 			if (get_lord_capability(game.who, 0) < 0)
 				set_lord_capability(game.who, 0, c)
 			else if (get_lord_capability(game.who, 1) < 0)
@@ -1072,8 +1088,30 @@ states.muster_capability = {
 				game.state = 'muster_capability_discard'
 				return
 			}
+		} else {
+			set_add(game.capabilities, c)
 		}
 		pop_state()
+		resume_levy_muster_lord()
+	},
+}
+
+states.muster_capability_discard = {
+	prompt() {
+		view.prompt = `Remove a capability from ${lord_name[game.who]}.`
+		gen_action_arts_of_war(get_lord_capability(game.who, 0))
+		gen_action_arts_of_war(get_lord_capability(game.who, 1))
+	},
+	arts_of_war(c) {
+		push_undo()
+		logi(`Discarded #${c}`)
+		if (c === get_lord_capability(game.who, 0))
+			set_lord_capability(game.who, 0, game.what)
+		else
+			set_lord_capability(game.who, 1, game.what)
+		game.what = -1
+		pop_state()
+		resume_levy_muster_lord()
 	},
 }
 
