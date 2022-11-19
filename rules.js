@@ -9,6 +9,9 @@ const RUSSIANS = "Russians"
 const P1 = TEUTONS
 const P2 = RUSSIANS
 
+// NOTE: With Hidden Mats option, the player order of feed/pay may matter.
+const FEED_PAY_DISBAND = false // feed, pay, disband in one go
+
 let game = null
 let view = null
 let states = {}
@@ -351,7 +354,7 @@ function is_levy_phase() {
 }
 
 function is_card_in_use(c) {
-	if (set_has(game.global_cards, c))
+	if (set_has(game.capabilities, c))
 		return true
 	if (game.lords.cards.includes(c))
 		return true
@@ -482,10 +485,14 @@ exports.setup = function (seed, scenario, options) {
 		stack: [],
 
 		turn: 0,
+
 		p1_hand: [],
 		p2_hand: [],
 		p1_plan: [],
 		p2_plan: [],
+		events: [], // this levy/this campaign cards
+		capabilities: [], // global capabilities
+
 		lords: {
 			locale: Array(lord_count).fill(NOWHERE),
 			service: Array(lord_count).fill(NEVER),
@@ -500,10 +507,11 @@ exports.setup = function (seed, scenario, options) {
 		legate: NOWHERE,
 		veche_vp: 0,
 		veche_coin: 0,
+
 		conquered: [],
 		ravaged: [],
 		castles: [],
-		global_cards: [],
+		sieges: {},
 
 		command: NOBODY,
 		who: NOBODY,
@@ -730,14 +738,14 @@ function setup_pleskau_quickstart() {
 	logi("Capability T3")
 	set_lord_capability(LORD_YAROSLAV, 0, find_arts_of_war("T3"))
 
-	set_add(game.global_cards, find_arts_of_war("T13"))
+	set_add(game.capabilities, find_arts_of_war("T13"))
 	game.legate = LOC_DORPAT
 
 	log_h2("Russians Muster")
 
 	log_h3("Vladislav")
 	logi("Capability R8")
-	set_add(game.global_cards, find_arts_of_war("R8"))
+	set_add(game.capabilities, find_arts_of_war("R8"))
 	logi(`Domash at %${LOC_NOVGOROD}`)
 	muster_lord(LORD_DOMASH, LOC_NOVGOROD)
 	logii("Boat")
@@ -1051,7 +1059,7 @@ states.muster_capability = {
 		push_undo()
 		logi(`Capability #${c}`)
 		if (!data.cards[c].lords) {
-			set_add(game.global_cards, c)
+			set_add(game.capabilities, c)
 		} else {
 			if (get_lord_capability(game.who, 0) < 0)
 				set_lord_capability(game.who, 0, c)
@@ -1123,7 +1131,6 @@ states.campaign_plan = {
 			if (count_cards_in_plan(plan, -1) < 3)
 				gen_action_plan(-1)
 			for (let lord = 0; lord <= last_lord; ++lord) {
-				console.log("campaign_plan", lord, current)
 				if (lord >= first_p1_lord && lord <= last_p1_lord && current !== P1)
 					continue
 				if (lord >= first_p2_lord && lord <= last_p2_lord && current !== P2)
@@ -1237,9 +1244,12 @@ function goto_feed() {
 		end_feed()
 }
 
+// TODO: feed_self
+// TODO: feed_other
+
 states.feed = {
 	prompt() {
-		view.prompt = "You must Feed your who Moved or Fought."
+		view.prompt = "You must Feed lords who Moved or Fought."
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 			if (get_lord_moved(lord))
 				gen_action_lord(lord)
@@ -1283,11 +1293,15 @@ states.feed_lord = {
 }
 
 function end_feed() {
-	set_active_enemy()
-	if (game.active === P2)
-		goto_feed()
-	else
+	if (FEED_PAY_DISBAND) {
 		goto_pay()
+	} else {
+		set_active_enemy()
+		if (game.active === P2)
+			goto_feed()
+		else
+			goto_pay()
+	}
 }
 
 // === LEVY & CAMPAIGN: PAY ===
@@ -1345,11 +1359,8 @@ states.pay_lord = {
 }
 
 function end_pay() {
-	set_active_enemy()
-	if (game.active === P2)
-		goto_pay()
-	else
-		goto_disband()
+	// NOTE: We can combine Pay & Disband steps because disband is mandatory only.
+	goto_disband()
 }
 
 // === LEVY & CAMPAIGN: DISBAND ===
@@ -1372,7 +1383,10 @@ states.disband = {
 function end_disband() {
 	set_active_enemy()
 	if (game.active === P2) {
-		goto_disband()
+		if (FEED_PAY_DISBAND)
+			goto_feed()
+		else
+			goto_pay()
 	} else {
 		if (is_levy_phase())
 			goto_levy_muster()
@@ -1507,7 +1521,7 @@ exports.view = function(state, current) {
 		legate: game.legate,
 		veche_vp: game.veche_vp,
 		veche_coin: game.veche_coin,
-		global_cards: game.global_cards,
+		capabilities: game.capabilities,
 		conquered: game.conquered,
 		ravaged: game.ravaged,
 		castles: game.castles,
@@ -1516,6 +1530,8 @@ exports.view = function(state, current) {
 		who: game.who,
 		where: game.where,
 	}
+
+	view.sieges = { 0: 3, [LOC_NOVGOROD]: 2, [LOC_PSKOV]: 1 }
 
 	if (game.state === 'game_over') {
 		view.prompt = game.victory
@@ -1581,7 +1597,8 @@ function pack4_set(word, n, x) {
 }
 
 // Sorted array treated as Set (for JSON)
-function set_index(set, item) {
+
+function set_has(set, item) {
 	let a = 0
 	let b = set.length - 1
 	while (a <= b) {
@@ -1592,13 +1609,9 @@ function set_index(set, item) {
 		else if (item > x)
 			a = m + 1
 		else
-			return m
+			return true
 	}
-	return -1
-}
-
-function set_has(set, item) {
-	return set_index(set, item) >= 0
+	return false
 }
 
 function set_add(set, item) {
@@ -1618,9 +1631,19 @@ function set_add(set, item) {
 }
 
 function set_delete(set, item) {
-	let i = set_index(set, item)
-	if (i >= 0)
-		set.splice(i, 1)
+	let a = 0
+	let b = set.length - 1
+	while (a <= b) {
+		let m = (a + b) >> 1
+		let x = set[m]
+		if (item < x)
+			b = m - 1
+		else if (item > x)
+			a = m + 1
+		else
+			return array_remove(set, m)
+	}
+	return set
 }
 
 function set_clear(set) {

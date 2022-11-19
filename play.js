@@ -1,5 +1,8 @@
 "use strict"
 
+// TODO: put card elements in capability containers, not c1/c2 specials
+// TODO: held events, this_turn events
+
 const MAP_DPI = 75
 
 const round = Math.round
@@ -47,6 +50,22 @@ function max_plan_length() {
 	case LATE_WINTER: return 4
 	case RASPUTITSA: return 5
 	}
+}
+
+function set_has(set, item) {
+	let a = 0
+	let b = set.length - 1
+	while (a <= b) {
+		let m = (a + b) >> 1
+		let x = set[m]
+		if (item < x)
+			b = m - 1
+		else if (item > x)
+			a = m + 1
+		else
+			return true
+	}
+	return false
 }
 
 function pack1_get(word, n) {
@@ -155,7 +174,7 @@ function count_vp2() {
 }
 
 function is_card_in_use(c) {
-	if (view.global_cards.includes(c))
+	if (view.capabilities.includes(c))
 		return true
 	if (view.lords.cards.includes(c))
 		return true
@@ -242,6 +261,7 @@ const locale_xy = []
 const ui = {
 	locale: [],
 	locale_extra: [],
+	locale_markers: [],
 	lord_cylinder: [],
 	lord_service: [],
 	lord_mat: [],
@@ -261,8 +281,8 @@ const ui = {
 	plan_action_cards: [],
 	arts_of_war_dialog: document.getElementById("arts_of_war"),
 	arts_of_war_list: document.getElementById("arts_of_war_list"),
-	p1_global: document.getElementById("p1_global"),
-	p2_global: document.getElementById("p2_global"),
+	p1_capabilities: document.getElementById("p1_capabilities"),
+	p2_capabilities: document.getElementById("p2_capabilities"),
 	command: document.getElementById("command"),
 	turn: document.getElementById("turn"),
 	vp1: document.getElementById("vp1"),
@@ -588,6 +608,47 @@ function update_locale(loc) {
 	ui.locale[loc].classList.toggle("action", is_locale_action(loc))
 	if (ui.locale_extra[loc])
 		ui.locale_extra[loc].classList.toggle("action", is_locale_action(loc))
+
+	ui.locale_markers[loc].replaceChildren()
+
+	if (set_has(view.ravaged, loc)) {
+		let cn
+		if (is_p1_locale(loc))
+			cn = "marker small ravaged russian"
+		else
+			cn = "marker small ravaged teutonic"
+		ui.locale_markers[loc].appendChild(get_cached_element(cn))
+	}
+
+	if (set_has(view.conquered, loc)) {
+		let cn
+		if (is_p1_locale(loc))
+			cn = "marker square conquered russian"
+		else
+			cn = "marker square conquered teutonic"
+		for (let i = 0; i < data.locales[loc].vp; ++i)
+			ui.locale_markers[loc].appendChild(get_cached_element(cn))
+	}
+
+	if (set_has(view.castles, loc)) {
+		let cn
+		if (is_p1_locale(loc))
+			cn = "marker rectangle castle russian"
+		else
+			cn = "marker rectangle castle teutonic"
+		ui.locale_markers[loc].appendChild(get_cached_element(cn))
+	}
+
+	if (view.sieges[loc]) {
+		let cn
+		// TODO: castle?
+		if (is_p1_locale(loc))
+			cn = "marker square siege russian"
+		else
+			cn = "marker square siege teutonic"
+		for (let i = 0; i < view.sieges[loc]; ++i)
+			ui.locale_markers[loc].appendChild(get_cached_element(cn))
+	}
 }
 
 function update_plan() {
@@ -662,16 +723,16 @@ function update_arts_of_war() {
 		}
 	}
 
-	ui.p1_global.replaceChildren()
+	ui.p1_capabilities.replaceChildren()
 	for_each_teutonic_arts_of_war(c => {
-		if (view.global_cards.includes(c))
-			ui.p1_global.appendChild(ui.arts_of_war[c])
+		if (view.capabilities.includes(c))
+			ui.p1_capabilities.appendChild(ui.arts_of_war[c])
 	})
 
-	ui.p2_global.replaceChildren()
+	ui.p2_capabilities.replaceChildren()
 	for_each_russian_arts_of_war(c => {
-		if (view.global_cards.includes(c))
-			ui.p2_global.appendChild(ui.arts_of_war[c])
+		if (view.capabilities.includes(c))
+			ui.p2_capabilities.appendChild(ui.arts_of_war[c])
 	})
 
 	for (let ix = 0; ix < data.lords.length; ++ix) {
@@ -892,6 +953,15 @@ function build_map() {
 			e.addEventListener("mouseleave", on_blur)
 			document.getElementById("locales").appendChild(e)
 		}
+
+		e = ui.locale_markers[ix] = document.createElement("div")
+		e.className = "locale_markers " + locale.type + " " + region
+		x = (locale.box.x + locale.box.w / 2) * MAP_DPI / 300 - 196/2
+		y = (locale.box.y + locale.box.h * 0) * MAP_DPI / 300 - 8
+		e.style.top = y + "px"
+		e.style.left = x + "px"
+		e.style.width = 196 + "px"
+		document.getElementById("pieces").appendChild(e)
 	})
 
 	let x = 160
@@ -954,5 +1024,4 @@ function build_map() {
 build_map()
 // drag_element_with_mouse("#battle", "#battle_header")
 drag_element_with_mouse("#arts_of_war", "#arts_of_war_header")
-drag_element_with_mouse("#plan", "#plan_header")
 scroll_with_middle_mouse("main")

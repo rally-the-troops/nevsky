@@ -248,18 +248,18 @@ body.shift .mat .card:hover {
 	z-index: 2;
 }
 
-#p1_global, #p2_global {
+#p1_capabilities, #p2_capabilities {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 12px;
 }
 
-#p1_global {
+#p1_capabilities {
 	margin-left: 24px;
 	justify-content: start;
 }
 
-#p2_global {
+#p2_capabilities {
 	margin-right: 24px;
 	justify-content: end;
 }
@@ -542,6 +542,16 @@ body.shift .mat .card:hover {
 	box-shadow: 0 0 8px #ff06;
 }
 
+.locale_markers {
+	position: absolute;
+	pointer-events: none;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 4px;
+}
+
 #veche { position: absolute; }
 
 .veche_label {
@@ -625,8 +635,8 @@ body.shift .mat .card:hover {
 	width: 32px;
 	height: 64px;
 	background-image: url(images/legate.svg);
-	top: 1585px;
-	left: 180px;
+	top: 1580px;
+	left: 170px;
 	filter: drop-shadow(0px 2px 4px #0004);
 }
 
@@ -1021,8 +1031,8 @@ body.shift .marker:hover { transform: scale(2); z-index: 200; }
 </div>
 
 <div class="tuck_under_map">
-<div id="p1_global" class="global"></div>
-<div id="p2_global" class="global"></div>
+<div id="p1_capabilities"></div>
+<div id="p2_capabilities"></div>
 </div>
 
 <div id="plan" class="hide">
