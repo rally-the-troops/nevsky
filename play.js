@@ -174,7 +174,9 @@ function count_vp2() {
 }
 
 function is_card_in_use(c) {
-	if (view.capabilities.includes(c))
+	if (set_has(view.events, c))
+		return true
+	if (set_has(view.capabilities, c))
 		return true
 	if (view.lords.cards.includes(c))
 		return true
@@ -281,6 +283,7 @@ const ui = {
 	plan_action_cards: [],
 	arts_of_war_dialog: document.getElementById("arts_of_war"),
 	arts_of_war_list: document.getElementById("arts_of_war_list"),
+	events: document.getElementById("events"),
 	p1_capabilities: document.getElementById("p1_capabilities"),
 	p2_capabilities: document.getElementById("p2_capabilities"),
 	command: document.getElementById("command"),
@@ -722,6 +725,10 @@ function update_arts_of_war() {
 			elt.classList.remove("disabled")
 		}
 	}
+
+	ui.events.replaceChildren()
+	for (let c of view.events)
+		ui.events.appendChild(ui.arts_of_war[c])
 
 	ui.p1_capabilities.replaceChildren()
 	for_each_teutonic_arts_of_war(c => {

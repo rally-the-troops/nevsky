@@ -354,6 +354,8 @@ function is_levy_phase() {
 }
 
 function is_card_in_use(c) {
+	if (set_has(game.events, c))
+		return true
 	if (set_has(game.capabilities, c))
 		return true
 	if (game.lords.cards.includes(c))
@@ -1515,23 +1517,26 @@ exports.view = function(state, current) {
 		prompt: null,
 		actions: null,
 		log: game.log,
+
 		turn: game.turn,
 		lords: game.lords,
 		vassals: game.vassals,
-		legate: game.legate,
-		veche_vp: game.veche_vp,
-		veche_coin: game.veche_coin,
+		events: game.events,
 		capabilities: game.capabilities,
 		conquered: game.conquered,
 		ravaged: game.ravaged,
 		castles: game.castles,
+		sieges: game.sieges,
+
+		legate: game.legate,
+		veche_vp: game.veche_vp,
+		veche_coin: game.veche_coin,
+
 		command: game.command,
 		plan: null,
 		who: game.who,
 		where: game.where,
 	}
-
-	view.sieges = { 0: 3, [LOC_NOVGOROD]: 2, [LOC_PSKOV]: 1 }
 
 	if (game.state === 'game_over') {
 		view.prompt = game.victory

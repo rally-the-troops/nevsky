@@ -264,6 +264,21 @@ body.shift .mat .card:hover {
 	justify-content: end;
 }
 
+/* EVENTS: THIS LEVY / THIS CAMPAIGN */
+
+#events {
+	display: flex;
+	max-width: 1275px;
+	margin: 0 auto;
+	flex-wrap: wrap;
+	gap: 12px;
+	justify-content: center;
+}
+
+#events:empty {
+	display: none;
+}
+
 /* ASSETS */
 
 .asset {
@@ -1034,6 +1049,8 @@ body.shift .marker:hover { transform: scale(2); z-index: 200; }
 <div id="p1_capabilities"></div>
 <div id="p2_capabilities"></div>
 </div>
+
+<div id="events"></div>
 
 <div id="plan" class="hide">
 <div id="plan_header">~ Plan ~</div>
