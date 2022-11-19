@@ -1,6 +1,5 @@
 "use strict"
 
-// TODO: put card elements in capability containers, not c1/c2 specials
 // TODO: held events, this_turn events
 
 const MAP_DPI = 75
@@ -78,23 +77,27 @@ function pack4_get(word, n) {
 }
 
 function is_lord_action(lord) {
-	return !!(view.actions && view.actions.lord && view.actions.lord.includes(lord))
+	return !!(view.actions && view.actions.lord && set_has(view.actions.lord, lord))
 }
 
 function is_plan_action(lord) {
-	return !!(view.actions && view.actions.plan && view.actions.plan.includes(lord))
+	return !!(view.actions && view.actions.plan && set_has(view.actions.plan, lord))
 }
 
 function is_service_action(lord) {
-	return !!(view.actions && view.actions.service && view.actions.service.includes(lord))
+	return !!(view.actions && view.actions.service && set_has(view.actions.service, lord))
 }
 
 function is_vassal_action(vassal) {
-	return !!(view.actions && view.actions.vassal && view.actions.vassal.includes(vassal))
+	return !!(view.actions && view.actions.vassal && set_has(view.actions.vassal, vassal))
 }
 
 function is_locale_action(locale) {
-	return !!(view.actions && view.actions.locale && view.actions.locale.includes(locale))
+	return !!(view.actions && view.actions.locale && set_has(view.actions.locale, locale))
+}
+
+function is_arts_of_war_action(c) {
+	return !!(view.actions && view.actions.arts_of_war && set_has(view.actions.arts_of_war, c))
 }
 
 const force_type_count = 7
@@ -271,8 +274,7 @@ const ui = {
 	forces: [],
 	routed: [],
 	assets: [],
-	c1: [],
-	c2: [],
+	lord_capabilities: [],
 	arts_of_war: [],
 	boxes: {},
 	veche: document.getElementById("veche"),
@@ -488,12 +490,12 @@ function layout_calendar_item(loc, e) {
 
 function add_force(parent, type) {
 	// TODO: reuse pool of elements?
-	build_div(parent, "unit " + force_type_name[type], "force", type)
+	build_div(parent, "unit " + force_type_name[type], type)
 }
 
 function add_asset(parent, type, n) {
 	// TODO: reuse pool of elements?
-	build_div(parent, "asset " + asset_type_name[type] + " x"+n, "asset", type)
+	build_div(parent, "asset " + asset_type_name[type] + " x"+n, type)
 }
 
 function add_veche_vp(parent) {
@@ -706,22 +708,22 @@ function update_plan() {
 }
 
 function update_arts_of_war() {
-	if (view.actions && view.actions.arts_of_war) {
+	if (view.show_arts_of_war) {
 		ui.arts_of_war_dialog.classList.remove("hide")
 		ui.arts_of_war_list.replaceChildren()
 		for_each_friendly_arts_of_war(c => {
 			if (!is_card_in_use(c)) {
 				let elt = ui.arts_of_war[c]
 				ui.arts_of_war_list.appendChild(elt)
-				elt.classList.toggle("action", view.actions.arts_of_war.includes(c))
-				elt.classList.toggle("disabled", !view.actions.arts_of_war.includes(c))
+				elt.classList.toggle("action", is_arts_of_war_action(c))
+				elt.classList.toggle("disabled", !is_arts_of_war_action(c))
 			}
 		})
 	} else {
 		ui.arts_of_war_dialog.classList.add("hide")
 		for (let c = 0; c < 42; ++c) {
 			let elt = ui.arts_of_war[c]
-			elt.classList.remove("action")
+			elt.classList.toggle("action", is_arts_of_war_action(c))
 			elt.classList.remove("disabled")
 		}
 	}
@@ -744,16 +746,13 @@ function update_arts_of_war() {
 
 	for (let ix = 0; ix < data.lords.length; ++ix) {
 		let side = ix < 6 ? "teutonic" : "russian"
+		ui.lord_capabilities[ix].replaceChildren()
 		let c = view.lords.cards[(ix << 1) + 0]
-		if (c < 0)
-			ui.c1[ix].classList = `c1 card ${side} hide`
-		else
-			ui.c1[ix].classList = `c1 card ${side} aow_${c}`
+		if (c >= 0)
+			ui.lord_capabilities[ix].appendChild(ui.arts_of_war[c])
 		c = view.lords.cards[(ix << 1) + 1]
-		if (c < 0)
-			ui.c2[ix].classList = `c2 card ${side} hide`
-		else
-			ui.c2[ix].classList = `c2 card ${side} aow_${c}`
+		if (c >= 0)
+			ui.lord_capabilities[ix].appendChild(ui.arts_of_war[c])
 	}
 }
 
@@ -847,13 +846,13 @@ function on_update() {
 	action_button("undo", "Undo")
 }
 
-function build_div(parent, className, dataname, datavalue, onclick) {
+function build_div(parent, className, id, onclick) {
 	let e = document.createElement("div")
 	e.className = className
-	if (dataname)
-		e.dataset[dataname] = datavalue
-	if (onclick)
+	if (onclick) {
+		e.my_id = id
 		e.addEventListener("mousedown", onclick)
+	}
 	parent.appendChild(e)
 	return e
 }
@@ -862,11 +861,10 @@ function build_lord_mat(lord, ix, side, name) {
 	let parent = document.getElementById(side === 'teutonic' ? "p1_court" : "p2_court")
 	let mat = build_div(parent, `mat ${side} ${name} hide`)
 	let bg = build_div(mat, "background")
-	ui.forces[ix] = build_div(bg, "forces", "lord", ix)
-	ui.routed[ix] = build_div(bg, "routed", "lord", ix)
-	ui.assets[ix] = build_div(bg, "assets", "lord", ix)
-	ui.c1[ix] = build_div(mat, `c1 card ${side} hide`, "lord", ix)
-	ui.c2[ix] = build_div(mat, `c2 card ${side} hide`, "lord", ix)
+	ui.forces[ix] = build_div(bg, "forces", ix)
+	ui.routed[ix] = build_div(bg, "routed", ix)
+	ui.assets[ix] = build_div(bg, "assets", ix)
+	ui.lord_capabilities[ix] = build_div(mat, "capabilities")
 	ui.lord_mat[ix] = mat
 }
 

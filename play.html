@@ -148,15 +148,15 @@ body.Teutons #plan_actions .russian { display: none }
 
 .mat {
 	position: relative;
-	width: 364px;
-	height: 500px;
+	width: 376px;
+	height: 506px;
 	z-index: 1;
 }
 
 .mat .background {
 	position: absolute;
-	width: 360px;
-	height: 360px;
+	width: 372px;
+	height: 372px;
 	border-radius: 12px;
 	border-width: 2px;
 	border-style: solid;
@@ -171,17 +171,20 @@ body.Teutons #plan_actions .russian { display: none }
 	box-shadow: 0 0 0 1px #584800, 0 0 0 3px yellow;
 }
 
-.mat .c1, .mat .c2 {
+.mat .capabilities {
 	position: absolute;
-	width: 186px;
+	width: 372px;
 	height: 260px;
-	background-color: green;
+	z-index: 2;
+	top: 246px;
+	left: 2px;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0px;
 }
 
-.mat .c1 { z-index: 3; top: 238px; left: 4px; }
-.mat .c2 { z-index: 2; top: 234px; right: 4px; }
-
-body.shift .mat .card:hover {
+body.shift .capabilities {
 	z-index: 200;
 }
 
@@ -206,9 +209,9 @@ body.shift .mat .card:hover {
 	gap: 2px;
 }
 
-.mat .forces { top: 90px; left: 60px; width: 240px; height: 96px; }
-.mat .routed { top: 194px; left: 12px; width: 336px; height: 48px; }
-.mat .assets { top: 249px; left: 18px; width: 324px; height: 96px; }
+.mat .forces { top: 96px; left: 66px; width: 240px; height: 96px; }
+.mat .routed { top: 200px; left: 18px; width: 336px; height: 48px; }
+.mat .assets { top: 255px; left: 24px; width: 324px; height: 96px; }
 
 .mat.teutonic.andreas .background { background-image:url(images/mat_teutonic_andreas.png) }
 .mat.teutonic.heinrich .background { background-image:url(images/mat_teutonic_heinrich.png) }
