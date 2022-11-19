@@ -142,8 +142,8 @@ body.Teutons #plan_actions .russian { display: none }
 	flex-wrap: wrap;
 	justify-content: center;
 	margin: 36px auto;
-	padding: 18px 12px;
-	gap: 18px;
+	padding: 18px 0;
+	gap: 12px;
 }
 
 .mat {
@@ -172,6 +172,7 @@ body.Teutons #plan_actions .russian { display: none }
 }
 
 .mat .capabilities {
+	pointer-events: none;
 	position: absolute;
 	width: 372px;
 	height: 260px;
@@ -188,7 +189,7 @@ body.shift .capabilities {
 	z-index: 200;
 }
 
-.mat .forces, .mat .routed, .mat .assets, .mat .vassals, #veche {
+.mat .forces, .mat .routed, .mat .assets, #veche {
 	position: absolute;
 	display: flex;
 	flex-wrap: wrap;
@@ -201,17 +202,42 @@ body.shift .capabilities {
 	//background-color: #f004;
 }
 
+.mat > .background > div {
+	//outline: 1px solid red;
+}
+
 .mat .forces, #veche {
 	justify-content: center;
 }
 
-.mat .forces {
+.mat .forces, .mat .routed {
 	gap: 2px;
 }
 
+.mat .ready_vassals {
+	position: absolute;
+	z-index: 6;
+}
+
+.mat .mustered_vassals {
+	position: absolute;
+	z-index: 5;
+}
+
+.mat .ready_vassals .service_marker {
+	margin-top: -8px;
+}
+
+.mat .mustered_vassals .service_marker {
+	margin-top: -38px;
+}
+
 .mat .forces { top: 96px; left: 66px; width: 240px; height: 96px; }
-.mat .routed { top: 200px; left: 18px; width: 336px; height: 48px; }
-.mat .assets { top: 255px; left: 24px; width: 324px; height: 96px; }
+.mat .routed { top: 200px; left: 18px; width: 236px; height: 48px; }
+.mat .assets { top: 255px; left: 24px; width: 230px; height: 96px; }
+.mat .ready_vassals { bottom: 22px; right: 22px; width: 94px; }
+.mat .mustered_vassals { bottom: 138px; right: 8px; width: 94px; }
+X.mat .mustered_vassals { top: 228px; right: 6px; width: 94px; }
 
 .mat.teutonic.andreas .background { background-image:url(images/mat_teutonic_andreas.png) }
 .mat.teutonic.heinrich .background { background-image:url(images/mat_teutonic_heinrich.png) }
@@ -741,7 +767,7 @@ body.shift .capabilities {
 
 .service_marker.russian.lord.action,
 .service_marker.russian.vassal.action {
-	box-shadow: 0 0 0 3px pink;
+	box-shadow: 0 0 0 3px white;
 }
 
 .service_marker.teutonic.lord.selected,
@@ -774,6 +800,8 @@ body.shift .capabilities {
 .service_marker.image12{background-position:0 -504px}
 .service_marker.image13{background-position:0 -546px}
 .service_marker.image14{background-position:0 -588px}
+
+/*
 .service_marker.image0:hover{background-position:100% -0px}
 .service_marker.image1:hover{background-position:100% -42px}
 .service_marker.image2:hover{background-position:100% -84px}
@@ -789,10 +817,7 @@ body.shift .capabilities {
 .service_marker.image12:hover{background-position:100% -504px}
 .service_marker.image13:hover{background-position:100% -546px}
 .service_marker.image14:hover{background-position:100% -588px}
-
-body.shift .service_marker:hover { transform: scale(2); z-index: 200; }
-body.shift .cylinder:hover { transform: scale(2); z-index: 200; }
-body.shift .marker:hover { transform: scale(2); z-index: 200; }
+*/
 
 /* BACKGROUND COLORS AND BORDERS */
 /* :r !node tools/colors.mjs */

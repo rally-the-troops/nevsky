@@ -274,6 +274,8 @@ const ui = {
 	forces: [],
 	routed: [],
 	assets: [],
+	ready_vassals: [],
+	mustered_vassals: [],
 	lord_capabilities: [],
 	arts_of_war: [],
 	boxes: {},
@@ -538,14 +540,15 @@ function update_assets(parent, assets) {
 	}
 }
 
-function update_vassals(parent, lord_ix) {
+function update_vassals(ready_parent, mustered_parent, lord_ix) {
 	for (let v of data.lords[lord_ix].vassals) {
 		let e = ui.vassal_service[v]
 		if (view.vassals[v] === 0) {
 			e.classList.remove("hide")
-			parent.appendChild(e)
+			ready_parent.appendChild(e)
 		} else {
-			e.classList.add("hide")
+			e.classList.remove("hide")
+			mustered_parent.appendChild(e)
 		}
 		e.classList.toggle("action", is_vassal_action(v))
 	}
@@ -553,7 +556,7 @@ function update_vassals(parent, lord_ix) {
 
 function update_lord_mat(ix) {
 	update_assets(ui.assets[ix], view.lords.assets[ix])
-	update_vassals(ui.assets[ix], ix)
+	update_vassals(ui.ready_vassals[ix], ui.mustered_vassals[ix], ix)
 	update_forces(ui.forces[ix], view.lords.forces[ix])
 	update_forces(ui.routed[ix], view.lords.routed_forces[ix])
 }
@@ -861,9 +864,11 @@ function build_lord_mat(lord, ix, side, name) {
 	let parent = document.getElementById(side === 'teutonic' ? "p1_court" : "p2_court")
 	let mat = build_div(parent, `mat ${side} ${name} hide`)
 	let bg = build_div(mat, "background")
-	ui.forces[ix] = build_div(bg, "forces", ix)
-	ui.routed[ix] = build_div(bg, "routed", ix)
-	ui.assets[ix] = build_div(bg, "assets", ix)
+	ui.forces[ix] = build_div(bg, "forces")
+	ui.routed[ix] = build_div(bg, "routed")
+	ui.assets[ix] = build_div(bg, "assets")
+	ui.ready_vassals[ix] = build_div(bg, "ready_vassals")
+	ui.mustered_vassals[ix] = build_div(bg, "mustered_vassals")
 	ui.lord_capabilities[ix] = build_div(mat, "capabilities")
 	ui.lord_mat[ix] = mat
 }
