@@ -78,49 +78,52 @@ header.your_turn { background-color: orange; }
 /* PLAN */
 
 #plan {
-	background-color: white;
-	border: 1px solid black;
-	position: fixed;
+	//background-color: white;
+	//border: 1px solid black;
+	//position: fixed;
 	top: 84px;
 	left: 36px;
-	box-shadow: 0px 5px 10px 0px rgba(0,0,0,0.5);
-	z-index: 51;
+	//box-shadow: 0px 5px 10px 0px rgba(0,0,0,0.5);
+	//z-index: 51;
 	user-select: none;
+	max-width: 1275px;
+	margin: 36px auto;
 }
 
 #plan_header {
 	font-weight: bold;
 	cursor: move;
-	border-bottom: 1px solid black;
-	background-color: lightsteelblue;
+	text-align: center;
+	//border-bottom: 1px solid black;
+	background-color: #444;
+	color: white;
 	padding: 3px 1em;
 }
 
 #plan_list {
 	display: flex;
 	flex-wrap: wrap;
+	justify-content: center;
 	gap: 12px;
-	padding: 12px;
-	height: 260px;
+	padding: 18px;
 }
 
 #plan_actions {
 	display: flex;
 	flex-wrap: wrap;
-	padding: 12px;
-	gap: 12px;
-	height: 130px;
 	justify-content: center;
+	padding: 18px;
+	gap: 12px;
 	flex-wrap: wrap;
 }
 
 #plan_list {
-	background-color: slategray;
+	background-color: #555;
 }
 
 #plan_actions {
-	border-top: 2px dotted white;
-	background-color: slategray;
+	//border-top: 2px dotted white;
+	background-color: #444;
 }
 
 body.Russians #plan_actions .teutonic { display: none }
@@ -138,8 +141,9 @@ body.Teutons #plan_actions .russian { display: none }
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: center;
-	margin: 16px auto;
-	gap: 16px;
+	margin: 36px auto;
+	padding: 18px 12px;
+	gap: 18px;
 }
 
 .mat {
@@ -608,27 +612,6 @@ body.shift .mat .card:hover {
 .t7, .t15 { left: 1055px }
 .t8, .t16 { left: 1207px }
 
-/* 100dpi
-.v1, .v2, .v3, .v4, .v5, .v6, .v7, .v8, .t1, .t2, .t3, .t4, .t5, .t6, .t7, .t8 { top: 68px; }
-.v9, .v10, .v11, .v12, .v13, .v14, .v15, .v16, .t9, .t10, .t11, .t12, .t13, .t14, .t15, .t16 { top: 386px; }
-.v1, .v9 { left: 65px }
-.v2, .v10 { left: 269px }
-.v3, .v11 { left: 490px }
-.v4, .v12 { left: 693px }
-.v5, .v13 { left: 914px }
-.v6, .v14 { left: 1117px }
-.v7, .v15 { left: 1339px }
-.v8, .v16 { left: 1542px }
-.t1, .t9 { left: 141px }
-.t2, .t10 { left: 344px }
-.t3, .t11 { left: 566px }
-.t4, .t12 { left: 769px }
-.t5, .t13 { left: 990px }
-.t6, .t14 { left: 1193px }
-.t7, .t15 { left: 1415px }
-.t8, .t16 { left: 1617px }
-*/
-
 /* PIECES */
 
 #legate, .cylinder, .service_marker, .marker {
@@ -642,8 +625,8 @@ body.shift .mat .card:hover {
 	width: 32px;
 	height: 64px;
 	background-image: url(images/legate.svg);
-	top: 815px;
-	left: 200px;
+	top: 1585px;
+	left: 180px;
 	filter: drop-shadow(0px 2px 4px #0004);
 }
 
@@ -964,12 +947,6 @@ body.shift .marker:hover { transform: scale(2); z-index: 200; }
 <div id="arts_of_war_list"></div>
 </div>
 
-<div id="plan" class="hide">
-<div id="plan_header">Plan</div>
-<div id="plan_list"></div>
-<div id="plan_actions"></div>
-</div>
-
 <header>
 	<div id="toolbar">
 		<div class="menu">
@@ -1048,8 +1025,16 @@ body.shift .marker:hover { transform: scale(2); z-index: 200; }
 <div id="p2_global" class="global"></div>
 </div>
 
+<div id="plan" class="hide">
+<div id="plan_header">~ Plan ~</div>
+<div id="plan_list"></div>
+<div id="plan_actions"></div>
+</div>
+
 <div id="p1_court" class="court"></div>
+
 <div id="p2_court" class="court"></div>
+
 <div id="hand" class="hand"></div>
 
 </main>
