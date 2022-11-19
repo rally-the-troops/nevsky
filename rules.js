@@ -859,6 +859,14 @@ states.levy_muster = {
 	},
 }
 
+function resume_levy_muster_lord() {
+	--game.count
+	if (game.count === 0) {
+		set_lord_moved(game.who, 1)
+		pop_state()
+	}
+}
+
 states.levy_muster_lord = {
 	prompt() {
 		view.prompt = `Muster ${lord_name[game.who]}.`
@@ -906,7 +914,6 @@ states.levy_muster_lord = {
 
 	lord(other) {
 		clear_undo()
-		--game.count
 		let die = roll_die()
 		let fealty = data.lords[other].fealty
 		if (die <= fealty) {
@@ -916,45 +923,46 @@ states.levy_muster_lord = {
 		} else {
 			logi(`${lord_name[other]} rolled ${die} > ${fealty}`)
 			logii(`failed`)
+			resume_levy_muster_lord()
 		}
 	},
 
 	vassal(vassal) {
 		push_undo()
-		logi(vassal_names[vassal])
-		--game.count
+		logi(vassal_name[vassal])
 		muster_vassal(game.who, vassal)
+		resume_levy_muster_lord()
 	},
 
 	ship() {
 		push_undo()
 		logi("Ship")
-		--game.count
 		add_lord_assets(game.who, SHIP, 1)
+		resume_levy_muster_lord()
 	},
 	boat() {
 		push_undo()
 		logi("Boat")
-		--game.count
 		add_lord_assets(game.who, BOAT, 1)
+		resume_levy_muster_lord()
 	},
 	cart() {
 		push_undo()
 		logi("Cart")
-		--game.count
 		add_lord_assets(game.who, CART, 1)
+		resume_levy_muster_lord()
 	},
 	sled() {
 		push_undo()
 		logi("Sled")
-		--game.count
 		add_lord_assets(game.who, SLED, 1)
+		resume_levy_muster_lord()
 	},
 
 	capability() {
 		push_undo()
-		--game.count
 		push_state('muster_capability')
+		resume_levy_muster_lord()
 	},
 
 	done() {
@@ -980,6 +988,13 @@ states.muster_lord_at_seat = {
 	},
 }
 
+function resume_muster_lord_transport() {
+	if (--game.count === 0)
+		pop_state()
+	if (game.state === 'levy_muster_lord')
+		resume_levy_muster_lord()
+}
+
 states.muster_lord_transport = {
 	prompt() {
 		view.prompt = `Select Transport for ${lord_name[game.who]}.`
@@ -1000,29 +1015,25 @@ states.muster_lord_transport = {
 		push_undo()
 		logii("Ship")
 		add_lord_assets(game.who, SHIP, 1)
-		if (--game.count === 0)
-			pop_state()
+		resume_muster_lord_transport()
 	},
 	boat() {
 		push_undo()
 		logii("Boat")
 		add_lord_assets(game.who, BOAT, 1)
-		if (--game.count === 0)
-			pop_state()
+		resume_muster_lord_transport()
 	},
 	cart() {
 		push_undo()
 		logii("Cart")
 		add_lord_assets(game.who, CART, 1)
-		if (--game.count === 0)
-			pop_state()
+		resume_muster_lord_transport()
 	},
 	sled() {
 		push_undo()
 		logii("Sled")
 		add_lord_assets(game.who, SLED, 1)
-		if (--game.count === 0)
-			pop_state()
+		resume_muster_lord_transport()
 	},
 }
 
