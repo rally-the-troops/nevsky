@@ -8,6 +8,11 @@ const round = Math.round
 const floor = Math.floor
 const ceil = Math.ceil
 
+const first_p1_card = 0
+const last_p1_card = 20
+const first_p2_card = 21
+const last_p2_card = 41
+
 // unit types
 const KNIGHTS = 0
 const SERGEANTS = 1
@@ -270,6 +275,7 @@ const ui = {
 	lord_cylinder: [],
 	lord_service: [],
 	lord_mat: [],
+	lord_buttons: [],
 	vassal_service: [],
 	forces: [],
 	routed: [],
@@ -584,6 +590,7 @@ function update_lord(ix) {
 		ui.lord_service[ix].classList.add("hide")
 		ui.lord_mat[ix].classList.add("hide")
 	}
+	ui.lord_buttons[ix].classList.toggle("action", is_lord_action(ix))
 	ui.lord_cylinder[ix].classList.toggle("action", is_lord_action(ix))
 	ui.lord_service[ix].classList.toggle("action", is_service_action(ix))
 
@@ -781,7 +788,12 @@ function on_update() {
 
 	update_veche()
 
-	if ((view.turn & 1) === 0) {
+	if (typeof view.what === "number" && view.what >= 0) {
+		if (view.what <= first_p1_card)
+			ui.command.className = `card teutonic aow_${view.what}`
+		else
+			ui.command.className = `card russian aow_${view.what}`
+	} else if ((view.turn & 1) === 0) {
 		if (player === "Russians")
 			ui.command.className = `card russian aow_back`
 		else
@@ -835,6 +847,8 @@ function on_update() {
 
 	action_button("capability", "Capability")
 
+	action_button("discard", "Discard")
+	action_button("deploy", "Deploy")
 	action_button("done", "Done")
 	action_button("unfed", "Unfed")
 	action_button("end_plan", "End plan")
@@ -869,6 +883,7 @@ function build_lord_mat(lord, ix, side, name) {
 	ui.assets[ix] = build_div(bg, "assets")
 	ui.ready_vassals[ix] = build_div(bg, "ready_vassals")
 	ui.mustered_vassals[ix] = build_div(bg, "mustered_vassals")
+	ui.lord_buttons[ix] = build_div(bg, "shield", ix, on_click_cylinder)
 	ui.lord_capabilities[ix] = build_div(mat, "capabilities")
 	ui.lord_mat[ix] = mat
 }

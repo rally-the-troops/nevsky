@@ -75,6 +75,11 @@ const last_p1_locale = 23
 const first_p2_locale = 24
 const last_p2_locale = 52
 
+const first_p1_card = 0
+const last_p1_card = 20
+const first_p2_card = 21
+const last_p2_card = 41
+
 const LORD_ANDREAS = find_lord("Andreas")
 const LORD_HEINRICH = find_lord("Heinrich")
 const LORD_HERMANN = find_lord("Hermann")
@@ -807,22 +812,100 @@ function end_setup_lords() {
 	game.lords.moved = 0
 	set_active_enemy()
 	if (game.active === P1)
-		goto_levy_arts_of_war()
+		goto_levy_arts_of_war_first()
+}
+
+// === LEVY: ARTS OF WAR (FIRST TURN) ===
+
+function draw_two_arts_of_war_cards() {
+	// TODO: no PASS cards in some scenarios in 2nd ed
+	let deck = []
+	if (game.active === P1) {
+		for (let c = first_p1_card; c <= last_p1_card; ++c)
+			if (!is_card_in_use(c))
+				deck.push(c)
+	} else {
+		for (let c = first_p2_card; c <= last_p2_card; ++c)
+			if (!is_card_in_use(c))
+				deck.push(c)
+	}
+
+	let result = []
+	let i = random(deck.length)
+	result.push(deck[i])
+	array_remove(deck, i)
+
+	i = random(deck.length)
+	result.push(deck[i])
+	array_remove(deck, i)
+	return result
+}
+
+function goto_levy_arts_of_war_first() {
+	log_h1("Levy " + current_turn_name())
+	game.state = 'levy_arts_of_war_first'
+	game.what = draw_two_arts_of_war_cards()
+}
+
+function resume_levy_arts_of_war_first() {
+	if (game.what.length === 0)
+		end_levy_arts_of_war_first()
+}
+
+states.levy_arts_of_war_first = {
+	prompt() {
+		let c = game.what[0]
+		view.what = c
+		if (data.cards[c].this_lord) {
+			view.prompt = `Assign ${data.cards[c].capability} to a Lord.`
+			let discard = true
+			for (let lord of data.cards[c].lords) {
+				if (is_lord_on_map(lord)) {
+					gen_action_lord(lord)
+					discard = false
+				}
+			}
+			if (discard)
+				view.actions.discard = 1
+		} else if (data.cards[c].capability) {
+			view.prompt = `Deploy ${data.cards[c].capability}.`
+			view.actions.deploy = 1
+		} else {
+			view.prompt = `No Capability.`
+			view.actions.discard = 1
+		}
+	},
+	lord(lord) {
+		let c = game.what.shift()
+		log(`${lord_name[lord]} capability #${c}`)
+		add_lord_capability(lord, c)
+		resume_levy_arts_of_war_first()
+	},
+	deploy() {
+		let c = game.what.shift()
+		log(`Global capability #${c}`)
+		set_add(game.capabilities, c)
+		resume_levy_arts_of_war_first()
+	},
+	discard() {
+		let c = game.what.shift()
+		log(`Discarded #${c}`)
+		resume_levy_arts_of_war_first()
+	},
+}
+
+function end_levy_arts_of_war_first() {
+	game.what = -1
+	set_active_enemy()
+	if (game.active === P2)
+		goto_levy_arts_of_war_first()
+	else
+		goto_pay()
 }
 
 // === LEVY: ARTS OF WAR ===
 
-function goto_levy_arts_of_war() {
-	log_h1("Levy " + current_turn_name())
-	game.state = 'levy_arts_of_war'
-	end_levy_arts_of_war()
-}
-
 states.levy_arts_of_war = {
-}
-
-function end_levy_arts_of_war() {
-	goto_pay()
 }
 
 // === LEVY: MUSTER ===
@@ -1058,6 +1141,30 @@ function lord_has_capability(lord, c) {
 	return false
 }
 
+function can_add_lord_capability(lord) {
+	if (get_lord_capability(lord, 0) < 0)
+		return true
+	if (get_lord_capability(lord, 1) < 0)
+		return true
+	return false
+}
+
+function add_lord_capability(lord, c) {
+	if (get_lord_capability(lord, 0) < 0)
+		return set_lord_capability(lord, 0, c)
+	if (get_lord_capability(lord, 1) < 0)
+		return set_lord_capability(lord, 1, c)
+	throw new Error("no empty capability slots!")
+}
+
+function discard_lord_capability(lord, c) {
+	if (get_lord_capability(lord, 0) === c)
+		return set_lord_capability(lord, 0, -1)
+	if (get_lord_capability(lord, 1) === c)
+		return set_lord_capability(lord, 1, -1)
+	throw new Error("capability not found")
+}
+
 states.muster_capability = {
 	prompt() {
 		view.prompt = `Select a new capability for ${lord_name[game.who]}.`
@@ -1079,11 +1186,9 @@ states.muster_capability = {
 		push_undo()
 		logi(`Capability #${c}`)
 		if (data.cards[c].this_lord) {
-			if (get_lord_capability(game.who, 0) < 0)
-				set_lord_capability(game.who, 0, c)
-			else if (get_lord_capability(game.who, 1) < 0)
-				set_lord_capability(game.who, 1, c)
-			else {
+			if (can_add_lord_capability(game.who, c)) {
+				add_lord_capability(game.who, c)
+			} else {
 				game.what = c
 				game.state = 'muster_capability_discard'
 				return
@@ -1105,10 +1210,8 @@ states.muster_capability_discard = {
 	arts_of_war(c) {
 		push_undo()
 		logi(`Discarded #${c}`)
-		if (c === get_lord_capability(game.who, 0))
-			set_lord_capability(game.who, 0, game.what)
-		else
-			set_lord_capability(game.who, 1, game.what)
+		discard_lord_capability(game.who, c)
+		add_lord_capability(game.who, game.what)
 		game.what = -1
 		pop_state()
 		resume_levy_muster_lord()
@@ -1639,7 +1742,22 @@ function pack4_set(word, n, x) {
 	return (word & ~(15 << n)) | (x << n)
 }
 
-// Sorted array treated as Set (for JSON)
+// remove item at index (faster than splice)
+function array_remove(array, index) {
+	let n = array.length
+	for (let i = index + 1; i < n; ++i)
+		array[i - 1] = array[i]
+	array.length = n - 1
+	return array
+}
+
+// insert item at index (faster than splice)
+function array_insert(array, index, item) {
+	for (let i = array.length; i > index; --i)
+		array[i] = array[i - 1]
+	array[index] = item
+	return array
+}
 
 function set_has(set, item) {
 	let a = 0

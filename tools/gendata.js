@@ -607,7 +607,7 @@ function arts_of_war_capability(name, capability, this_lord, lord_names) {
 		lord_names = lords.filter(l => l.side === side).map(l => l.name)
 		AOW[name].lords = lord_names.map(n => lords.findIndex(l => l.name === n)).sort(cmpnum)
 	}
-	else {
+	else if (Array.isArray(lord_names)) {
 		AOW[name].lords = lord_names.map(n => lords.findIndex(l => l.name === n)).sort(cmpnum)
 	}
 }
@@ -652,6 +652,9 @@ arts_of_war_capability("T15", "Warrior Monks", false, [ "Andreas", "Rudolf" ])
 arts_of_war_capability("T16", "Ransom", false, "ALL")
 arts_of_war_capability("T17", "Stonemasons", true, "any")
 arts_of_war_capability("T18", "Cogs", true, [ "Heinrich", "Knud & Abel", "Andreas" ])
+arts_of_war_capability("T0", "No Capability", false, null)
+arts_of_war_capability("T0", "No Capability", false, null)
+arts_of_war_capability("T0", "No Capability", false, null)
 
 arts_of_war_event("R1", "Bridge", "hold")
 arts_of_war_event("R2", "Marsh", "hold")
@@ -693,6 +696,9 @@ arts_of_war_capability("R15", "Archbishopric", false, "any")
 arts_of_war_capability("R16", "Lodya", true, "any")
 arts_of_war_capability("R17", "Veliky Knyaz", true, "any")
 arts_of_war_capability("R18", "Stone Kremlin", true, "any")
+arts_of_war_capability("R0", "No Capability", false, null)
+arts_of_war_capability("R0", "No Capability", false, null)
+arts_of_war_capability("R0", "No Capability", false, null)
 
 let vassals = []
 for (let lord of lords)
