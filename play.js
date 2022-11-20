@@ -298,6 +298,7 @@ const ui = {
 	events: document.getElementById("events"),
 	p1_capabilities: document.getElementById("p1_capabilities"),
 	p2_capabilities: document.getElementById("p2_capabilities"),
+	hand: document.getElementById("hand"),
 	command: document.getElementById("command"),
 	turn: document.getElementById("turn"),
 	vp1: document.getElementById("vp1"),
@@ -760,6 +761,12 @@ function update_arts_of_war() {
 		if (view.capabilities.includes(c))
 			ui.p2_capabilities.appendChild(ui.arts_of_war[c])
 	})
+
+	ui.hand.replaceChildren()
+	if (view.hand) {
+		for (let c of view.hand)
+			ui.hand.appendChild(ui.arts_of_war[c])
+	}
 
 	for (let ix = 0; ix < data.lords.length; ++ix) {
 		let side = ix < 6 ? "teutonic" : "russian"

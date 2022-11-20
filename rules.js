@@ -927,17 +927,17 @@ states.levy_arts_of_war = {
 		let c = game.what[0]
 		view.what = c
 		switch (data.cards[c].when) {
-		case "this_levy":
-		case "this_campaign":
-		case "now":
+		case 'this_levy':
+		case 'this_campaign':
+		case 'now':
 			view.prompt = `Play ${data.cards[c].event}.`
 			view.actions.play = 1
 			break
-		case "hold":
+		case 'hold':
 			view.prompt = `Hold ${data.cards[c].event}.`
 			view.actions.hold = 1
 			break
-		case "never":
+		case 'never':
 			view.prompt = `Discard ${data.cards[c].event}.`
 			view.actions.discard = 1
 			break
@@ -946,7 +946,7 @@ states.levy_arts_of_war = {
 	play() {
 		let c = game.what.shift()
 		log(`Played #${c} ${data.cards[c].event}.`)
-		if (data.cards[c].when === "this_levy" || data.cards[c].when === "this_campaign")
+		if (data.cards[c].when === 'this_levy' || data.cards[c].when === 'this_campaign')
 			set_add(game.events, c)
 		log(`TODO implement event`)
 		resume_levy_arts_of_war()
@@ -955,9 +955,9 @@ states.levy_arts_of_war = {
 		let c = game.what.shift()
 		log(`Held event card.`)
 		if (game.active === P1)
-			set_add(game.p1_hand, c)
+			game.p1_hand.push(c)
 		else
-			set_add(game.p2_hand, c)
+			game.p2_hand.push(c)
 		resume_levy_arts_of_war()
 	},
 	discard() {
@@ -1305,6 +1305,10 @@ function end_levy_call_to_arms() {
 function goto_campaign_plan() {
 	game.turn++
 
+	// Discard "This Levy" events from play.
+	if (game.events.length > 0)
+		game.events = game.events.filter(c => data.cards[c].when !== 'this_levy')
+
 	log_h1("Campaign " + current_turn_name())
 
 	set_active(BOTH)
@@ -1609,6 +1613,10 @@ function end_disband() {
 // === CAMPAIGN: REMOVE MARKERS ===
 
 function goto_remove_markers() {
+	// Discard "This Campaign" events from play.
+	if (game.events.length > 0)
+		game.events = game.events.filter(c => data.cards[c].when !== 'this_campaign')
+
 	game.lords.moved = 0
 	goto_command_activation()
 }
@@ -1745,10 +1753,16 @@ exports.view = function(state, current) {
 		veche_coin: game.veche_coin,
 
 		command: game.command,
+		hand: null,
 		plan: null,
 		who: game.who,
 		where: game.where,
 	}
+
+	if (current === P1)
+		view.hand = game.p1_hand
+	if (current === P2)
+		view.hand = game.p2_hand
 
 	if (game.state === 'game_over') {
 		view.prompt = game.victory
