@@ -711,9 +711,9 @@ function vassal(lord, service, name, forces, capability) {
 	vassals.push({ lord: lord_id, name, service, forces, capability })
 }
 
+vassal("Andreas", 3, "Teutonic Vassals", { knights: 1, men_at_arms: 2 })
 vassal("Andreas", 1, "Lettgallian Auxiliaries", { light_horse: 1, militia: 1 })
 vassal("Andreas", 2, "Summer Crusaders", { knights: 3 }, "Crusade")
-vassal("Andreas", 3, "Teutonic Vassals", { knights: 1, men_at_arms: 2 })
 
 vassal("Heinrich", 2, "Heinrich von Lode", { knights: 1, men_at_arms: 1 })
 vassal("Heinrich", 2, "Odward von Lode", { knights: 1, men_at_arms: 1 })
@@ -723,8 +723,8 @@ vassal("Hermann", 2, "Johannes von Dolen", { knights: 1, men_at_arms: 1 })
 vassal("Hermann", 1, "Ugaunian Auxiliaries", { light_horse: 1, militia: 1 })
 
 vassal("Knud & Abel", 2, "Dietrich von Kivel", { knights: 1, men_at_arms: 1 })
-vassal("Knud & Abel", 1, "Estonian Auxiliaries", { light_horse: 1, militia: 1 })
 vassal("Knud & Abel", 2, "Otto von Lüneburg", { knights: 1, men_at_arms: 1 })
+vassal("Knud & Abel", 1, "Estonian Auxiliaries", { light_horse: 1, militia: 1 })
 
 vassal("Rudolf", 2, "Ex-Sword Brethren", { knights: 1, sergeants: 1 })
 vassal("Rudolf", 2, "Jerwen Teutonic Vassals", { knights: 1, men_at_arms: 1 })
@@ -732,24 +732,24 @@ vassal("Rudolf", 2, "Summer Crusaders", { knights: 2 }, "Crusade")
 
 vassal("Yaroslav", 1, "Mstislavich Partisans", { militia: 2 })
 
-vassal("Aleksandr", 3, "Mongols", { asiatic_horse: 2 }, "Steppe Warriors")
-vassal("Aleksandr", 3, "Mongols", { asiatic_horse: 2 }, "Steppe Warriors")
 vassal("Aleksandr", 4, "Pereyaslavl", { men_at_arms: 1 })
 vassal("Aleksandr", 3, "Rostov", { men_at_arms: 1 })
 vassal("Aleksandr", 3, "Yaroslavl", { men_at_arms: 1 })
+vassal("Aleksandr", 3, "Mongols", { asiatic_horse: 2 }, "Steppe Warriors")
+vassal("Aleksandr", 3, "Mongols", { asiatic_horse: 2 }, "Steppe Warriors")
 
-vassal("Andrey", 3, "Kipchaqs", { asiatic_horse: 3 }, "Steppe Warriors")
-vassal("Andrey", 3, "Kipchaqs", { asiatic_horse: 3 }, "Steppe Warriors")
 vassal("Andrey", 4, "Suzdal", { men_at_arms: 1 })
 vassal("Andrey", 4, "Vladimir", { men_at_arms: 1 })
+vassal("Andrey", 3, "Kipchaqs", { asiatic_horse: 3 }, "Steppe Warriors")
+vassal("Andrey", 3, "Kipchaqs", { asiatic_horse: 3 }, "Steppe Warriors")
 
 vassal("Domash", 2, "Novgorod", { militia: 2 })
 vassal("Domash", 2, "Novgorod", { militia: 2 })
 vassal("Domash", 2, "Novgorod", { militia: 2 })
 
-vassal("Gavrilo", 1, "Borderland Russians", { light_horse: 1, militia: 1 })
-vassal("Gavrilo", 2, "Pskov Militia", { militia: 2 })
 vassal("Gavrilo", 4, "Pskov", { men_at_arms: 1 })
+vassal("Gavrilo", 2, "Pskov Militia", { militia: 2 })
+vassal("Gavrilo", 1, "Borderland Russians", { light_horse: 1, militia: 1 })
 
 vassal("Vladislav", 1, "Izhoran Auxiliaries", { militia: 1 })
 vassal("Vladislav", 1, "Ingrian Auxiliaries", { militia: 1 })

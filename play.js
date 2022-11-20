@@ -400,16 +400,49 @@ function on_blur(evt) {
 	document.getElementById("status").textContent = ""
 }
 
+function update_current_card_display() {
+	if (typeof view.what === "number" && view.what >= 0) {
+		if (view.what <= first_p1_card)
+			ui.command.className = `card teutonic aow_${view.what}`
+		else
+			ui.command.className = `card russian aow_${view.what}`
+	} else if ((view.turn & 1) === 0) {
+		if (player === "Russians")
+			ui.command.className = `card russian aow_back`
+		else
+			ui.command.className = `card teutonic aow_back`
+	} else if (view.command < 0) {
+		if (player === "Russians")
+			ui.command.className = `card russian cc_back`
+		else
+			ui.command.className = `card teutonic cc_back`
+	} else {
+		if (view.command < 6)
+			ui.command.className = `card russian cc_lord_${view.command}`
+		else
+			ui.command.className = `card teutonic cc_lord_${view.command}`
+	}
+}
+
 function on_focus_card_tip(c) {
+	if (c <= first_p1_card)
+		ui.command.className = `card teutonic aow_${c}`
+	else
+		ui.command.className = `card russian aow_${c}`
 }
 
 function on_blur_card_tip(c) {
+	update_current_card_display()
 }
 
-function sub_card_name(match, p1) {
+function sub_card_capability(match, p1) {
 	let x = p1 | 0
-	let n = data.cards[x].name
-	return `<span class="card_tip" onmouseenter="on_focus_card_tip(${x})" onmouseleave="on_blur_card_tip(${x})">${n}</span>`
+	return `<span class="card_tip" onmouseenter="on_focus_card_tip(${x})" onmouseleave="on_blur_card_tip(${x})">${data.cards[x].capability}</span>`
+}
+
+function sub_card_event(match, p1) {
+	let x = p1 | 0
+	return `<span class="card_tip" onmouseenter="on_focus_card_tip(${x})" onmouseleave="on_blur_card_tip(${x})">${data.cards[x].event}</span>`
 }
 
 function on_focus_locale_tip(loc) {
@@ -426,10 +459,26 @@ function on_click_locale_tip(loc) {
 	ui.locale[loc].scrollIntoView({ block:"center", inline:"center", behavior:"smooth" })
 }
 
+function on_focus_lord_tip(lord) {
+}
+
+function on_blur_lord_tip(lord) {
+}
+
+function on_click_lord_tip(lord) {
+	ui.lord_mat[lord].scrollIntoView({ block:"center", inline:"center", behavior:"smooth" })
+}
+
 function sub_locale_name(match, p1) {
 	let x = p1 | 0
 	let n = data.locales[x].name
 	return `<span class="locale_tip" onmouseenter="on_focus_locale_tip(${x})" onmouseleave="on_blur_locale_tip(${x})" onclick="on_click_locale_tip(${x})">${n}</span>`
+}
+
+function sub_lord_name(match, p1) {
+	let x = p1 | 0
+	let n = data.lords[x].name
+	return `<span class="lord_tip" onmouseenter="on_focus_lord_tip(${x})" onmouseleave="on_blur_lord_tip(${x})" onclick="on_click_lord_tip(${x})">${n}</span>`
 }
 
 function on_log(text) {
@@ -449,7 +498,9 @@ function on_log(text) {
 	text = text.replace(/</g, "&lt;")
 	text = text.replace(/>/g, "&gt;")
 
-	text = text.replace(/#(\d+)/g, sub_card_name)
+	text = text.replace(/%C(\d+)/g, sub_card_capability)
+	text = text.replace(/%E(\d+)/g, sub_card_event)
+	text = text.replace(/%L(\d+)/g, sub_lord_name)
 	text = text.replace(/%(\d+)/g, sub_locale_name)
 
 	if (text.match(/^\.h1/)) {
@@ -798,27 +849,7 @@ function on_update() {
 
 	update_veche()
 
-	if (typeof view.what === "number" && view.what >= 0) {
-		if (view.what <= first_p1_card)
-			ui.command.className = `card teutonic aow_${view.what}`
-		else
-			ui.command.className = `card russian aow_${view.what}`
-	} else if ((view.turn & 1) === 0) {
-		if (player === "Russians")
-			ui.command.className = `card russian aow_back`
-		else
-			ui.command.className = `card teutonic aow_back`
-	} else if (view.command < 0) {
-		if (player === "Russians")
-			ui.command.className = `card russian cc_back`
-		else
-			ui.command.className = `card teutonic cc_back`
-	} else {
-		if (view.command < 6)
-			ui.command.className = `card russian cc_lord_${view.command}`
-		else
-			ui.command.className = `card teutonic cc_lord_${view.command}`
-	}
+	update_current_card_display()
 
 	if (view.turn & 1)
 		ui.turn.className = `marker circle turn campaign t${view.turn>>1}`

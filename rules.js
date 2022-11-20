@@ -511,7 +511,6 @@ function for_each_friendly_arts_of_war(fn) {
 }
 
 function can_add_transport(who, what) {
-	// TODO: limit to transports usable in current season?
 	return get_lord_assets(who, what) < 8
 }
 
@@ -859,48 +858,29 @@ function setup_pleskau_quickstart() {
 
 	log_h1("Levy " + current_turn_name())
 
-	log_h2("Teutons Muster")
+	log(`Quickstart...`)
 
-	log_h3("Knud & Abel")
-	logi(`Rudolf at %${LOC_WENDEN}`)
 	muster_lord(LORD_RUDOLF, LOC_WENDEN)
-	logii("Cart")
 	add_lord_assets(LORD_RUDOLF, CART, 1)
 
-	logi("Boat")
 	add_lord_assets(LORD_KNUD_ABEL, BOAT, 1)
 
-	log_h3("Hermann")
 	muster_vassal(LORD_HERMANN, data.lords[LORD_HERMANN].vassals[0])
-	logi("Capability T4")
 	set_lord_capability(LORD_HERMANN, 0, find_arts_of_war("T4"))
-	logi("Capability T14")
 	set_lord_capability(LORD_HERMANN, 1, find_arts_of_war("T14"))
 
-	log_h3("Yaroslav")
-	logi("Capability T3")
 	set_lord_capability(LORD_YAROSLAV, 0, find_arts_of_war("T3"))
 
 	set_add(game.capabilities, find_arts_of_war("T13"))
 	game.legate = LOC_DORPAT
 
-	log_h2("Russians Muster")
-
-	log_h3("Vladislav")
-	logi("Capability R8")
 	set_add(game.capabilities, find_arts_of_war("R8"))
-	logi(`Domash at %${LOC_NOVGOROD}`)
 	muster_lord(LORD_DOMASH, LOC_NOVGOROD)
-	logii("Boat")
 	add_lord_assets(LORD_DOMASH, BOAT, 2)
-	logii("Cart")
 	add_lord_assets(LORD_DOMASH, CART, 2)
 
-	log_h3("Gavrilo")
 	muster_vassal(LORD_GAVRILO, data.lords[LORD_GAVRILO].vassals[0])
-	logi("Capability R2")
 	set_lord_capability(LORD_GAVRILO, 0, find_arts_of_war("R2"))
-	logi("Capability R6")
 	set_lord_capability(LORD_GAVRILO, 1, find_arts_of_war("R6"))
 
 	game.veche_coin += 1
@@ -933,7 +913,7 @@ states.setup_lords = {
 	},
 	lord(lord) {
 		push_undo()
-		log(`${lord_name[lord]} at %${get_lord_locale(lord)}`)
+		log(`%L${lord} at %${get_lord_locale(lord)}`)
 		push_state('muster_lord_transport')
 		set_lord_moved(lord, 1)
 		game.who = lord
@@ -948,8 +928,11 @@ states.setup_lords = {
 function end_setup_lords() {
 	game.lords.moved = 0
 	set_active_enemy()
-	if (game.active === P1)
+	if (game.active === P1) {
+		log_h1("Levy " + current_turn_name())
+		log_h2("Arts of War")
 		goto_levy_arts_of_war_first()
+	}
 }
 
 // === LEVY: ARTS OF WAR (FIRST TURN) ===
@@ -966,6 +949,7 @@ function draw_two_arts_of_war_cards() {
 			if (!is_card_in_use(c))
 				deck.push(c)
 	}
+	console.log("deck", deck)
 
 	let result = []
 	let i = random(deck.length)
@@ -979,7 +963,8 @@ function draw_two_arts_of_war_cards() {
 }
 
 function goto_levy_arts_of_war_first() {
-	log_h1("Levy " + current_turn_name())
+	log_br()
+	log(game.active)
 	game.state = 'levy_arts_of_war_first'
 	game.what = draw_two_arts_of_war_cards()
 }
@@ -1014,19 +999,19 @@ states.levy_arts_of_war_first = {
 	},
 	lord(lord) {
 		let c = game.what.shift()
-		log(`${lord_name[lord]} capability #${c}`)
+		logi(`%C${c} - %L${lord}`)
 		add_lord_capability(lord, c)
 		resume_levy_arts_of_war_first()
 	},
 	deploy() {
 		let c = game.what.shift()
-		log(`Global capability #${c}`)
+		logi(`%C${c}`)
 		set_add(game.capabilities, c)
 		resume_levy_arts_of_war_first()
 	},
 	discard() {
 		let c = game.what.shift()
-		log(`Discarded #${c}`)
+		logi(`%C${c} - discarded`)
 		resume_levy_arts_of_war_first()
 	},
 }
@@ -1043,7 +1028,8 @@ function end_levy_arts_of_war_first() {
 // === LEVY: ARTS OF WAR ===
 
 function goto_levy_arts_of_war() {
-	log_h1("Levy " + current_turn_name())
+	log_br()
+	log(game.active)
 	game.state = 'levy_arts_of_war'
 	game.what = draw_two_arts_of_war_cards()
 }
@@ -1076,7 +1062,7 @@ states.levy_arts_of_war = {
 	},
 	play() {
 		let c = game.what.shift()
-		log(`Played #${c} ${data.cards[c].event}.`)
+		log(`Played %E${c}`)
 		if (data.cards[c].when === 'this_levy' || data.cards[c].when === 'this_campaign')
 			set_add(game.events, c)
 		log(`TODO implement event`)
@@ -1093,7 +1079,7 @@ states.levy_arts_of_war = {
 	},
 	discard() {
 		let c = game.what.shift()
-		log(`Discarded #${c}`)
+		log(`Discarded %E${c}`)
 		resume_levy_arts_of_war()
 	},
 }
@@ -1140,7 +1126,7 @@ states.levy_muster = {
 	},
 	lord(lord) {
 		push_undo()
-		log_h3(`${lord_name[lord]} at %${get_lord_locale(lord)}`)
+		log_h3(`%L${lord} at %${get_lord_locale(lord)}`)
 		push_state('levy_muster_lord')
 		game.who = lord
 		game.count = data.lords[lord].lordship
@@ -1209,11 +1195,11 @@ states.levy_muster_lord = {
 		let die = roll_die()
 		let fealty = data.lords[other].fealty
 		if (die <= fealty) {
-			logi(`${lord_name[other]} rolled ${die} <= ${fealty}`)
+			logi(`%L${other} rolled ${die} <= ${fealty}`)
 			push_state('muster_lord_at_seat')
 			game.who = other
 		} else {
-			logi(`${lord_name[other]} rolled ${die} > ${fealty}`)
+			logi(`%L${other} rolled ${die} > ${fealty}`)
 			logii(`failed`)
 			resume_levy_muster_lord()
 		}
@@ -1388,7 +1374,7 @@ states.muster_capability = {
 	},
 	arts_of_war(c) {
 		push_undo()
-		logi(`Capability #${c}`)
+		logi(`Capability %C${c}`)
 		if (data.cards[c].this_lord) {
 			if (can_add_lord_capability(game.who, c)) {
 				add_lord_capability(game.who, c)
@@ -1413,7 +1399,7 @@ states.muster_capability_discard = {
 	},
 	arts_of_war(c) {
 		push_undo()
-		logi(`Discarded #${c}`)
+		logi(`Discarded %C${c}`)
 		discard_lord_capability(game.who, c)
 		add_lord_capability(game.who, game.what)
 		game.what = NOTHING
@@ -1570,7 +1556,7 @@ function end_campaign_plan() {
 		for (let i = 0; i < game.lords.lieutenants.length; i += 2) {
 			let upper = game.lords.lieutenants[i]
 			let lower = game.lords.lieutenants[i+1]
-			log(`>${lord_name[upper]} over ${lord_name[lower]}`)
+			log(`>%L${upper} over %L${lower}`)
 		}
 	}
 
@@ -1606,13 +1592,15 @@ function goto_command_activation() {
 function goto_end_campaign() {
 	// TODO: end game check
 	game.turn++
+	log_h1("Levy " + current_turn_name())
+	log_h2("Arts of War")
 	goto_levy_arts_of_war()
 }
 
 // === CAMPAIGN: ACTIONS ===
 
 function goto_actions() {
-	log_h2(lord_name[game.command])
+	log_h2(`%L${game.command}`)
 
 	game.state = 'actions'
 	game.who = game.command
@@ -1680,19 +1668,19 @@ states.feed_lord = {
 		view.actions.unfed = 1
 	},
 	loot(lord) {
-		logi(`Fed ${lord_name[game.who]} with Loot from ${lord_name[lord]}.`)
+		logi(`Fed %L${game.who} with Loot from %L${lord}.`)
 		add_lord_assets(lord, LOOT, -1)
 		if (--game.count === 0)
 			game.state = 'feed'
 	},
 	prov(lord) {
-		logi(`Fed ${lord_name[game.who]} with Provender from ${lord_name[lord]}.`)
+		logi(`Fed %L${game.who} with Provender from %L${lord}.`)
 		add_lord_assets(lord, PROV, -1)
 		if (--game.count === 0)
 			game.state = 'feed'
 	},
 	unfed() {
-		logi(`Did not feed ${lord_name[game.who]}.`)
+		logi(`Did not feed %L${game.who}.`)
 		add_lord_service(game.who, -1)
 		game.state = 'feed'
 	},
@@ -1745,19 +1733,19 @@ states.pay_lord = {
 		}
 	},
 	loot(lord) {
-		logi(`Paid ${lord_name[game.who]} with Loot from ${lord_name[lord]}.`)
+		logi(`Paid %L${game.who} with Loot from %L${lord}.`)
 		add_lord_assets(lord, LOOT, -1)
 		add_lord_service(game.who, 1)
 		pop_state()
 	},
 	coin(lord) {
-		logi(`Paid ${lord_name[game.who]} with Coin from ${lord_name[lord]}.`)
+		logi(`Paid %L${game.who} with Coin from %L${lord}.`)
 		add_lord_assets(lord, COIN, -1)
 		add_lord_service(game.who, 1)
 		pop_state()
 	},
 	veche_coin() {
-		logi(`Paid ${lord_name[game.who]} with Coin from Veche.`)
+		logi(`Paid %L${game.who} with Coin from Veche.`)
 		game.veche_coin --
 		add_lord_service(game.who, 1)
 		pop_state()
@@ -1773,7 +1761,8 @@ function end_pay() {
 
 function goto_disband() {
 	game.state = 'disband'
-	// TODO
+	if (TODO)
+		end_disband()
 }
 
 states.disband = {
