@@ -340,6 +340,10 @@ function set_lord_vassal_service(lord, n, x) {
 
 // === GAME STATE HELPERS ===
 
+function roll_die() {
+	return random(6) + 1
+}
+
 function count_lord_forces(lord) {
 	return get_lord_forces(lord, KNIGHTS)
 		+ get_lord_forces(lord, SERGEANTS)
@@ -356,6 +360,38 @@ function is_campaign_phase() {
 
 function is_levy_phase() {
 	return (game.turn & 1) === 0
+}
+
+function max_plan_length() {
+	switch (current_season()) {
+	case SUMMER: return 6
+	case EARLY_WINTER: return 4
+	case LATE_WINTER: return 4
+	case RASPUTITSA: return 5
+	}
+}
+
+function count_cards_in_plan(plan, lord) {
+	let n = 0
+	for (let c of plan)
+		if (c === lord)
+			++n
+	return n
+}
+
+function is_marshal(lord) {
+	switch (lord) {
+	case LORD_ANDREAS: return true
+	case LORD_HERMANN: return is_lord_on_map(LORD_ANDREAS)
+	case LORD_ALEKSANDR: return true
+	case LORD_ANDREY: return is_lord_on_map(LORD_ALEKSANDR)
+	default: return false
+	}
+}
+
+function is_lord_besieged(lord) {
+	// TODO
+	return false
 }
 
 function is_card_in_use(c) {
@@ -423,8 +459,46 @@ function can_add_transport(who, what) {
 	return get_lord_assets(who, what) < 8
 }
 
-function roll_die() {
-	return random(6) + 1
+function is_upper_lord(lord) {
+	for (let i = 0; i < game.lords.lieutenants.length; i += 2)
+		if (game.lords.lieutenants[i] === lord)
+			return true
+	return false
+}
+
+function is_lower_lord(lord) {
+	for (let i = 1; i < game.lords.lieutenants.length; i += 2)
+		if (game.lords.lieutenants[i] === lord)
+			return true
+	return false
+}
+
+function get_lower_lord(upper) {
+	for (let i = 0; i < game.lords.lieutenants.length; i += 2)
+		if (game.lords.lieutenants[i] === upper)
+			return game.lords.lieutenants[i+1]
+	return NOBODY
+}
+
+function set_lower_lord(upper, lower) {
+	for (let i = 0; i < game.lords.lieutenants.length; i += 2)
+		if (game.lords.lieutenants[i] === upper)
+			return game.lords.lieutenants[i+1] = lower
+}
+
+function add_lieutenant(upper) {
+	game.lords.lieutenants.push(upper)
+	game.lords.lieutenants.push(NOBODY)
+}
+
+function remove_lieutenant(upper) {
+	for (let i = 0; i < game.lords.lieutenants.length; i += 2) {
+		if (game.lords.lieutenants[i] === upper) {
+			array_remove(game.lords.lieutenants, i)
+			array_remove(game.lords.lieutenants, i)
+			return
+		}
+	}
 }
 
 // === SETUP ===
@@ -1144,12 +1218,13 @@ states.muster_lord_at_seat = {
 		set_lord_moved(game.who, 1)
 		muster_lord(game.who, loc)
 		game.state = 'muster_lord_transport'
-		game.count = data.lords[game.who].assets.transport
+		game.count = data.lords[game.who].assets.transport | 0
+		resume_muster_lord_transport()
 	},
 }
 
 function resume_muster_lord_transport() {
-	if (--game.count === 0)
+	if (game.count === 0)
 		pop_state()
 	if (game.state === 'levy_muster_lord')
 		resume_levy_muster_lord()
@@ -1175,24 +1250,28 @@ states.muster_lord_transport = {
 		push_undo()
 		logii("Ship")
 		add_lord_assets(game.who, SHIP, 1)
+		--game.count
 		resume_muster_lord_transport()
 	},
 	boat() {
 		push_undo()
 		logii("Boat")
 		add_lord_assets(game.who, BOAT, 1)
+		--game.count
 		resume_muster_lord_transport()
 	},
 	cart() {
 		push_undo()
 		logii("Cart")
 		add_lord_assets(game.who, CART, 1)
+		--game.count
 		resume_muster_lord_transport()
 	},
 	sled() {
 		push_undo()
 		logii("Sled")
 		add_lord_assets(game.who, SLED, 1)
+		--game.count
 		resume_muster_lord_transport()
 	},
 }
@@ -1315,51 +1394,77 @@ function goto_campaign_plan() {
 	game.state = 'campaign_plan'
 	game.p1_plan = []
 	game.p2_plan = []
-
-	// TODO: define lieutenants
 }
 
-function max_plan_length() {
-	switch (current_season()) {
-	case SUMMER: return 6
-	case EARLY_WINTER: return 4
-	case LATE_WINTER: return 4
-	case RASPUTITSA: return 5
-	}
+function plan_get_upper_lord(first, last) {
+	for (let lord = first; lord <= last; ++lord)
+		if (is_upper_lord(lord) && get_lower_lord(lord) === NOBODY)
+			return lord
+	return NOBODY
 }
 
-function count_cards_in_plan(plan, lord) {
-	let n = 0
-	for (let c of plan)
-		if (c === lord)
-			++n
-	return n
+function plan_has_upper_lord(first, last) {
+	for (let lord = first; lord <= last; ++lord)
+		if (is_upper_lord(lord))
+			return true
+	return false
 }
 
 states.campaign_plan = {
 	prompt(current) {
-		view.prompt = "Create your plan."
+		view.prompt = "Build a Plan and designate Lieutenants."
 		let plan = (current === P1) ? game.p1_plan : game.p2_plan
+		let first = (current === P1) ? first_p1_lord : first_p2_lord
+		let last = (current === P1) ? last_p1_lord : last_p2_lord
+		let upper = plan_get_upper_lord(first, last)
+
 		view.plan = plan
+		view.who = upper
+
 		if (plan.length < max_plan_length()) {
 			view.actions.end_plan = 0
 			if (count_cards_in_plan(plan, -1) < 3)
 				gen_action_plan(-1)
-			for (let lord = 0; lord <= last_lord; ++lord) {
-				if (lord >= first_p1_lord && lord <= last_p1_lord && current !== P1)
-					continue
-				if (lord >= first_p2_lord && lord <= last_p2_lord && current !== P2)
-					continue
+			for (let lord = first; lord <= last; ++lord) {
 				if (is_lord_on_map(lord) && count_cards_in_plan(plan, lord) < 3)
 					gen_action_plan(lord)
 			}
 		} else {
-			view.actions.end_plan = 1
+			if (upper === NOBODY)
+				view.actions.end_plan = 1
 		}
-		if (plan.length > 0)
+
+		if (upper !== NOBODY)
+			gen_action_lord(upper)
+
+		for (let lord = first; lord <= last; ++lord) {
+			if (is_marshal(lord) || is_lord_besieged(lord))
+				continue
+			if (is_upper_lord(lord) || is_lower_lord(lord))
+				continue
+			if (upper === NOBODY) {
+				gen_action_lord(lord)
+			} else {
+				if (get_lord_locale(upper) === get_lord_locale(lord))
+					gen_action_lord(lord)
+			}
+		}
+
+		if (plan.length > 0 || plan_has_upper_lord(first, last))
 			view.actions.undo = 1
 		else
 			view.actions.undo = 0
+	},
+	lord(lord, current) {
+		let first = (current === P1) ? first_p1_lord : first_p2_lord
+		let last = (current === P1) ? last_p1_lord : last_p2_lord
+		let upper = plan_get_upper_lord(first, last)
+		if (lord === upper)
+			remove_lieutenant(upper)
+		else if (upper === NOBODY)
+			add_lieutenant(lord)
+		else
+			set_lower_lord(upper, lord)
 	},
 	plan(lord, current) {
 		let plan = (current === P1) ? game.p1_plan : game.p2_plan
@@ -1367,7 +1472,13 @@ states.campaign_plan = {
 	},
 	undo(_, current) {
 		let plan = (current === P1) ? game.p1_plan : game.p2_plan
-		plan.length--
+		let first = (current === P1) ? first_p1_lord : first_p2_lord
+		let last = (current === P1) ? last_p1_lord : last_p2_lord
+		game.lords.lieutenants = []
+		for (let lord = first; lord <= last; ++lord)
+			if (is_upper_lord(lord))
+				remove_lieutenant(lord)
+		plan.length = 0
 	},
 	end_plan(_, current) {
 		console.log("active", game.active)
@@ -1383,6 +1494,15 @@ states.campaign_plan = {
 }
 
 function end_campaign_plan() {
+	if (game.lords.lieutenants.length > 0) {
+		log(`Lieutenants`)
+		for (let i = 0; i < game.lords.lieutenants.length; i += 2) {
+			let upper = game.lords.lieutenants[i]
+			let lower = game.lords.lieutenants[i+1]
+			log(`>${lord_name[upper]} over ${lord_name[lower]}`)
+		}
+	}
+
 	set_active(P1)
 	goto_command_activation()
 }

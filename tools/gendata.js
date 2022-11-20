@@ -346,8 +346,8 @@ let lords = [
 			men_at_arms: 1,
 		},
 		assets: {
-			ship: 1,
-			coin: 2,
+			coin: 1,
+			ship: 2,
 			prov: 1,
 		},
 		ships: 1,
