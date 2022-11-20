@@ -156,6 +156,7 @@ function is_p2_locale(loc) {
 function count_vp1() {
 	let vp = 0
 	for (let loc of view.castles)
+		// TODO: captured by russians?
 		if (is_p2_locale(loc))
 			vp += 2
 	for (let loc of view.conquered)
@@ -170,6 +171,7 @@ function count_vp1() {
 function count_vp2() {
 	let vp = view.veche_vp * 2
 	for (let loc of view.castles)
+		// TODO: captured by russians?
 		if (is_p1_locale(loc))
 			vp += 2
 	for (let loc of view.conquered)
@@ -647,16 +649,21 @@ function update_locale(loc) {
 
 	if (set_has(view.castles, loc)) {
 		let cn
-		if (is_p1_locale(loc))
+		// TODO: captured by russians?
+		if (false)
 			cn = "marker rectangle castle russian"
 		else
 			cn = "marker rectangle castle teutonic"
 		ui.locale_markers[loc].appendChild(get_cached_element(cn))
 	}
 
+	if (set_has(view.walls, loc)) {
+		let cn = "marker square walls"
+		ui.locale_markers[loc].appendChild(get_cached_element(cn))
+	}
+
 	if (view.sieges[loc]) {
 		let cn
-		// TODO: castle?
 		if (is_p1_locale(loc))
 			cn = "marker square siege russian"
 		else
@@ -848,7 +855,10 @@ function on_update() {
 	action_button("capability", "Capability")
 
 	action_button("discard", "Discard")
+	action_button("play", "Play")
+	action_button("hold", "Hold")
 	action_button("deploy", "Deploy")
+
 	action_button("done", "Done")
 	action_button("unfed", "Unfed")
 	action_button("end_plan", "End plan")

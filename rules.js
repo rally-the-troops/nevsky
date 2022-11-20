@@ -480,6 +480,7 @@ function muster_vassal(lord, vassal) {
 }
 
 exports.setup = function (seed, scenario, options) {
+	console.log("DO SETUP", seed, scenario)
 	game = {
 		seed,
 		scenario,
@@ -517,8 +518,10 @@ exports.setup = function (seed, scenario, options) {
 
 		conquered: [],
 		ravaged: [],
-		castles: [],
 		sieges: {},
+
+		castles: [],
+		walls: [],
 
 		command: NOBODY,
 		who: NOBODY,
@@ -527,6 +530,8 @@ exports.setup = function (seed, scenario, options) {
 		levy: 0, // lordship used
 		count: 0,
 	}
+
+	update_aliases()
 
 	log_h1(scenario)
 
@@ -780,6 +785,7 @@ function setup_pleskau_quickstart() {
 states.setup_lords = {
 	prompt() {
 		view.prompt = "Setup your Lords."
+		console.log("SETUP", game.lords.moved)
 		let done = true
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 			if (is_lord_on_map(lord) && !get_lord_moved(lord)) {
@@ -905,7 +911,69 @@ function end_levy_arts_of_war_first() {
 
 // === LEVY: ARTS OF WAR ===
 
+function goto_levy_arts_of_war() {
+	log_h1("Levy " + current_turn_name())
+	game.state = 'levy_arts_of_war'
+	game.what = draw_two_arts_of_war_cards()
+}
+
+function resume_levy_arts_of_war() {
+	if (game.what.length === 0)
+		end_levy_arts_of_war()
+}
+
 states.levy_arts_of_war = {
+	prompt() {
+		let c = game.what[0]
+		view.what = c
+		switch (data.cards[c].when) {
+		case "this_levy":
+		case "this_campaign":
+		case "now":
+			view.prompt = `Play ${data.cards[c].event}.`
+			view.actions.play = 1
+			break
+		case "hold":
+			view.prompt = `Hold ${data.cards[c].event}.`
+			view.actions.hold = 1
+			break
+		case "never":
+			view.prompt = `Discard ${data.cards[c].event}.`
+			view.actions.discard = 1
+			break
+		}
+	},
+	play() {
+		let c = game.what.shift()
+		log(`Played #${c} ${data.cards[c].event}.`)
+		if (data.cards[c].when === "this_levy" || data.cards[c].when === "this_campaign")
+			set_add(game.events, c)
+		log(`TODO implement event`)
+		resume_levy_arts_of_war()
+	},
+	hold() {
+		let c = game.what.shift()
+		log(`Held event card.`)
+		if (game.active === P1)
+			set_add(game.p1_hand, c)
+		else
+			set_add(game.p2_hand, c)
+		resume_levy_arts_of_war()
+	},
+	discard() {
+		let c = game.what.shift()
+		log(`Discarded #${c}`)
+		resume_levy_arts_of_war()
+	},
+}
+
+function end_levy_arts_of_war() {
+	game.what = -1
+	set_active_enemy()
+	if (game.active === P2)
+		goto_levy_arts_of_war()
+	else
+		goto_pay()
 }
 
 // === LEVY: MUSTER ===
@@ -1664,10 +1732,13 @@ exports.view = function(state, current) {
 		vassals: game.vassals,
 		events: game.events,
 		capabilities: game.capabilities,
+
 		conquered: game.conquered,
 		ravaged: game.ravaged,
-		castles: game.castles,
 		sieges: game.sieges,
+
+		castles: game.castles,
+		walls: game.walls,
 
 		legate: game.legate,
 		veche_vp: game.veche_vp,

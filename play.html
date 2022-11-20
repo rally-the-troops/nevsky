@@ -104,8 +104,8 @@ header.your_turn { background-color: orange; }
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: center;
-	gap: 12px;
-	padding: 18px;
+	gap: 12px 6px;
+	padding: 18px 0;
 }
 
 #plan_actions {
@@ -220,8 +220,13 @@ body.shift .capabilities {
 }
 
 .mat .mustered_vassals {
+	display: none;
 	position: absolute;
 	z-index: 5;
+}
+
+body.shift .mustered_vassals {
+	display: block;
 }
 
 .mat .ready_vassals .service_marker {
@@ -422,6 +427,7 @@ X.mat .mustered_vassals { top: 228px; right: 6px; width: 94px; }
 .marker.pursuit.russian { background-image: url(images/marker_pursuit_russian.png) }
 .marker.castle.russian { background-image: url(images/marker_castle_russian.png) }
 .marker.castle.teutonic { background-image: url(images/marker_castle_teutonic.png) }
+.marker.walls { background-image: url(images/marker_walls.a.png) }
 .marker.sea_trade_blocked { background-image: url(images/marker_sea_trade_blocked.a.png) }
 
 .marker.number.teutonic.n1 { background-image: url(images/marker_1_teutonic.png) }
