@@ -440,6 +440,13 @@ function is_lord_at_friendly_locale(lord) {
 	return is_friendly_locale(loc)
 }
 
+function has_free_seat(lord) {
+	for (let loc of data.lords[lord].seats)
+		if (is_friendly_locale(loc))
+			return true
+	return false
+}
+
 function has_enemy_lord(loc) {
 	for (let lord = first_enemy_lord; lord <= last_enemy_lord; ++lord)
 		if (get_lord_locale(lord) === loc)
@@ -737,7 +744,7 @@ function setup_peipus() {
 	game.veche_vp = 4
 	game.veche_coin = 3
 
-	set_add(game.p1_castles, LOC_KOPORYE)
+	set_add(game.p2_castles, LOC_KOPORYE)
 	set_add(game.conquered, LOC_IZBORSK)
 	set_add(game.conquered, LOC_PSKOV)
 	set_add(game.ravaged, LOC_VOD)
@@ -1158,8 +1165,7 @@ states.levy_muster_lord = {
 					continue
 				if (lord === LORD_ANDREY && game.who !== LORD_ALEKSANDR)
 					continue
-				if (is_lord_ready(lord))
-					// TODO: has available seat
+				if (is_lord_ready(lord) && has_free_seat(lord))
 					gen_action_lord(lord)
 			}
 
