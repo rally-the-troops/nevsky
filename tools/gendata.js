@@ -769,51 +769,49 @@ function to_path(name) {
 let lord_service = {Russian:[],Teutonic:[]}
 let vassal_service = {Russian:[],Teutonic:[]}
 
-let last_path, last_side, last_ix
+let last_path, last_side
 
-last_path = null
+last_path = []
 last_side = null
 lords.forEach((lord,id) => {
 	let side = lord.side
 	let path = "counters300/lord_" + side.toLowerCase() + "_" + to_path(lord.name)
 	if (side !== last_side) {
-		last_ix = 0
 		last_side = side
+		last_path = []
 	}
-	lord.image = last_ix
-	if (path !== last_path) {
-		last_ix++
-		last_path = path
+	if (!last_path.includes(path)) {
+		last_path.push(path)
 		lord_service[side].push(path + ".a.png")
-		lord_service[side].push(path + ".b.png")
+		// lord_service[side].push(path + ".b.png")
 	}
+	lord.image = last_path.indexOf(path)
 })
 
-last_path = null
+last_path = []
 last_side = null
 vassals.forEach((vassal,id) => {
 	let lord = lords[vassal.lord]
 	let side = lord.side
 	let path = "counters300/vassal_" + side.toLowerCase() + "_" + to_path(lord.name) + "_" + to_path(vassal.name)
 	if (side !== last_side) {
-		last_ix = 0
 		last_side = side
+		last_path = []
 	}
-	vassal.image = last_ix
-	if (path !== last_path) {
-		last_ix++
-		last_path = path
+	if (!last_path.includes(path)) {
+		last_path.push(path)
 		vassal_service[side].push(path + ".a.png")
-		vassal_service[side].push(path + ".b.png")
+		// vassal_service[side].push(path + ".b.png")
 	}
+	vassal.image = last_path.indexOf(path)
 })
 
 let script = []
 script.push("mkdir -p service300")
-script.push("montage -mode concatenate -tile 2x " + lord_service.Teutonic.join(" ") + " service300/service_lords_teutonic.png")
-script.push("montage -mode concatenate -tile 2x " + vassal_service.Teutonic.join(" ") + " service300/service_vassals_teutonic.png")
-script.push("montage -mode concatenate -tile 2x " + lord_service.Russian.join(" ") + " service300/service_lords_russian.png")
-script.push("montage -mode concatenate -tile 2x " + vassal_service.Russian.join(" ") + " service300/service_vassals_russian.png")
+script.push("montage -mode concatenate -tile 1x " + lord_service.Teutonic.join(" ") + " service300/service_lords_teutonic.png")
+script.push("montage -mode concatenate -tile 1x " + lord_service.Russian.join(" ") + " service300/service_lords_russian.png")
+script.push("montage -mode concatenate -tile 3x " + vassal_service.Teutonic.join(" ") + " service300/service_vassals_teutonic.png")
+script.push("montage -mode concatenate -tile 3x " + vassal_service.Russian.join(" ") + " service300/service_vassals_russian.png")
 
 print("const data = {")
 print("seaports:" + JSON.stringify(seaports) + ",")

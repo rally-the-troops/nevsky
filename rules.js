@@ -540,8 +540,6 @@ function muster_lord(lord, locale, service) {
 function muster_vassal(lord, vassal) {
 	let info = data.vassals[vassal]
 
-	logi(`${vassal_name[vassal]}`)
-
 	game.vassals[vassal] = 1
 
 	add_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
