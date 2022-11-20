@@ -440,9 +440,65 @@ function is_lord_at_friendly_locale(lord) {
 	return is_friendly_locale(loc)
 }
 
+function has_enemy_lord(loc) {
+	for (let lord = first_enemy_lord; lord <= last_enemy_lord; ++lord)
+		if (get_lord_locale(lord) === loc)
+			return true
+	return false
+}
+
+function is_friendly_territory(loc) {
+	if (game.active === P1)
+		return loc >= first_p1_locale && loc <= last_p1_locale
+	return loc >= first_p2_locale && loc <= last_p2_locale
+}
+
+function has_stronghold(loc) {
+	return data.locales[loc].stronghold > 0
+}
+
+function has_conquered_marker(loc) {
+	return set_has(game.conquered, loc)
+}
+
+function has_ravaged_marker(loc) {
+	return set_has(game.ravaged, loc)
+}
+
+function has_enemy_castle(loc) {
+	if (game.active === P1)
+		return set_has(game.p2_castles, loc)
+	return set_has(game.p1_castles, loc)
+}
+
+function has_friendly_castle(loc) {
+	if (game.active === P1)
+		return set_has(game.p1_castles, loc)
+	return set_has(game.p2_castles, loc)
+}
+
+function has_conquered_stronghold(loc) {
+	return has_stronghold(loc) && has_conquered_marker(loc)
+}
+
 function is_friendly_locale(loc) {
-	// TODO
-	return loc !== NOWHERE && loc < CALENDAR
+	if (loc !== NOWHERE && loc < CALENDAR) {
+		if (has_enemy_lord(loc))
+			return false
+		if (is_friendly_territory(loc)) {
+			if (has_conquered_marker(loc))
+				return false
+			if (has_enemy_castle(loc))
+				return false
+			return true
+		} else {
+			if (has_stronghold(loc) && has_conquered_marker(loc))
+				return true
+			if (has_friendly_castle(loc))
+				return true
+		}
+	}
+	return false
 }
 
 function for_each_friendly_arts_of_war(fn) {
@@ -592,7 +648,8 @@ exports.setup = function (seed, scenario, options) {
 		ravaged: [],
 		sieges: {},
 
-		castles: [],
+		p1_castles: [],
+		p2_castles: [],
 		walls: [],
 
 		command: NOBODY,
@@ -681,7 +738,7 @@ function setup_peipus() {
 	game.veche_vp = 4
 	game.veche_coin = 3
 
-	set_add(game.castles, LOC_KOPORYE)
+	set_add(game.p1_castles, LOC_KOPORYE)
 	set_add(game.conquered, LOC_IZBORSK)
 	set_add(game.conquered, LOC_PSKOV)
 	set_add(game.ravaged, LOC_VOD)
@@ -703,6 +760,8 @@ function setup_peipus() {
 	setup_lord_on_calendar(LORD_RUDOLF, 13)
 	setup_lord_on_calendar(LORD_GAVRILO, 13)
 	setup_lord_on_calendar(LORD_VLADISLAV, 15)
+
+	// XXX goto_campaign_plan()
 }
 
 function setup_return_of_the_prince() {
@@ -711,7 +770,7 @@ function setup_return_of_the_prince() {
 	game.veche_vp = 3
 	game.veche_coin = 2
 
-	set_add(game.castles, LOC_KOPORYE)
+	set_add(game.p1_castles, LOC_KOPORYE)
 	set_add(game.conquered, LOC_KAIBOLOVO)
 	set_add(game.conquered, LOC_KOPORYE)
 	set_add(game.conquered, LOC_IZBORSK)
@@ -744,7 +803,7 @@ function setup_return_of_the_prince_nicolle() {
 	game.veche_vp = 3
 	game.veche_coin = 2
 
-	set_add(game.castles, LOC_KOPORYE)
+	set_add(game.p1_castles, LOC_KOPORYE)
 	set_add(game.conquered, LOC_KAIBOLOVO)
 	set_add(game.conquered, LOC_KOPORYE)
 	set_add(game.ravaged, LOC_VOD)
@@ -938,7 +997,7 @@ states.levy_arts_of_war_first = {
 			view.prompt = `Assign ${data.cards[c].capability} to a Lord.`
 			let discard = true
 			for (let lord of data.cards[c].lords) {
-				if (is_lord_on_map(lord)) {
+				if (is_lord_on_map(lord) && !lord_has_capability(lord, c)) {
 					gen_action_lord(lord)
 					discard = false
 				}
@@ -973,7 +1032,7 @@ states.levy_arts_of_war_first = {
 }
 
 function end_levy_arts_of_war_first() {
-	game.what = -1
+	game.what = NOTHING
 	set_active_enemy()
 	if (game.active === P2)
 		goto_levy_arts_of_war_first()
@@ -1040,7 +1099,7 @@ states.levy_arts_of_war = {
 }
 
 function end_levy_arts_of_war() {
-	game.what = -1
+	game.what = NOTHING
 	set_active_enemy()
 	if (game.active === P2)
 		goto_levy_arts_of_war()
@@ -1304,9 +1363,9 @@ function add_lord_capability(lord, c) {
 
 function discard_lord_capability(lord, c) {
 	if (get_lord_capability(lord, 0) === c)
-		return set_lord_capability(lord, 0, -1)
+		return set_lord_capability(lord, 0, NOTHING)
 	if (get_lord_capability(lord, 1) === c)
-		return set_lord_capability(lord, 1, -1)
+		return set_lord_capability(lord, 1, NOTHING)
 	throw new Error("capability not found")
 }
 
@@ -1357,7 +1416,7 @@ states.muster_capability_discard = {
 		logi(`Discarded #${c}`)
 		discard_lord_capability(game.who, c)
 		add_lord_capability(game.who, game.what)
-		game.what = -1
+		game.what = NOTHING
 		pop_state()
 		resume_levy_muster_lord()
 	},
@@ -1394,17 +1453,31 @@ function goto_campaign_plan() {
 	game.p2_plan = []
 }
 
-function plan_get_upper_lord(first, last) {
+function plan_has_lieutenant(first, last) {
+	for (let lord = first; lord <= last; ++lord)
+		if (is_upper_lord(lord))
+			return true
+	return false
+}
+
+function plan_selected_lieutenant(first, last) {
 	for (let lord = first; lord <= last; ++lord)
 		if (is_upper_lord(lord) && get_lower_lord(lord) === NOBODY)
 			return lord
 	return NOBODY
 }
 
-function plan_has_upper_lord(first, last) {
-	for (let lord = first; lord <= last; ++lord)
-		if (is_upper_lord(lord))
+function plan_can_make_lieutenant(upper, first, last) {
+	for (let lord = first; lord <= last; ++lord) {
+		if (lord === upper)
+			continue
+		if (is_marshal(lord) || is_lord_besieged(lord))
+			continue
+		if (is_upper_lord(lord) || is_lower_lord(lord))
+			continue
+		if (get_lord_locale(upper) === get_lord_locale(lord))
 			return true
+	}
 	return false
 }
 
@@ -1414,15 +1487,15 @@ states.campaign_plan = {
 		let plan = (current === P1) ? game.p1_plan : game.p2_plan
 		let first = (current === P1) ? first_p1_lord : first_p2_lord
 		let last = (current === P1) ? last_p1_lord : last_p2_lord
-		let upper = plan_get_upper_lord(first, last)
+		let upper = plan_selected_lieutenant(first, last)
 
 		view.plan = plan
 		view.who = upper
 
 		if (plan.length < max_plan_length()) {
 			view.actions.end_plan = 0
-			if (count_cards_in_plan(plan, -1) < 3)
-				gen_action_plan(-1)
+			if (count_cards_in_plan(plan, NOBODY) < 3)
+				gen_action_plan(NOBODY)
 			for (let lord = first; lord <= last; ++lord) {
 				if (is_lord_on_map(lord) && count_cards_in_plan(plan, lord) < 3)
 					gen_action_plan(lord)
@@ -1441,14 +1514,15 @@ states.campaign_plan = {
 			if (is_upper_lord(lord) || is_lower_lord(lord))
 				continue
 			if (upper === NOBODY) {
-				gen_action_lord(lord)
+				if (plan_can_make_lieutenant(lord, first, last))
+					gen_action_lord(lord)
 			} else {
 				if (get_lord_locale(upper) === get_lord_locale(lord))
 					gen_action_lord(lord)
 			}
 		}
 
-		if (plan.length > 0 || plan_has_upper_lord(first, last))
+		if (plan.length > 0 || plan_has_lieutenant(first, last))
 			view.actions.undo = 1
 		else
 			view.actions.undo = 0
@@ -1456,7 +1530,7 @@ states.campaign_plan = {
 	lord(lord, current) {
 		let first = (current === P1) ? first_p1_lord : first_p2_lord
 		let last = (current === P1) ? last_p1_lord : last_p2_lord
-		let upper = plan_get_upper_lord(first, last)
+		let upper = plan_selected_lieutenant(first, last)
 		if (lord === upper)
 			remove_lieutenant(upper)
 		else if (upper === NOBODY)
@@ -1472,7 +1546,6 @@ states.campaign_plan = {
 		let plan = (current === P1) ? game.p1_plan : game.p2_plan
 		let first = (current === P1) ? first_p1_lord : first_p2_lord
 		let last = (current === P1) ? last_p1_lord : last_p2_lord
-		game.lords.lieutenants = []
 		for (let lord = first; lord <= last; ++lord)
 			if (is_upper_lord(lord))
 				remove_lieutenant(lord)
@@ -1522,7 +1595,7 @@ function goto_command_activation() {
 		game.command = game.p1_plan.shift()
 	}
 
-	if (game.command === -1) {
+	if (game.command === NOBODY) {
 		log_h2("Pass")
 		goto_command_activation()
 	} else {
@@ -1863,7 +1936,8 @@ exports.view = function(state, current) {
 		ravaged: game.ravaged,
 		sieges: game.sieges,
 
-		castles: game.castles,
+		p1_castles: game.p1_castles,
+		p2_castles: game.p2_castles,
 		walls: game.walls,
 
 		legate: game.legate,

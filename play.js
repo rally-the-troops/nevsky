@@ -155,10 +155,8 @@ function is_p2_locale(loc) {
 
 function count_vp1() {
 	let vp = 0
-	for (let loc of view.castles)
-		// TODO: captured by russians?
-		if (is_p2_locale(loc))
-			vp += 2
+	for (let loc of view.p1_castles)
+		vp += 2
 	for (let loc of view.conquered)
 		if (is_p2_locale(loc))
 			vp += data.locales[loc].vp << 1
@@ -170,10 +168,8 @@ function count_vp1() {
 
 function count_vp2() {
 	let vp = view.veche_vp * 2
-	for (let loc of view.castles)
-		// TODO: captured by russians?
-		if (is_p1_locale(loc))
-			vp += 2
+	for (let loc of view.p2_castles)
+		vp += 2
 	for (let loc of view.conquered)
 		if (is_p1_locale(loc))
 			vp += data.locales[loc].vp << 1
@@ -484,7 +480,7 @@ function on_log(text) {
 
 function layout_locale_item(loc, e) {
 	let [x, y] = locale_xy[loc]
-	x += locale_layout[loc] * (46 + 6)
+	x += locale_layout[loc] * 44
 	e.style.top = (y - 23) + "px"
 	e.style.left = (x - 23) + "px"
 	locale_layout[loc] ++
@@ -648,13 +644,13 @@ function update_locale(loc) {
 			ui.locale_markers[loc].appendChild(get_cached_element(cn))
 	}
 
-	if (set_has(view.castles, loc)) {
-		let cn
-		// TODO: captured by russians?
-		if (false)
-			cn = "marker rectangle castle russian"
-		else
-			cn = "marker rectangle castle teutonic"
+	if (set_has(view.p1_castles, loc)) {
+		let cn = "marker rectangle castle teutonic"
+		ui.locale_markers[loc].appendChild(get_cached_element(cn))
+	}
+
+	if (set_has(view.p2_castles, loc)) {
+		let cn = "marker rectangle castle russian"
 		ui.locale_markers[loc].appendChild(get_cached_element(cn))
 	}
 
