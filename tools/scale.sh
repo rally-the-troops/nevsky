@@ -5,14 +5,8 @@ do
 	echo $F
 
 	O=${F/300/75}
-	gm convert $F -colorspace RGB -resize 25% -colorspace sRGB $O.tmp
-	rm -f $O
-	zopflipng -m $O.tmp $O
-	rm -f $O.tmp
+	convert $F -colorspace RGB -resize 25% -colorspace sRGB $O
 
 	O=${F/300/150}
-	gm convert $F -colorspace RGB -resize 50% -colorspace sRGB $O.tmp
-	rm -f $O
-	zopflipng -m $O.tmp $O
-	rm -f $O.tmp
+	convert $F -colorspace RGB -resize 50% -colorspace sRGB $O
 done
