@@ -230,7 +230,12 @@ body.shift .mustered_vassals {
 }
 
 .mat .ready_vassals .service_marker {
-	margin-top: -8px;
+	transition: margin 100ms;
+	margin-top: -24px;
+}
+
+.mat .ready_vassals:hover .service_marker {
+	margin-top: 6px;
 }
 
 .mat .mustered_vassals .service_marker {
@@ -257,7 +262,6 @@ body.shift .mustered_vassals {
 .mat .assets { top: 255px; left: 24px; width: 230px; height: 96px; }
 .mat .ready_vassals { bottom: 22px; right: 22px; width: 94px; }
 .mat .mustered_vassals { bottom: 138px; right: 8px; width: 94px; }
-X.mat .mustered_vassals { top: 228px; right: 6px; width: 94px; }
 
 .mat.teutonic.andreas .background { background-image:url(images/mat_teutonic_andreas.opt.png) }
 .mat.teutonic.heinrich .background { background-image:url(images/mat_teutonic_heinrich.opt.png) }
@@ -272,6 +276,10 @@ X.mat .mustered_vassals { top: 228px; right: 6px; width: 94px; }
 .mat.russian.gavrilo .background { background-image:url(images/mat_russian_gavrilo.opt.png) }
 .mat.russian.karelians .background { background-image:url(images/mat_russian_karelians.opt.png) }
 .mat.russian.vladislav .background { background-image:url(images/mat_russian_vladislav.opt.png) }
+
+.conquered + .conquered { margin-left: -44px; margin-bottom: 13px; }
+.conquered + .conquered + .conquered { margin-bottom: 26px; }
+.conquered + .conquered + .conquered + .conquered { margin-bottom: 39px; }
 
 /* TUCKED CARDS */
 
