@@ -522,10 +522,7 @@ function can_add_transport(who, what) {
 }
 
 function is_upper_lord(lord) {
-	for (let i = 0; i < game.lords.lieutenants.length; i += 2)
-		if (game.lords.lieutenants[i] === lord)
-			return true
-	return false
+	return map_has(game.lords.lieutenants, lord)
 }
 
 function is_lower_lord(lord) {
@@ -536,31 +533,19 @@ function is_lower_lord(lord) {
 }
 
 function get_lower_lord(upper) {
-	for (let i = 0; i < game.lords.lieutenants.length; i += 2)
-		if (game.lords.lieutenants[i] === upper)
-			return game.lords.lieutenants[i+1]
-	return NOBODY
+	return map_get(game.lords.lieutenants, upper, NOBODY)
 }
 
 function set_lower_lord(upper, lower) {
-	for (let i = 0; i < game.lords.lieutenants.length; i += 2)
-		if (game.lords.lieutenants[i] === upper)
-			return game.lords.lieutenants[i+1] = lower
+	map_set(game.lords.lieutenants, upper, lower)
 }
 
 function add_lieutenant(upper) {
-	game.lords.lieutenants.push(upper)
-	game.lords.lieutenants.push(NOBODY)
+	map_set(game.lords.lieutenants, upper, NOBODY)
 }
 
 function remove_lieutenant(upper) {
-	for (let i = 0; i < game.lords.lieutenants.length; i += 2) {
-		if (game.lords.lieutenants[i] === upper) {
-			array_remove(game.lords.lieutenants, i)
-			array_remove(game.lords.lieutenants, i)
-			return
-		}
-	}
+	map_delete(game.lords.lieutenants, upper)
 }
 
 // === SETUP ===
@@ -652,7 +637,7 @@ exports.setup = function (seed, scenario, options) {
 
 		conquered: [],
 		ravaged: [],
-		sieges: {},
+		sieges: [],
 
 		p1_castles: [],
 		p2_castles: [],
@@ -767,7 +752,8 @@ function setup_peipus() {
 	setup_lord_on_calendar(LORD_GAVRILO, 13)
 	setup_lord_on_calendar(LORD_VLADISLAV, 15)
 
-	// XXX goto_campaign_plan()
+	// XXX
+	goto_campaign_plan()
 }
 
 function setup_return_of_the_prince() {
@@ -1459,9 +1445,11 @@ function plan_selected_lieutenant(first, last) {
 	return NOBODY
 }
 
-function plan_can_make_lieutenant(upper, first, last) {
+function plan_can_make_lieutenant(plan, upper, first, last) {
 	for (let lord = first; lord <= last; ++lord) {
 		if (lord === upper)
+			continue
+		if (plan.includes(lord))
 			continue
 		if (is_marshal(lord) || is_lord_besieged(lord))
 			continue
@@ -1475,11 +1463,15 @@ function plan_can_make_lieutenant(upper, first, last) {
 
 states.campaign_plan = {
 	prompt(current) {
-		view.prompt = "Build a Plan and designate Lieutenants."
 		let plan = (current === P1) ? game.p1_plan : game.p2_plan
 		let first = (current === P1) ? first_p1_lord : first_p2_lord
 		let last = (current === P1) ? last_p1_lord : last_p2_lord
 		let upper = plan_selected_lieutenant(first, last)
+
+		// view.prompt = "Build a Plan and designate Lieutenants."
+		//if (plan.length > 0)
+		//view.prompt = "Build a Plan and designate Lieutenants."
+		view.prompt = "Designate Lieutenants and build a Plan."
 
 		view.plan = plan
 		view.who = upper
@@ -1490,7 +1482,8 @@ states.campaign_plan = {
 				gen_action_plan(NOBODY)
 			for (let lord = first; lord <= last; ++lord) {
 				if (is_lord_on_map(lord) && count_cards_in_plan(plan, lord) < 3)
-					gen_action_plan(lord)
+					if (!is_lower_lord(lord))
+						gen_action_plan(lord)
 			}
 		} else {
 			if (upper === NOBODY)
@@ -1506,11 +1499,12 @@ states.campaign_plan = {
 			if (is_upper_lord(lord) || is_lower_lord(lord))
 				continue
 			if (upper === NOBODY) {
-				if (plan_can_make_lieutenant(lord, first, last))
+				if (plan_can_make_lieutenant(plan, lord, first, last))
 					gen_action_lord(lord)
 			} else {
 				if (get_lord_locale(upper) === get_lord_locale(lord))
-					gen_action_lord(lord)
+					if (!plan.includes(lord))
+						gen_action_lord(lord)
 			}
 		}
 
@@ -2014,21 +2008,133 @@ function pack4_set(word, n, x) {
 	return (word & ~(15 << n)) | (x << n)
 }
 
-// remove item at index (faster than splice)
+// === COMMON LIBRARY ===
+
+function clear_undo() {
+	if (game.undo.length > 0)
+		game.undo = []
+}
+
+function push_undo() {
+	let copy = {}
+	for (let k in game) {
+		let v = game[k]
+		if (k === "undo")
+			continue
+		else if (k === "log")
+			v = v.length
+		else if (typeof v === "object" && v !== null)
+			v = object_copy(v)
+		copy[k] = v
+	}
+	game.undo.push(copy)
+}
+
+function pop_undo() {
+	let save_log = game.log
+	let save_undo = game.undo
+	game = save_undo.pop()
+	save_log.length = game.log
+	game.log = save_log
+	game.undo = save_undo
+}
+
+function random(range) {
+	// An MLCG using integer arithmetic with doubles.
+	// https://www.ams.org/journals/mcom/1999-68-225/S0025-5718-99-00996-5/S0025-5718-99-00996-5.pdf
+	// m = 2**35 − 31
+	return (game.seed = game.seed * 200105 % 34359738337) % range
+}
+
+function random_bigint(range) {
+	// Largest MLCG that will fit its state in a double.
+	// Uses BigInt for arithmetic, so is an order of magnitude slower.
+	// https://www.ams.org/journals/mcom/1999-68-225/S0025-5718-99-00996-5/S0025-5718-99-00996-5.pdf
+	// m = 2**53 - 111
+	return (game.seed = Number(BigInt(game.seed) * 5667072534355537n % 9007199254740881n)) % range
+}
+
+function shuffle(list) {
+	// Fisher-Yates shuffle
+	for (let i = list.length - 1; i > 0; --i) {
+		let j = random(i + 1)
+		let tmp = list[j]
+		list[j] = list[i]
+		list[i] = tmp
+	}
+}
+
+function shuffle_bigint(list) {
+	// Fisher-Yates shuffle
+	for (let i = list.length - 1; i > 0; --i) {
+		let j = random_bigint(i + 1)
+		let tmp = list[j]
+		list[j] = list[i]
+		list[i] = tmp
+	}
+}
+
+// Fast deep copy for objects without cycles
+function object_copy(original) {
+	if (Array.isArray(original)) {
+		let n = original.length
+		let copy = new Array(n)
+		for (let i = 0; i < n; ++i) {
+			let v = original[i]
+			if (typeof v === "object" && v !== null)
+				copy[i] = object_copy(v)
+			else
+				copy[i] = v
+		}
+		return copy
+	} else {
+		let copy = {}
+		for (let i in original) {
+			let v = original[i]
+			if (typeof v === "object" && v !== null)
+				copy[i] = object_copy(v)
+			else
+				copy[i] = v
+		}
+		return copy
+	}
+}
+
+// Array remove and insert (faster than splice)
+
 function array_remove(array, index) {
 	let n = array.length
 	for (let i = index + 1; i < n; ++i)
 		array[i - 1] = array[i]
 	array.length = n - 1
-	return array
 }
 
-// insert item at index (faster than splice)
 function array_insert(array, index, item) {
 	for (let i = array.length; i > index; --i)
 		array[i] = array[i - 1]
 	array[index] = item
-	return array
+}
+
+function array_remove_pair(array, index) {
+	let n = array.length
+	for (let i = index + 2; i < n; ++i)
+		array[i - 2] = array[i]
+	array.length = n - 2
+}
+
+function array_insert_pair(array, index, key, value) {
+	for (let i = array.length; i > index; i -= 2) {
+		array[i] = array[i-2]
+		array[i+1] = array[i-1]
+	}
+	array[index] = key
+	array[index+1] = value
+}
+
+// Set as plain sorted array
+
+function set_clear(set) {
+	set.length = 0
 }
 
 function set_has(set, item) {
@@ -2060,7 +2166,7 @@ function set_add(set, item) {
 		else
 			return
 	}
-	set.splice(a, 0, item)
+	array_insert(set, a, item)
 }
 
 function set_delete(set, item) {
@@ -2073,70 +2179,100 @@ function set_delete(set, item) {
 			b = m - 1
 		else if (item > x)
 			a = m + 1
-		else
-			return array_remove(set, m)
+		else {
+			array_remove(set, m)
+			return
+		}
 	}
-	return set
-}
-
-function set_clear(set) {
-	set.length = 0
 }
 
 function set_toggle(set, item) {
-	if (set_has(set, item))
-		set_delete(set, item)
-	else
-		set_add(set, item)
-}
-
-function deep_copy(original) {
-	if (Array.isArray(original)) {
-		let n = original.length
-		let copy = new Array(n)
-		for (let i = 0; i < n; ++i) {
-			let v = original[i]
-			if (typeof v === "object" && v !== null)
-				copy[i] = deep_copy(v)
-			else
-				copy[i] = v
+	let a = 0
+	let b = set.length - 1
+	while (a <= b) {
+		let m = (a + b) >> 1
+		let x = set[m]
+		if (item < x)
+			b = m - 1
+		else if (item > x)
+			a = m + 1
+		else {
+			array_remove(set, m)
+			return
 		}
-		return copy
-	} else {
-		let copy = {}
-		for (let i in original) {
-			let v = original[i]
-			if (typeof v === "object" && v !== null)
-				copy[i] = deep_copy(v)
-			else
-				copy[i] = v
+	}
+	array_insert(set, a, item)
+}
+
+// Map as plain sorted array of key/value pairs
+
+function map_clear(map) {
+	map.length = 0
+}
+
+function map_has(map, key) {
+	let a = 0
+	let b = (map.length >> 1) - 1
+	while (a <= b) {
+		let m = (a + b) >> 1
+		let x = map[m<<1]
+		if (key < x)
+			b = m - 1
+		else if (key > x)
+			a = m + 1
+		else
+			return true
+	}
+	return false
+}
+
+function map_get(map, key, missing) {
+	let a = 0
+	let b = (map.length >> 1) - 1
+	while (a <= b) {
+		let m = (a + b) >> 1
+		let x = map[m<<1]
+		if (key < x)
+			b = m - 1
+		else if (key > x)
+			a = m + 1
+		else
+			return map[(m<<1)+1]
+	}
+	return missing
+}
+
+function map_set(map, key, value) {
+	let a = 0
+	let b = (map.length >> 1) - 1
+	while (a <= b) {
+		let m = (a + b) >> 1
+		let x = map[m<<1]
+		if (key < x)
+			b = m - 1
+		else if (key > x)
+			a = m + 1
+		else {
+			map[(m<<1)+1] = value
+			return
 		}
-		return copy
 	}
+	array_insert_pair(map, a<<1, key, value)
 }
 
-function push_undo() {
-	let copy = {}
-	for (let k in game) {
-		let v = game[k]
-		if (k === "undo") continue
-		else if (k === "log") v = v.length
-		else if (typeof v === "object" && v !== null) v = deep_copy(v)
-		copy[k] = v
+function map_delete(map, item) {
+	let a = 0
+	let b = (map.length >> 1) - 1
+	while (a <= b) {
+		let m = (a + b) >> 1
+		let x = map[m<<1]
+		if (item < x)
+			b = m - 1
+		else if (item > x)
+			a = m + 1
+		else {
+			array_remove_pair(map, m<<1)
+			return
+		}
 	}
-	game.undo.push(copy)
-}
-
-function pop_undo() {
-	let save_log = game.log
-	let save_undo = game.undo
-	let state = save_undo.pop()
-	save_log.length = state.log
-	state.log = save_log
-	state.undo = save_undo
-	load_state(state)
-}
-
-function clear_undo() {
-	game.undo.length = 0
 }
