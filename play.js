@@ -101,8 +101,8 @@ function is_locale_action(locale) {
 	return !!(view.actions && view.actions.locale && set_has(view.actions.locale, locale))
 }
 
-function is_arts_of_war_action(c) {
-	return !!(view.actions && view.actions.arts_of_war && set_has(view.actions.arts_of_war, c))
+function is_card_action(c) {
+	return !!(view.actions && view.actions.card && set_has(view.actions.card, c))
 }
 
 const force_type_count = 7
@@ -193,28 +193,28 @@ function is_card_in_use(c) {
 	return false
 }
 
-function for_each_teutonic_arts_of_war(fn) {
+function for_each_teutonic_card(fn) {
 	for (let i = 0; i < 21; ++i)
 		fn(i)
 }
 
-function for_each_russian_arts_of_war(fn) {
+function for_each_russian_card(fn) {
 	for (let i = 21; i < 42; ++i)
 		fn(i)
 }
 
-function for_each_friendly_arts_of_war(fn) {
+function for_each_friendly_card(fn) {
 	if (player === "Teutons")
-		for_each_teutonic_arts_of_war(fn)
+		for_each_teutonic_card(fn)
 	else
-		for_each_russian_arts_of_war(fn)
+		for_each_russian_card(fn)
 }
 
-function for_each_enemy_arts_of_war(fn) {
+function for_each_enemy_card(fn) {
 	if (player !== "Teutons")
-		for_each_teutonic_arts_of_war(fn)
+		for_each_teutonic_card(fn)
 	else
-		for_each_russian_arts_of_war(fn)
+		for_each_russian_card(fn)
 }
 
 const original_boxes = {
@@ -281,7 +281,7 @@ const ui = {
 	ready_vassals: [],
 	mustered_vassals: [],
 	lord_capabilities: [],
-	arts_of_war: [],
+	cards: [],
 	boxes: {},
 	veche: document.getElementById("veche"),
 	plan_dialog: document.getElementById("plan"),
@@ -351,10 +351,10 @@ function on_click_cylinder(evt) {
 	}
 }
 
-function on_click_arts_of_war(evt) {
+function on_click_card(evt) {
 	if (evt.button === 0) {
 		let id = evt.target.my_id
-		send_action('arts_of_war', id)
+		send_action('card', id)
 	}
 }
 
@@ -772,47 +772,47 @@ function update_plan() {
 	}
 }
 
-function update_arts_of_war() {
+function update_cards() {
 	if (view.show_arts_of_war) {
 		ui.arts_of_war_dialog.classList.remove("hide")
 		ui.arts_of_war_list.replaceChildren()
-		for_each_friendly_arts_of_war(c => {
+		for_each_friendly_card(c => {
 			if (!is_card_in_use(c)) {
-				let elt = ui.arts_of_war[c]
+				let elt = ui.cards[c]
 				ui.arts_of_war_list.appendChild(elt)
-				elt.classList.toggle("action", is_arts_of_war_action(c))
-				elt.classList.toggle("disabled", !is_arts_of_war_action(c))
+				elt.classList.toggle("action", is_card_action(c))
+				elt.classList.toggle("disabled", !is_card_action(c))
 			}
 		})
 	} else {
 		ui.arts_of_war_dialog.classList.add("hide")
 		for (let c = 0; c < 42; ++c) {
-			let elt = ui.arts_of_war[c]
-			elt.classList.toggle("action", is_arts_of_war_action(c))
+			let elt = ui.cards[c]
+			elt.classList.toggle("action", is_card_action(c))
 			elt.classList.remove("disabled")
 		}
 	}
 
 	ui.events.replaceChildren()
 	for (let c of view.events)
-		ui.events.appendChild(ui.arts_of_war[c])
+		ui.events.appendChild(ui.cards[c])
 
 	ui.p1_capabilities.replaceChildren()
-	for_each_teutonic_arts_of_war(c => {
+	for_each_teutonic_card(c => {
 		if (view.capabilities.includes(c))
-			ui.p1_capabilities.appendChild(ui.arts_of_war[c])
+			ui.p1_capabilities.appendChild(ui.cards[c])
 	})
 
 	ui.p2_capabilities.replaceChildren()
-	for_each_russian_arts_of_war(c => {
+	for_each_russian_card(c => {
 		if (view.capabilities.includes(c))
-			ui.p2_capabilities.appendChild(ui.arts_of_war[c])
+			ui.p2_capabilities.appendChild(ui.cards[c])
 	})
 
 	ui.hand.replaceChildren()
 	if (view.hand) {
 		for (let c of view.hand)
-			ui.hand.appendChild(ui.arts_of_war[c])
+			ui.hand.appendChild(ui.cards[c])
 	}
 
 	for (let ix = 0; ix < data.lords.length; ++ix) {
@@ -820,10 +820,10 @@ function update_arts_of_war() {
 		ui.lord_capabilities[ix].replaceChildren()
 		let c = view.lords.cards[(ix << 1) + 0]
 		if (c >= 0)
-			ui.lord_capabilities[ix].appendChild(ui.arts_of_war[c])
+			ui.lord_capabilities[ix].appendChild(ui.cards[c])
 		c = view.lords.cards[(ix << 1) + 1]
 		if (c >= 0)
-			ui.lord_capabilities[ix].appendChild(ui.arts_of_war[c])
+			ui.lord_capabilities[ix].appendChild(ui.cards[c])
 	}
 }
 
@@ -879,7 +879,7 @@ function on_update() {
 	}
 
 	update_plan()
-	update_arts_of_war()
+	update_cards()
 
 	action_button("ship", "Ship")
 	action_button("boat", "Boat")
@@ -932,11 +932,11 @@ function build_lord_mat(lord, ix, side, name) {
 	ui.lord_mat[ix] = mat
 }
 
-function build_arts_of_war(side, c) {
-	let card = ui.arts_of_war[c] = document.createElement("div")
+function build_card(side, c) {
+	let card = ui.cards[c] = document.createElement("div")
 	card.className = `card ${side} aow_${c}`
 	card.my_id = c
-	card.addEventListener("mousedown", on_click_arts_of_war)
+	card.addEventListener("mousedown", on_click_card)
 }
 
 function build_plan() {
@@ -1085,9 +1085,9 @@ function build_map() {
 	build_plan()
 
 	for (let c = 0; c < 21; ++c)
-		build_arts_of_war("teutonic", c)
+		build_card("teutonic", c)
 	for (let c = 21; c < 42; ++c)
-		build_arts_of_war("russian", c)
+		build_card("russian", c)
 }
 
 build_map()

@@ -58,7 +58,7 @@ const SHIP = 6
 
 const data = require("./data.js")
 
-function find_arts_of_war(name) { return data.cards.findIndex(x => x.name === name) }
+function find_card(name) { return data.cards.findIndex(x => x.name === name) }
 function find_lord(name) { return data.lords.findIndex(x => x.name === name) }
 function find_locale(name) { return data.locales.findIndex(x => x.name === name) }
 
@@ -859,22 +859,22 @@ function setup_pleskau_quickstart() {
 	add_lord_assets(LORD_KNUD_ABEL, BOAT, 1)
 
 	muster_vassal(LORD_HERMANN, data.lords[LORD_HERMANN].vassals[0])
-	set_lord_capability(LORD_HERMANN, 0, find_arts_of_war("T4"))
-	set_lord_capability(LORD_HERMANN, 1, find_arts_of_war("T14"))
+	set_lord_capability(LORD_HERMANN, 0, find_card("T4"))
+	set_lord_capability(LORD_HERMANN, 1, find_card("T14"))
 
-	set_lord_capability(LORD_YAROSLAV, 0, find_arts_of_war("T3"))
+	set_lord_capability(LORD_YAROSLAV, 0, find_card("T3"))
 
-	set_add(game.capabilities, find_arts_of_war("T13"))
+	set_add(game.capabilities, find_card("T13"))
 	game.legate = LOC_DORPAT
 
-	set_add(game.capabilities, find_arts_of_war("R8"))
+	set_add(game.capabilities, find_card("R8"))
 	muster_lord(LORD_DOMASH, LOC_NOVGOROD)
 	add_lord_assets(LORD_DOMASH, BOAT, 2)
 	add_lord_assets(LORD_DOMASH, CART, 2)
 
 	muster_vassal(LORD_GAVRILO, data.lords[LORD_GAVRILO].vassals[0])
-	set_lord_capability(LORD_GAVRILO, 0, find_arts_of_war("R2"))
-	set_lord_capability(LORD_GAVRILO, 1, find_arts_of_war("R6"))
+	set_lord_capability(LORD_GAVRILO, 0, find_card("R2"))
+	set_lord_capability(LORD_GAVRILO, 1, find_card("R6"))
 
 	game.veche_coin += 1
 
@@ -930,7 +930,7 @@ function end_setup_lords() {
 
 // === LEVY: ARTS OF WAR (FIRST TURN) ===
 
-function draw_two_arts_of_war_cards() {
+function draw_two_cards() {
 	// TODO: no PASS cards in some scenarios in 2nd ed
 	let deck = []
 	if (game.active === P1) {
@@ -959,7 +959,7 @@ function goto_levy_arts_of_war_first() {
 	log_br()
 	log(game.active)
 	game.state = 'levy_arts_of_war_first'
-	game.what = draw_two_arts_of_war_cards()
+	game.what = draw_two_cards()
 }
 
 function resume_levy_arts_of_war_first() {
@@ -1024,7 +1024,7 @@ function goto_levy_arts_of_war() {
 	log_br()
 	log(game.active)
 	game.state = 'levy_arts_of_war'
-	game.what = draw_two_arts_of_war_cards()
+	game.what = draw_two_cards()
 }
 
 function resume_levy_arts_of_war() {
@@ -1356,15 +1356,15 @@ states.muster_capability = {
 				if (!data.cards[c].lords || set_has(data.cards[c].lords, game.who)) {
 					if (data.cards[c].this_lord) {
 						if (!lord_has_capability(game.who, c))
-							gen_action_arts_of_war(c)
+							gen_action_card(c)
 					} else {
-						gen_action_arts_of_war(c)
+						gen_action_card(c)
 					}
 				}
 			}
 		})
 	},
-	arts_of_war(c) {
+	card(c) {
 		push_undo()
 		logi(`Capability %C${c}`)
 		if (data.cards[c].this_lord) {
@@ -1386,10 +1386,10 @@ states.muster_capability = {
 states.muster_capability_discard = {
 	prompt() {
 		view.prompt = `Remove a capability from ${lord_name[game.who]}.`
-		gen_action_arts_of_war(get_lord_capability(game.who, 0))
-		gen_action_arts_of_war(get_lord_capability(game.who, 1))
+		gen_action_card(get_lord_capability(game.who, 0))
+		gen_action_card(get_lord_capability(game.who, 1))
 	},
-	arts_of_war(c) {
+	card(c) {
 		push_undo()
 		logi(`Discarded %C${c}`)
 		discard_lord_capability(game.who, c)
@@ -1447,6 +1447,8 @@ function plan_selected_lieutenant(first, last) {
 
 function plan_can_make_lieutenant(plan, upper, first, last) {
 	for (let lord = first; lord <= last; ++lord) {
+		if (!is_lord_on_map(lord))
+			continue
 		if (lord === upper)
 			continue
 		if (plan.includes(lord))
@@ -1468,11 +1470,7 @@ states.campaign_plan = {
 		let last = (current === P1) ? last_p1_lord : last_p2_lord
 		let upper = plan_selected_lieutenant(first, last)
 
-		// view.prompt = "Build a Plan and designate Lieutenants."
-		//if (plan.length > 0)
-		//view.prompt = "Build a Plan and designate Lieutenants."
 		view.prompt = "Designate Lieutenants and build a Plan."
-
 		view.plan = plan
 		view.who = upper
 
@@ -1899,8 +1897,8 @@ function gen_action_vassal(vassal) {
 	gen_action('vassal', vassal)
 }
 
-function gen_action_arts_of_war(c) {
-	gen_action('arts_of_war', c)
+function gen_action_card(c) {
+	gen_action('card', c)
 }
 
 function gen_action_plan(lord) {
@@ -1935,9 +1933,6 @@ exports.view = function(state, current) {
 
 		command: game.command,
 		hand: null,
-		plan: null,
-		who: game.who,
-		where: game.where,
 	}
 
 	if (current === P1)
