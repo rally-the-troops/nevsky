@@ -182,7 +182,16 @@ const TURN_NAME = [
 	null,
 ]
 
-const USABLE_TRANSPORT = [ [ CART, BOAT, SHIP ], [ SLED ], [ SLED ], [ BOAT, SHIP ] ]
+const USABLE_TRANSPORT = [
+	[ CART, BOAT, SHIP ],
+	[ SLED ],
+	[ SLED ],
+	[ BOAT, SHIP ]
+]
+
+function current_turn() {
+	return game.turn >> 1
+}
 
 function current_season() {
 	return SEASONS[game.turn >> 1]
@@ -190,6 +199,14 @@ function current_season() {
 
 function current_turn_name() {
 	return TURN_NAME[game.turn >> 1]
+}
+
+function is_campaign_phase() {
+	return (game.turn & 1) === 1
+}
+
+function is_levy_phase() {
+	return (game.turn & 1) === 0
 }
 
 // === GAME STATE ===
@@ -396,14 +413,6 @@ function count_lord_horses(lord) {
 		get_lord_forces(lord, LIGHT_HORSE) +
 		get_lord_forces(lord, ASIATIC_HORSE)
 	)
-}
-
-function is_campaign_phase() {
-	return (game.turn & 1) === 1
-}
-
-function is_levy_phase() {
-	return (game.turn & 1) === 0
 }
 
 function max_plan_length() {
@@ -616,6 +625,13 @@ function is_lower_lord(lord) {
 	return false
 }
 
+function get_upper_lord(lower) {
+	for (let i = 0; i < game.lords.lieutenants.length; i += 2)
+		if (game.lords.lieutenants[i+1] === lower)
+			return i
+	return NOBODY
+}
+
 function get_lower_lord(upper) {
 	return map_get(game.lords.lieutenants, upper, NOBODY)
 }
@@ -628,8 +644,13 @@ function add_lieutenant(upper) {
 	map_set(game.lords.lieutenants, upper, NOBODY)
 }
 
-function remove_lieutenant(upper) {
-	map_delete(game.lords.lieutenants, upper)
+function remove_lieutenant(lord) {
+	for (let i = 0; i < game.lords.lieutenants.length; i += 2) {
+		if(game.lords.lieutenants[i] === lord || game.lords.lieutenants[i+1] === lord) {
+			array_remove_pair(game.lords.lieutenants, i)
+			return
+		}
+	}
 }
 
 // === SETUP ===
@@ -642,7 +663,7 @@ function muster_lord(lord, locale, service) {
 	let info = data.lords[lord]
 
 	if (!service)
-		service = (game.turn >> 1) + info.service
+		service = current_turn() + info.service
 
 	set_lord_locale(lord, locale)
 	set_lord_service(lord, service)
@@ -2005,16 +2026,63 @@ function end_pay() {
 
 // === LEVY & CAMPAIGN: DISBAND ===
 
+function has_friendly_lord_who_must_disband() {
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (is_lord_on_map(lord) && get_lord_service(lord) <= current_turn())
+			return true
+	return false
+}
+
 function goto_disband() {
 	game.state = "disband"
-	if (TODO)
+	if (!has_friendly_lord_who_must_disband())
 		end_disband()
+}
+
+function disband_lord(lord) {
+	if (get_lord_service(lord) < current_turn()) {
+		log(`Disbanded L${lord} beyond service limit`)
+		set_lord_locale(lord, NOWHERE)
+		set_lord_service(lord, NEVER)
+	} else {
+		log(`Disbanded L${lord}`)
+		let turn = current_turn() + data.lords[lord].service
+		set_lord_locale(lord, CALENDAR + turn)
+		set_lord_service(lord, turn)
+	}
+
+	remove_lieutenant(lord)
+
+	set_lord_capability(lord, 0, NOTHING)
+	set_lord_capability(lord, 1, NOTHING)
+	game.lords.assets[lord] = 0
+	game.lords.forces[lord] = 0
+	game.lords.routed_forces[lord] = 0
+
+	set_lord_besieged(lord, 0)
+	set_lord_moved(lord, 0)
+
+	for (let v of data.lords[lord].vassals)
+		game.vassals[v] = 0
+
+	// TODO: check lifted siege
 }
 
 states.disband = {
 	prompt() {
 		view.prompt = "You must Disband Lords at their Service limit."
-		view.actions.end_disband = 1
+		let done = true
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+			if (is_lord_on_map(lord) && get_lord_service(lord) <= current_turn()) {
+				gen_action_lord(lord)
+				done = false
+			}
+		}
+		if (done)
+			view.actions.end_disband = 1
+	},
+	lord(lord) {
+		disband_lord(lord)
 	},
 	end_disband() {
 		end_disband()
