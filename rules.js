@@ -58,12 +58,18 @@ const SHIP = 6
 
 const data = require("./data.js")
 
-function find_card(name) { return data.cards.findIndex(x => x.name === name) }
-function find_lord(name) { return data.lords.findIndex(x => x.name === name) }
-function find_locale(name) { return data.locales.findIndex(x => x.name === name) }
+function find_card(name) {
+	return data.cards.findIndex((x) => x.name === name)
+}
+function find_lord(name) {
+	return data.lords.findIndex((x) => x.name === name)
+}
+function find_locale(name) {
+	return data.locales.findIndex((x) => x.name === name)
+}
 
-const lord_name = data.lords.map(lord => lord.name)
-const vassal_name = data.vassals.map(vassal => vassal.name)
+const lord_name = data.lords.map((lord) => lord.name)
+const vassal_name = data.vassals.map((vassal) => vassal.name)
 
 const lord_count = data.lords.length
 const vassal_count = data.vassals.length
@@ -136,9 +142,23 @@ const RASPUTITSA = 3
 
 const SEASONS = [
 	null,
-	SUMMER, SUMMER, EARLY_WINTER, EARLY_WINTER, LATE_WINTER, LATE_WINTER, RASPUTITSA, RASPUTITSA,
-	SUMMER, SUMMER, EARLY_WINTER, EARLY_WINTER, LATE_WINTER, LATE_WINTER, RASPUTITSA, RASPUTITSA,
-	null
+	SUMMER,
+	SUMMER,
+	EARLY_WINTER,
+	EARLY_WINTER,
+	LATE_WINTER,
+	LATE_WINTER,
+	RASPUTITSA,
+	RASPUTITSA,
+	SUMMER,
+	SUMMER,
+	EARLY_WINTER,
+	EARLY_WINTER,
+	LATE_WINTER,
+	LATE_WINTER,
+	RASPUTITSA,
+	RASPUTITSA,
+	null,
 ]
 
 const TURN_NAME = [
@@ -159,15 +179,10 @@ const TURN_NAME = [
 	"14 - Late Winter 1242",
 	"15 - Rasputitsa 1242",
 	"16 - Rasputitsa 1242",
-	null
+	null,
 ]
 
-const USABLE_TRANSPORT = [
-	[ CART, BOAT, SHIP ],
-	[ SLED ],
-	[ SLED ],
-	[ BOAT, SHIP ],
-]
+const USABLE_TRANSPORT = [ [ CART, BOAT, SHIP ], [ SLED ], [ SLED ], [ BOAT, SHIP ] ]
 
 function current_season() {
 	return SEASONS[game.turn >> 1]
@@ -218,7 +233,7 @@ function load_state(state) {
 function push_state(next) {
 	if (!states[next])
 		throw Error("No such state: " + next)
-	game.stack.push([game.state, game.who, game.count])
+	game.stack.push([ game.state, game.who, game.count ])
 	game.state = next
 }
 
@@ -239,8 +254,10 @@ function set_active_enemy() {
 }
 
 function enemy_player() {
-	if (game.active === P1) return P2
-	if (game.active === P2) return P1
+	if (game.active === P1)
+		return P2
+	if (game.active === P2)
+		return P1
 	return null
 }
 
@@ -281,8 +298,10 @@ function set_lord_locale(lord, locale) {
 }
 
 function set_lord_service(lord, service) {
-	if (service < 0) service = 0
-	if (service > 16) service = 16
+	if (service < 0)
+		service = 0
+	if (service > 16)
+		service = 16
 	game.lords.service[lord] = service
 }
 
@@ -291,8 +310,10 @@ function add_lord_service(lord, n) {
 }
 
 function set_lord_assets(lord, n, x) {
-	if (x < 0) x = 0
-	if (x > 8) x = 8
+	if (x < 0)
+		x = 0
+	if (x > 8)
+		x = 8
 	game.lords.assets[lord] = pack4_set(game.lords.assets[lord], n, x)
 }
 
@@ -301,8 +322,10 @@ function add_lord_assets(lord, n, x) {
 }
 
 function set_lord_forces(lord, n, x) {
-	if (x < 0) x = 0
-	if (x > 15) x = 15
+	if (x < 0)
+		x = 0
+	if (x > 15)
+		x = 15
 	game.lords.forces[lord] = pack4_set(game.lords.forces[lord], n, x)
 }
 
@@ -311,8 +334,10 @@ function add_lord_forces(lord, n, x) {
 }
 
 function set_lord_routed_forces(lord, n, x) {
-	if (x < 0) x = 0
-	if (x > 15) x = 15
+	if (x < 0)
+		x = 0
+	if (x > 15)
+		x = 15
 	game.lords.routed_forces[lord] = pack4_set(game.lords.routed_forces[lord], n, x)
 }
 
@@ -353,20 +378,24 @@ function get_shared_assets(loc, what) {
 }
 
 function count_lord_forces(lord) {
-	return get_lord_forces(lord, KNIGHTS)
-		+ get_lord_forces(lord, SERGEANTS)
-		+ get_lord_forces(lord, LIGHT_HORSE)
-		+ get_lord_forces(lord, ASIATIC_HORSE)
-		+ get_lord_forces(lord, MEN_AT_ARMS)
-		+ get_lord_forces(lord, MILITIA)
-		+ get_lord_forces(lord, SERFS)
+	return (
+		get_lord_forces(lord, KNIGHTS) +
+		get_lord_forces(lord, SERGEANTS) +
+		get_lord_forces(lord, LIGHT_HORSE) +
+		get_lord_forces(lord, ASIATIC_HORSE) +
+		get_lord_forces(lord, MEN_AT_ARMS) +
+		get_lord_forces(lord, MILITIA) +
+		get_lord_forces(lord, SERFS)
+	)
 }
 
 function count_lord_horses(lord) {
-	return get_lord_forces(lord, KNIGHTS)
-		+ get_lord_forces(lord, SERGEANTS)
-		+ get_lord_forces(lord, LIGHT_HORSE)
-		+ get_lord_forces(lord, ASIATIC_HORSE)
+	return (
+		get_lord_forces(lord, KNIGHTS) +
+		get_lord_forces(lord, SERGEANTS) +
+		get_lord_forces(lord, LIGHT_HORSE) +
+		get_lord_forces(lord, ASIATIC_HORSE)
+	)
 }
 
 function is_campaign_phase() {
@@ -379,10 +408,14 @@ function is_levy_phase() {
 
 function max_plan_length() {
 	switch (current_season()) {
-	case SUMMER: return 6
-	case EARLY_WINTER: return 4
-	case LATE_WINTER: return 4
-	case RASPUTITSA: return 5
+		case SUMMER:
+			return 6
+		case EARLY_WINTER:
+			return 4
+		case LATE_WINTER:
+			return 4
+		case RASPUTITSA:
+			return 5
 	}
 }
 
@@ -396,11 +429,16 @@ function count_cards_in_plan(plan, lord) {
 
 function is_marshal(lord) {
 	switch (lord) {
-	case LORD_ANDREAS: return true
-	case LORD_HERMANN: return !is_lord_on_map(LORD_ANDREAS)
-	case LORD_ALEKSANDR: return true
-	case LORD_ANDREY: return !is_lord_on_map(LORD_ALEKSANDR)
-	default: return false
+		case LORD_ANDREAS:
+			return true
+		case LORD_HERMANN:
+			return !is_lord_on_map(LORD_ANDREAS)
+		case LORD_ALEKSANDR:
+			return true
+		case LORD_ANDREY:
+			return !is_lord_on_map(LORD_ALEKSANDR)
+		default:
+			return false
 	}
 }
 
@@ -442,7 +480,7 @@ function is_lord_on_calendar(lord) {
 
 function is_lord_ready(lord) {
 	let loc = get_lord_locale(lord)
-	return (loc >= CALENDAR && loc <= CALENDAR + (game.turn >> 1))
+	return loc >= CALENDAR && loc <= CALENDAR + (game.turn >> 1)
 }
 
 function is_vassal_ready(vassal) {
@@ -497,7 +535,7 @@ function is_stronghold(loc) {
 }
 
 function is_region(loc) {
-	return data.locales[loc].type === 'region'
+	return data.locales[loc].type === "region"
 }
 
 function has_conquered_marker(loc) {
@@ -654,7 +692,7 @@ exports.setup = function (seed, scenario, options) {
 		undo: [],
 
 		active: P1,
-		state: 'setup_lords',
+		state: "setup_lords",
 		stack: [],
 
 		turn: 0,
@@ -703,28 +741,28 @@ exports.setup = function (seed, scenario, options) {
 	log_h1(scenario)
 
 	switch (scenario) {
-	default:
-	case "Pleskau":
-		setup_pleskau()
-		break
-	case "Watland":
-		setup_watland()
-		break
-	case "Peipus":
-		setup_peipus()
-		break
-	case "Return of the Prince":
-		setup_return_of_the_prince()
-		break
-	case "Return of the Prince (Nicolle)":
-		setup_return_of_the_prince_nicolle()
-		break
-	case "Crusade on Novgorod":
-		setup_crusade_on_novgorod()
-		break
-	case "Pleskau (Quickstart)":
-		setup_pleskau_quickstart()
-		break
+		default:
+		case "Pleskau":
+			setup_pleskau()
+			break
+		case "Watland":
+			setup_watland()
+			break
+		case "Peipus":
+			setup_peipus()
+			break
+		case "Return of the Prince":
+			setup_return_of_the_prince()
+			break
+		case "Return of the Prince (Nicolle)":
+			setup_return_of_the_prince_nicolle()
+			break
+		case "Crusade on Novgorod":
+			setup_crusade_on_novgorod()
+			break
+		case "Pleskau (Quickstart)":
+			setup_pleskau_quickstart()
+			break
 	}
 
 	return game
@@ -952,7 +990,7 @@ states.setup_lords = {
 	lord(lord) {
 		push_undo()
 		log(`L${lord} at %${get_lord_locale(lord)}`)
-		push_state('muster_lord_transport')
+		push_state("muster_lord_transport")
 		set_lord_moved(lord, 1)
 		game.who = lord
 		game.count = data.lords[lord].assets.transport
@@ -1003,7 +1041,7 @@ function draw_two_cards() {
 function goto_levy_arts_of_war_first() {
 	log_br()
 	log(game.active)
-	game.state = 'levy_arts_of_war_first'
+	game.state = "levy_arts_of_war_first"
 	game.what = draw_two_cards()
 }
 
@@ -1068,7 +1106,7 @@ function end_levy_arts_of_war_first() {
 function goto_levy_arts_of_war() {
 	log_br()
 	log(game.active)
-	game.state = 'levy_arts_of_war'
+	game.state = "levy_arts_of_war"
 	game.what = draw_two_cards()
 }
 
@@ -1082,26 +1120,26 @@ states.levy_arts_of_war = {
 		let c = game.what[0]
 		view.what = c
 		switch (data.cards[c].when) {
-		case 'this_levy':
-		case 'this_campaign':
-		case 'now':
-			view.prompt = `Play ${data.cards[c].event}.`
-			view.actions.play = 1
-			break
-		case 'hold':
-			view.prompt = `Hold ${data.cards[c].event}.`
-			view.actions.hold = 1
-			break
-		case 'never':
-			view.prompt = `Discard ${data.cards[c].event}.`
-			view.actions.discard = 1
-			break
+			case "this_levy":
+			case "this_campaign":
+			case "now":
+				view.prompt = `Play ${data.cards[c].event}.`
+				view.actions.play = 1
+				break
+			case "hold":
+				view.prompt = `Hold ${data.cards[c].event}.`
+				view.actions.hold = 1
+				break
+			case "never":
+				view.prompt = `Discard ${data.cards[c].event}.`
+				view.actions.discard = 1
+				break
 		}
 	},
 	play() {
 		let c = game.what.shift()
 		log(`Played E${c}`)
-		if (data.cards[c].when === 'this_levy' || data.cards[c].when === 'this_campaign')
+		if (data.cards[c].when === "this_levy" || data.cards[c].when === "this_campaign")
 			set_add(game.events, c)
 		log(`TODO implement event`)
 		resume_levy_arts_of_war()
@@ -1135,7 +1173,7 @@ function end_levy_arts_of_war() {
 
 function goto_levy_muster() {
 	log_h2(game.active + " Muster")
-	game.state = 'levy_muster'
+	game.state = "levy_muster"
 }
 
 function end_levy_muster() {
@@ -1165,7 +1203,7 @@ states.levy_muster = {
 	lord(lord) {
 		push_undo()
 		log_h3(`L${lord} at %${get_lord_locale(lord)}`)
-		push_state('levy_muster_lord')
+		push_state("levy_muster_lord")
 		game.who = lord
 		game.count = data.lords[lord].lordship
 	},
@@ -1233,7 +1271,7 @@ states.levy_muster_lord = {
 		let fealty = data.lords[other].fealty
 		if (die <= fealty) {
 			logi(`L${other} rolled ${die} <= ${fealty}`)
-			push_state('muster_lord_at_seat')
+			push_state("muster_lord_at_seat")
 			game.who = other
 		} else {
 			logi(`L${other} rolled ${die} > ${fealty}`)
@@ -1276,7 +1314,7 @@ states.levy_muster_lord = {
 
 	capability() {
 		push_undo()
-		push_state('muster_capability')
+		push_state("muster_capability")
 	},
 
 	done() {
@@ -1297,7 +1335,7 @@ states.muster_lord_at_seat = {
 		logii(`at %${loc}`)
 		set_lord_moved(game.who, 1)
 		muster_lord(game.who, loc)
-		game.state = 'muster_lord_transport'
+		game.state = "muster_lord_transport"
 		game.count = data.lords[game.who].assets.transport | 0
 		resume_muster_lord_transport()
 	},
@@ -1306,7 +1344,7 @@ states.muster_lord_at_seat = {
 function resume_muster_lord_transport() {
 	if (game.count === 0)
 		pop_state()
-	if (game.state === 'levy_muster_lord')
+	if (game.state === "levy_muster_lord")
 		resume_levy_muster_lord()
 }
 
@@ -1396,7 +1434,7 @@ states.muster_capability = {
 	prompt() {
 		view.prompt = `Select a new capability for ${lord_name[game.who]}.`
 		view.show_arts_of_war = 1
-		for_each_friendly_arts_of_war(c => {
+		for_each_friendly_arts_of_war((c) => {
 			if (!is_card_in_use(c)) {
 				if (!data.cards[c].lords || set_has(data.cards[c].lords, game.who)) {
 					if (data.cards[c].this_lord) {
@@ -1417,7 +1455,7 @@ states.muster_capability = {
 				add_lord_capability(game.who, c)
 			} else {
 				game.what = c
-				game.state = 'muster_capability_discard'
+				game.state = "muster_capability_discard"
 				return
 			}
 		} else {
@@ -1448,12 +1486,11 @@ states.muster_capability_discard = {
 // === LEVY: CALL TO ARMS ===
 
 function goto_levy_call_to_arms() {
-	game.state = 'levy_call_to_arms'
+	game.state = "levy_call_to_arms"
 	end_levy_call_to_arms()
 }
 
-states.levy_call_to_arms = {
-}
+states.levy_call_to_arms = {}
 
 function end_levy_call_to_arms() {
 	goto_campaign_plan()
@@ -1466,12 +1503,12 @@ function goto_campaign_plan() {
 
 	// Discard "This Levy" events from play.
 	if (game.events.length > 0)
-		game.events = game.events.filter(c => data.cards[c].when !== 'this_levy')
+		game.events = game.events.filter((c) => data.cards[c].when !== "this_levy")
 
 	log_h1("Campaign " + current_turn_name())
 
 	set_active(BOTH)
-	game.state = 'campaign_plan'
+	game.state = "campaign_plan"
 	game.p1_plan = []
 	game.p2_plan = []
 }
@@ -1508,9 +1545,9 @@ function plan_can_make_lieutenant(plan, upper, first, last) {
 
 states.campaign_plan = {
 	prompt(current) {
-		let plan = (current === P1) ? game.p1_plan : game.p2_plan
-		let first = (current === P1) ? first_p1_lord : first_p2_lord
-		let last = (current === P1) ? last_p1_lord : last_p2_lord
+		let plan = current === P1 ? game.p1_plan : game.p2_plan
+		let first = current === P1 ? first_p1_lord : first_p2_lord
+		let last = current === P1 ? last_p1_lord : last_p2_lord
 		let upper = plan_selected_lieutenant(first, last)
 
 		view.prompt = "Designate Lieutenants and build a Plan."
@@ -1553,8 +1590,8 @@ states.campaign_plan = {
 			view.actions.undo = 0
 	},
 	lord(lord, current) {
-		let first = (current === P1) ? first_p1_lord : first_p2_lord
-		let last = (current === P1) ? last_p1_lord : last_p2_lord
+		let first = current === P1 ? first_p1_lord : first_p2_lord
+		let last = current === P1 ? last_p1_lord : last_p2_lord
 		let upper = plan_selected_lieutenant(first, last)
 		if (lord === upper)
 			remove_lieutenant(upper)
@@ -1564,13 +1601,13 @@ states.campaign_plan = {
 			set_lower_lord(upper, lord)
 	},
 	plan(lord, current) {
-		let plan = (current === P1) ? game.p1_plan : game.p2_plan
+		let plan = current === P1 ? game.p1_plan : game.p2_plan
 		plan.push(lord)
 	},
 	undo(_, current) {
-		let plan = (current === P1) ? game.p1_plan : game.p2_plan
-		let first = (current === P1) ? first_p1_lord : first_p2_lord
-		let last = (current === P1) ? last_p1_lord : last_p2_lord
+		let plan = current === P1 ? game.p1_plan : game.p2_plan
+		let first = current === P1 ? first_p1_lord : first_p2_lord
+		let last = current === P1 ? last_p1_lord : last_p2_lord
 		for (let lord = first; lord <= last; ++lord)
 			if (is_upper_lord(lord))
 				remove_lieutenant(lord)
@@ -1594,7 +1631,7 @@ function end_campaign_plan() {
 		log(`Lieutenants`)
 		for (let i = 0; i < game.lords.lieutenants.length; i += 2) {
 			let upper = game.lords.lieutenants[i]
-			let lower = game.lords.lieutenants[i+1]
+			let lower = game.lords.lieutenants[i + 1]
 			log(`>L${upper} over L${lower}`)
 		}
 	}
@@ -1647,7 +1684,7 @@ function goto_end_campaign() {
 function goto_actions() {
 	log_h2(`L${game.command}`)
 
-	game.state = 'actions'
+	game.state = "actions"
 	game.who = game.command
 	game.count = 0
 }
@@ -1695,6 +1732,10 @@ states.actions = {
 	forage: do_action_forage,
 	ravage: do_action_ravage,
 	pass() {
+		clear_undo()
+		end_actions()
+	},
+	done() {
 		clear_undo()
 		end_actions()
 	},
@@ -1746,9 +1787,10 @@ function can_action_forage() {
 }
 
 function do_action_forage() {
+	push_undo()
 	let where = get_lord_locale(game.who)
 	log(`Foraged at %${where}`)
-	add_lord_assets(game.who, PROV)
+	add_lord_assets(game.who, PROV, 1)
 	++game.count
 }
 
@@ -1769,7 +1811,8 @@ function can_action_ravage() {
 }
 
 function do_action_ravage() {
-	game.state = 'ravage'
+	push_undo()
+	game.state = "ravage"
 }
 
 states.ravage = {
@@ -1784,10 +1827,10 @@ states.ravage = {
 	locale(loc) {
 		log(`Ravaged at %${loc}`)
 		add_ravaged_marker(loc)
-		add_lord_assets(game.who, PROV)
+		add_lord_assets(game.who, PROV, 1)
 		if (!is_region(loc))
-			add_lord_assets(game.who, LOOT)
-		game.state = 'actions'
+			add_lord_assets(game.who, LOOT, 1)
+		game.state = "actions"
 	},
 }
 
@@ -1808,22 +1851,22 @@ function can_action_sail() {
 	if (!is_lord_unbesieged(game.who))
 		return false
 
-			let where = get_lord_locale(game.who)
-			if (!is_seaport(where))
-				return false
+	let where = get_lord_locale(game.who)
+	if (!is_seaport(where))
+		return false
 
-					let season = current_season()
-					if (season !== SUMMER && season !== RASPUTITSA)
-						return false
+	let season = current_season()
+	if (season !== SUMMER && season !== RASPUTITSA)
+		return false
 
-							let horses = count_lord_horses(game.who)
-							let ships = count_lord_ships(game.who)
-							if (horses > ships)
-								return false
+	let horses = count_lord_horses(game.who)
+	let ships = count_lord_ships(game.who)
+	if (horses > ships)
+		return false
 
-									// TODO: check valid destinations
+	// TODO: check valid destinations
 
-									return true
+	return true
 }
 
 // === CAMPAIGN: FEED ===
@@ -1832,13 +1875,13 @@ function has_friendly_lord_who_moved_or_fought() {
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 		if (get_lord_moved(lord))
 			return true
-				return false
+	return false
 }
 
 function goto_feed() {
-	game.state = 'feed'
-		if (!has_friendly_lord_who_moved_or_fought())
-			end_feed()
+	game.state = "feed"
+	if (!has_friendly_lord_who_moved_or_fought())
+		end_feed()
 }
 
 // TODO: feed_self
@@ -1847,45 +1890,45 @@ function goto_feed() {
 states.feed = {
 	prompt() {
 		view.prompt = "You must Feed lords who Moved or Fought."
-			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-				if (get_lord_moved(lord))
-					gen_action_lord(lord)
-						view.actions.end_feed = 1
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+			if (get_lord_moved(lord))
+				gen_action_lord(lord)
+		view.actions.end_feed = 1
 	},
 	lord(lord) {
 		push_undo()
-			game.who = lord
-			game.count = (count_lord_forces(lord) / 6 | 0) + 1
-			game.state = 'feed_lord'
+		game.who = lord
+		game.count = ((count_lord_forces(lord) / 6) | 0) + 1
+		game.state = "feed_lord"
 	},
 	end_feed() {
 		clear_undo()
-			end_feed()
+		end_feed()
 	},
 }
 
 states.feed_lord = {
 	prompt() {
 		view.prompt = "You must Feed ${lord_name[game.who]} ${game.count}x Loot or Provender."
-			// TODO: find loot or prov!
-			view.actions.unfed = 1
+		// TODO: find loot or prov!
+		view.actions.unfed = 1
 	},
 	loot(lord) {
 		logi(`Fed L${game.who} with Loot from L${lord}.`)
-			add_lord_assets(lord, LOOT, -1)
-			if (--game.count === 0)
-			game.state = 'feed'
+		add_lord_assets(lord, LOOT, -1)
+		if (--game.count === 0)
+			game.state = "feed"
 	},
 	prov(lord) {
 		logi(`Fed L${game.who} with Provender from L${lord}.`)
 		add_lord_assets(lord, PROV, -1)
 		if (--game.count === 0)
-			game.state = 'feed'
+			game.state = "feed"
 	},
 	unfed() {
 		logi(`Did not feed L${game.who}.`)
 		add_lord_service(game.who, -1)
-		game.state = 'feed'
+		game.state = "feed"
 	},
 }
 
@@ -1904,7 +1947,7 @@ function end_feed() {
 // === LEVY & CAMPAIGN: PAY ===
 
 function goto_pay() {
-	game.state = 'pay'
+	game.state = "pay"
 	if (TODO)
 		end_pay()
 }
@@ -1919,7 +1962,7 @@ states.pay = {
 	},
 	lord(lord) {
 		push_undo()
-		push_state('pay_lord')
+		push_state("pay_lord")
 		game.who = lord
 	},
 	end_pay() {
@@ -1949,10 +1992,10 @@ states.pay_lord = {
 	},
 	veche_coin() {
 		logi(`Paid L${game.who} with Coin from Veche.`)
-		game.veche_coin --
+		game.veche_coin--
 		add_lord_service(game.who, 1)
 		pop_state()
-	}
+	},
 }
 
 function end_pay() {
@@ -1963,7 +2006,7 @@ function end_pay() {
 // === LEVY & CAMPAIGN: DISBAND ===
 
 function goto_disband() {
-	game.state = 'disband'
+	game.state = "disband"
 	if (TODO)
 		end_disband()
 }
@@ -1998,7 +2041,7 @@ function end_disband() {
 function goto_remove_markers() {
 	// Discard "This Campaign" events from play.
 	if (game.events.length > 0)
-		game.events = game.events.filter(c => data.cards[c].when !== 'this_campaign')
+		game.events = game.events.filter((c) => data.cards[c].when !== "this_campaign")
 
 	game.lords.moved = 0
 	goto_command_activation()
@@ -2007,7 +2050,7 @@ function goto_remove_markers() {
 // === GAME OVER ===
 
 function goto_game_over(result, victory) {
-	game.state = 'game_over'
+	game.state = "game_over"
 	game.active = "None"
 	game.result = result
 	game.victory = victory
@@ -2022,12 +2065,12 @@ states.game_over = {
 	},
 	prompt() {
 		view.prompt = game.victory
-	}
+	},
 }
 
 exports.resign = function (state, current) {
 	load_state(state)
-	if (game.state !== 'game_over') {
+	if (game.state !== "game_over") {
 		for (let opponent of exports.roles) {
 			if (opponent !== current) {
 				goto_game_over(opponent, current + " resigned.")
@@ -2041,7 +2084,7 @@ exports.resign = function (state, current) {
 // === UNCOMMON TEMPLATE ===
 
 function log_br() {
-	if (game.log.length > 0 && game.log[game.log.length-1] !== "")
+	if (game.log.length > 0 && game.log[game.log.length - 1] !== "")
 		game.log.push("")
 }
 
@@ -2079,7 +2122,6 @@ function log_h4(msg) {
 	log(".h4 " + msg)
 }
 
-
 function gen_action(action, argument) {
 	if (!(action in view.actions))
 		view.actions[action] = []
@@ -2087,30 +2129,30 @@ function gen_action(action, argument) {
 }
 
 function gen_action_locale(locale) {
-	gen_action('locale', locale)
+	gen_action("locale", locale)
 }
 
 function gen_action_lord(lord) {
-	gen_action('lord', lord)
+	gen_action("lord", lord)
 }
 
 function gen_action_service(service) {
-	gen_action('service', service)
+	gen_action("service", service)
 }
 
 function gen_action_vassal(vassal) {
-	gen_action('vassal', vassal)
+	gen_action("vassal", vassal)
 }
 
 function gen_action_card(c) {
-	gen_action('card', c)
+	gen_action("card", c)
 }
 
 function gen_action_plan(lord) {
-	gen_action('plan', lord)
+	gen_action("plan", lord)
 }
 
-exports.view = function(state, current) {
+exports.view = function (state, current) {
 	load_state(state)
 
 	view = {
@@ -2145,9 +2187,9 @@ exports.view = function(state, current) {
 	if (current === P2)
 		view.hand = game.p2_hand
 
-	if (game.state === 'game_over') {
+	if (game.state === "game_over") {
 		view.prompt = game.victory
-	} else if (current === 'Observer' || (game.active !== current && game.active !== BOTH)) {
+	} else if (current === "Observer" || (game.active !== current && game.active !== BOTH)) {
 		let inactive = states[game.state].inactive || game.state
 		view.prompt = `Waiting for ${game.active} \u2014 ${inactive}...`
 	} else {
@@ -2174,7 +2216,7 @@ exports.action = function (state, current, action, arg) {
 	if (S && action in S) {
 		S[action](arg, current)
 	} else {
-		if (action === 'undo' && game.undo && game.undo.length > 0)
+		if (action === "undo" && game.undo && game.undo.length > 0)
 			pop_undo()
 		else
 			throw new Error("Invalid action: " + action)
@@ -2186,7 +2228,7 @@ exports.action = function (state, current, action, arg) {
 
 function random(range) {
 	// https://www.ams.org/journals/mcom/1999-68-225/S0025-5718-99-00996-5/S0025-5718-99-00996-5.pdf
-	return (game.seed = game.seed * 200105 % 34359738337) % range
+	return (game.seed = (game.seed * 200105) % 34359738337) % range
 }
 
 // Packed array of small numbers in one word
@@ -2244,7 +2286,7 @@ function random(range) {
 	// An MLCG using integer arithmetic with doubles.
 	// https://www.ams.org/journals/mcom/1999-68-225/S0025-5718-99-00996-5/S0025-5718-99-00996-5.pdf
 	// m = 2**35 − 31
-	return (game.seed = game.seed * 200105 % 34359738337) % range
+	return (game.seed = (game.seed * 200105) % 34359738337) % range
 }
 
 function random_bigint(range) {
@@ -2252,7 +2294,7 @@ function random_bigint(range) {
 	// Uses BigInt for arithmetic, so is an order of magnitude slower.
 	// https://www.ams.org/journals/mcom/1999-68-225/S0025-5718-99-00996-5/S0025-5718-99-00996-5.pdf
 	// m = 2**53 - 111
-	return (game.seed = Number(BigInt(game.seed) * 5667072534355537n % 9007199254740881n)) % range
+	return (game.seed = Number((BigInt(game.seed) * 5667072534355537n) % 9007199254740881n)) % range
 }
 
 function shuffle(list) {
@@ -2325,11 +2367,11 @@ function array_remove_pair(array, index) {
 
 function array_insert_pair(array, index, key, value) {
 	for (let i = array.length; i > index; i -= 2) {
-		array[i] = array[i-2]
-		array[i+1] = array[i-1]
+		array[i] = array[i - 2]
+		array[i + 1] = array[i - 1]
 	}
 	array[index] = key
-	array[index+1] = value
+	array[index + 1] = value
 }
 
 // Set as plain sorted array
@@ -2416,7 +2458,7 @@ function map_has(map, key) {
 	let b = (map.length >> 1) - 1
 	while (a <= b) {
 		let m = (a + b) >> 1
-		let x = map[m<<1]
+		let x = map[m << 1]
 		if (key < x)
 			b = m - 1
 		else if (key > x)
@@ -2432,13 +2474,13 @@ function map_get(map, key, missing) {
 	let b = (map.length >> 1) - 1
 	while (a <= b) {
 		let m = (a + b) >> 1
-		let x = map[m<<1]
+		let x = map[m << 1]
 		if (key < x)
 			b = m - 1
 		else if (key > x)
 			a = m + 1
 		else
-			return map[(m<<1)+1]
+			return map[(m << 1) + 1]
 	}
 	return missing
 }
@@ -2448,17 +2490,17 @@ function map_set(map, key, value) {
 	let b = (map.length >> 1) - 1
 	while (a <= b) {
 		let m = (a + b) >> 1
-		let x = map[m<<1]
+		let x = map[m << 1]
 		if (key < x)
 			b = m - 1
 		else if (key > x)
 			a = m + 1
 		else {
-			map[(m<<1)+1] = value
+			map[(m << 1) + 1] = value
 			return
 		}
 	}
-	array_insert_pair(map, a<<1, key, value)
+	array_insert_pair(map, a << 1, key, value)
 }
 
 function map_delete(map, item) {
@@ -2466,13 +2508,13 @@ function map_delete(map, item) {
 	let b = (map.length >> 1) - 1
 	while (a <= b) {
 		let m = (a + b) >> 1
-		let x = map[m<<1]
+		let x = map[m << 1]
 		if (item < x)
 			b = m - 1
 		else if (item > x)
 			a = m + 1
 		else {
-			array_remove_pair(map, m<<1)
+			array_remove_pair(map, m << 1)
 			return
 		}
 	}
