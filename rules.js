@@ -344,6 +344,14 @@ function roll_die() {
 	return random(6) + 1
 }
 
+function get_shared_assets(loc, what) {
+	let n = 0
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (get_lord_locale(lord) === loc)
+			n += get_lord_assets(lord, what)
+	return n
+}
+
 function count_lord_forces(lord) {
 	return get_lord_forces(lord, KNIGHTS)
 		+ get_lord_forces(lord, SERGEANTS)
@@ -352,6 +360,13 @@ function count_lord_forces(lord) {
 		+ get_lord_forces(lord, MEN_AT_ARMS)
 		+ get_lord_forces(lord, MILITIA)
 		+ get_lord_forces(lord, SERFS)
+}
+
+function count_lord_horses(lord) {
+	return get_lord_forces(lord, KNIGHTS)
+		+ get_lord_forces(lord, SERGEANTS)
+		+ get_lord_forces(lord, LIGHT_HORSE)
+		+ get_lord_forces(lord, ASIATIC_HORSE)
 }
 
 function is_campaign_phase() {
@@ -389,11 +404,6 @@ function is_marshal(lord) {
 	}
 }
 
-function is_lord_besieged(lord) {
-	// TODO
-	return false
-}
-
 function is_card_in_use(c) {
 	if (set_has(game.events, c))
 		return true
@@ -411,6 +421,18 @@ function is_card_in_use(c) {
 function is_lord_on_map(lord) {
 	let loc = get_lord_locale(lord)
 	return loc !== NOWHERE && loc < CALENDAR
+}
+
+function is_lord_besieged(lord) {
+	return pack1_get(game.lords.besieged, lord)
+}
+
+function is_lord_unbesieged(lord) {
+	return !pack1_get(game.lords.besieged, lord)
+}
+
+function set_lord_besieged(lord, x) {
+	game.lords.besieged = pack1_set(game.lords.besieged, lord, x)
 }
 
 function is_lord_on_calendar(lord) {
@@ -460,8 +482,22 @@ function is_friendly_territory(loc) {
 	return loc >= first_p2_locale && loc <= last_p2_locale
 }
 
-function has_stronghold(loc) {
+function is_enemy_territory(loc) {
+	if (game.active === P1)
+		return loc >= first_p2_locale && loc <= last_p2_locale
+	return loc >= first_p1_locale && loc <= last_p1_locale
+}
+
+function is_seaport(loc) {
+	return set_has(data.seaports, loc)
+}
+
+function is_stronghold(loc) {
 	return data.locales[loc].stronghold > 0
+}
+
+function is_region(loc) {
+	return data.locales[loc].type === 'region'
 }
 
 function has_conquered_marker(loc) {
@@ -470,6 +506,10 @@ function has_conquered_marker(loc) {
 
 function has_ravaged_marker(loc) {
 	return set_has(game.ravaged, loc)
+}
+
+function add_ravaged_marker(loc) {
+	set_add(game.ravaged, loc)
 }
 
 function has_enemy_castle(loc) {
@@ -485,7 +525,13 @@ function has_friendly_castle(loc) {
 }
 
 function has_conquered_stronghold(loc) {
-	return has_stronghold(loc) && has_conquered_marker(loc)
+	return is_stronghold(loc) && has_conquered_marker(loc)
+}
+
+function is_friendly_stronghold(loc) {
+	if (is_friendly_locale(loc))
+		return is_stronghold(loc) || has_friendly_castle(loc)
+	return false
 }
 
 function is_friendly_locale(loc) {
@@ -499,7 +545,7 @@ function is_friendly_locale(loc) {
 				return false
 			return true
 		} else {
-			if (has_stronghold(loc) && has_conquered_marker(loc))
+			if (is_stronghold(loc) && has_conquered_marker(loc))
 				return true
 			if (has_friendly_castle(loc))
 				return true
@@ -628,6 +674,7 @@ exports.setup = function (seed, scenario, options) {
 			routed_forces: Array(lord_count).fill(0),
 			cards: Array(lord_count << 1).fill(NOTHING),
 			lieutenants: [],
+			besieged: 0,
 			moved: 0,
 		},
 		vassals: Array(vassal_count).fill(0),
@@ -889,7 +936,6 @@ function setup_pleskau_quickstart() {
 states.setup_lords = {
 	prompt() {
 		view.prompt = "Setup your Lords."
-		console.log("SETUP", game.lords.moved)
 		let done = true
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 			if (is_lord_on_map(lord) && !get_lord_moved(lord)) {
@@ -906,7 +952,7 @@ states.setup_lords = {
 	},
 	lord(lord) {
 		push_undo()
-		log(`%L${lord} at %${get_lord_locale(lord)}`)
+		log(`L${lord} at %${get_lord_locale(lord)}`)
 		push_state('muster_lord_transport')
 		set_lord_moved(lord, 1)
 		game.who = lord
@@ -992,19 +1038,19 @@ states.levy_arts_of_war_first = {
 	},
 	lord(lord) {
 		let c = game.what.shift()
-		logi(`%C${c} - %L${lord}`)
+		logi(`C${c} - L${lord}`)
 		add_lord_capability(lord, c)
 		resume_levy_arts_of_war_first()
 	},
 	deploy() {
 		let c = game.what.shift()
-		logi(`%C${c}`)
+		logi(`C${c}`)
 		set_add(game.capabilities, c)
 		resume_levy_arts_of_war_first()
 	},
 	discard() {
 		let c = game.what.shift()
-		logi(`%C${c} - discarded`)
+		logi(`C${c} - discarded`)
 		resume_levy_arts_of_war_first()
 	},
 }
@@ -1055,7 +1101,7 @@ states.levy_arts_of_war = {
 	},
 	play() {
 		let c = game.what.shift()
-		log(`Played %E${c}`)
+		log(`Played E${c}`)
 		if (data.cards[c].when === 'this_levy' || data.cards[c].when === 'this_campaign')
 			set_add(game.events, c)
 		log(`TODO implement event`)
@@ -1072,7 +1118,7 @@ states.levy_arts_of_war = {
 	},
 	discard() {
 		let c = game.what.shift()
-		log(`Discarded %E${c}`)
+		log(`Discarded E${c}`)
 		resume_levy_arts_of_war()
 	},
 }
@@ -1119,7 +1165,7 @@ states.levy_muster = {
 	},
 	lord(lord) {
 		push_undo()
-		log_h3(`%L${lord} at %${get_lord_locale(lord)}`)
+		log_h3(`L${lord} at %${get_lord_locale(lord)}`)
 		push_state('levy_muster_lord')
 		game.who = lord
 		game.count = data.lords[lord].lordship
@@ -1187,11 +1233,11 @@ states.levy_muster_lord = {
 		let die = roll_die()
 		let fealty = data.lords[other].fealty
 		if (die <= fealty) {
-			logi(`%L${other} rolled ${die} <= ${fealty}`)
+			logi(`L${other} rolled ${die} <= ${fealty}`)
 			push_state('muster_lord_at_seat')
 			game.who = other
 		} else {
-			logi(`%L${other} rolled ${die} > ${fealty}`)
+			logi(`L${other} rolled ${die} > ${fealty}`)
 			logii(`failed`)
 			resume_levy_muster_lord()
 		}
@@ -1366,7 +1412,7 @@ states.muster_capability = {
 	},
 	card(c) {
 		push_undo()
-		logi(`Capability %C${c}`)
+		logi(`Capability C${c}`)
 		if (data.cards[c].this_lord) {
 			if (can_add_lord_capability(game.who, c)) {
 				add_lord_capability(game.who, c)
@@ -1391,7 +1437,7 @@ states.muster_capability_discard = {
 	},
 	card(c) {
 		push_undo()
-		logi(`Discarded %C${c}`)
+		logi(`Discarded C${c}`)
 		discard_lord_capability(game.who, c)
 		add_lord_capability(game.who, game.what)
 		game.what = NOTHING
@@ -1451,8 +1497,6 @@ function plan_can_make_lieutenant(plan, upper, first, last) {
 			continue
 		if (lord === upper)
 			continue
-		if (plan.includes(lord))
-			continue
 		if (is_marshal(lord) || is_lord_besieged(lord))
 			continue
 		if (is_upper_lord(lord) || is_lower_lord(lord))
@@ -1501,8 +1545,7 @@ states.campaign_plan = {
 					gen_action_lord(lord)
 			} else {
 				if (get_lord_locale(upper) === get_lord_locale(lord))
-					if (!plan.includes(lord))
-						gen_action_lord(lord)
+					gen_action_lord(lord)
 			}
 		}
 
@@ -1554,7 +1597,7 @@ function end_campaign_plan() {
 		for (let i = 0; i < game.lords.lieutenants.length; i += 2) {
 			let upper = game.lords.lieutenants[i]
 			let lower = game.lords.lieutenants[i+1]
-			log(`>%L${upper} over %L${lower}`)
+			log(`>L${upper} over L${lower}`)
 		}
 	}
 
@@ -1582,6 +1625,12 @@ function goto_command_activation() {
 	if (game.command === NOBODY) {
 		log_h2("Pass")
 		goto_command_activation()
+	} else if (is_lower_lord(game.command)) {
+		log_h2(`L${game.command} - Pass`)
+		goto_command_activation()
+	} else if (!is_lord_on_map(game.command)) {
+		log_h2(`L${game.command} - Pass`)
+		goto_command_activation()
 	} else {
 		goto_actions()
 	}
@@ -1598,11 +1647,11 @@ function goto_end_campaign() {
 // === CAMPAIGN: ACTIONS ===
 
 function goto_actions() {
-	log_h2(`%L${game.command}`)
+	log_h2(`L${game.command}`)
 
 	game.state = 'actions'
 	game.who = game.command
-	game.count = data.lords[game.command].command
+	game.count = 0
 }
 
 function end_actions() {
@@ -1612,13 +1661,171 @@ function end_actions() {
 
 states.actions = {
 	prompt() {
-		view.prompt = `${lord_name[game.who]} has ${game.count}x actions.`
-		view.actions.end_actions = 1
+		let avail = data.lords[game.command].command - game.count
+
+		view.prompt = `${lord_name[game.who]} has ${avail}x actions.`
+
+		if (avail > 0) {
+			if (can_action_march())
+				view.actions.march = 1
+
+			if (can_action_siege())
+				view.actions.siege = 1
+			if (can_action_storm())
+				view.actions.storm = 1
+			if (can_action_sally())
+				view.actions.sally = 1
+
+			if (can_action_supply())
+				view.actions.supply = 1
+			if (can_action_forage())
+				view.actions.forage = 1
+			if (can_action_ravage())
+				view.actions.ravage = 1
+
+			if (can_action_tax())
+				view.actions.tax = 1
+
+			if (can_action_sail())
+				view.actions.sail = 1
+
+			view.actions.pass = 1
+		} else {
+			view.actions.done = 1
+		}
 	},
-	end_actions() {
+	forage: do_action_forage,
+	ravage: do_action_ravage,
+	pass() {
 		clear_undo()
 		end_actions()
 	},
+}
+
+// === ACTION: MARCH ===
+
+function can_action_march() {
+	return false
+}
+
+// === ACTION: SIEGE ===
+
+function can_action_siege() {
+	return false
+}
+
+// === ACTION: STORM ===
+
+function can_action_storm() {
+	return false
+}
+
+// === ACTION: SALLY ===
+
+function can_action_sally() {
+	return is_lord_besieged(game.who)
+}
+
+// === ACTION: SUPPLY ===
+
+function can_action_supply() {
+	return false
+}
+
+// === ACTION: FORAGE ===
+
+function can_action_forage() {
+	let where = get_lord_locale(game.who)
+	if (is_lord_besieged(game.who))
+		return false
+	if (has_ravaged_marker(where))
+		return false
+	if (current_season() === SUMMER)
+		return true
+	if (is_friendly_stronghold(where))
+		return true
+	return false
+}
+
+function do_action_forage() {
+	let where = get_lord_locale(game.who)
+	log(`Foraged at %${where}`)
+	add_lord_assets(game.who, PROV)
+	++game.count
+}
+
+// === ACTION: RAVAGE ===
+
+function can_action_ravage() {
+	let where = get_lord_locale(game.who)
+	if (is_lord_besieged(game.who))
+		return false
+
+	// TODO: cost 2 if enemy lord is adjacent in 2nd ed
+	// TODO: adjacent ability
+
+	if (is_enemy_territory(where) && !has_ravaged_marker(where))
+		return true
+
+	return false
+}
+
+function do_action_ravage() {
+	game.state = 'ravage'
+}
+
+states.ravage = {
+	prompt() {
+		view.prompt = `Ravage enemy territory!`
+		let where = get_lord_locale(game.who)
+
+		// TODO: adjacent from abilities
+
+		gen_action_locale(where)
+	},
+	locale(loc) {
+		log(`Ravaged at %${loc}`)
+		add_ravaged_marker(loc)
+		add_lord_assets(game.who, PROV)
+		if (!is_region(loc))
+			add_lord_assets(game.who, LOOT)
+		game.state = 'actions'
+	},
+}
+
+// === ACTION: TAX ===
+
+function can_action_tax() {
+	return false
+}
+
+// === ACTION: SAIL ===
+
+function count_lord_ships(lord) {
+	// TODO: sailing as group
+	return get_lord_assets(lord, SHIP)
+}
+
+function can_action_sail() {
+	if (!is_lord_unbesieged(game.who))
+		return false
+
+			let where = get_lord_locale(game.who)
+			if (!is_seaport(where))
+				return false
+
+					let season = current_season()
+					if (season !== SUMMER && season !== RASPUTITSA)
+						return false
+
+							let horses = count_lord_horses(game.who)
+							let ships = count_lord_ships(game.who)
+							if (horses > ships)
+								return false
+
+									// TODO: check valid destinations
+
+									return true
 }
 
 // === CAMPAIGN: FEED ===
@@ -1627,13 +1834,13 @@ function has_friendly_lord_who_moved_or_fought() {
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 		if (get_lord_moved(lord))
 			return true
-	return false
+				return false
 }
 
 function goto_feed() {
 	game.state = 'feed'
-	if (!has_friendly_lord_who_moved_or_fought())
-		end_feed()
+		if (!has_friendly_lord_who_moved_or_fought())
+			end_feed()
 }
 
 // TODO: feed_self
@@ -1642,43 +1849,43 @@ function goto_feed() {
 states.feed = {
 	prompt() {
 		view.prompt = "You must Feed lords who Moved or Fought."
-		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-			if (get_lord_moved(lord))
-				gen_action_lord(lord)
-		view.actions.end_feed = 1
+			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+				if (get_lord_moved(lord))
+					gen_action_lord(lord)
+						view.actions.end_feed = 1
 	},
 	lord(lord) {
 		push_undo()
-		game.who = lord
-		game.count = (count_lord_forces(lord) / 6 | 0) + 1
-		game.state = 'feed_lord'
+			game.who = lord
+			game.count = (count_lord_forces(lord) / 6 | 0) + 1
+			game.state = 'feed_lord'
 	},
 	end_feed() {
 		clear_undo()
-		end_feed()
+			end_feed()
 	},
 }
 
 states.feed_lord = {
 	prompt() {
 		view.prompt = "You must Feed ${lord_name[game.who]} ${game.count}x Loot or Provender."
-		// TODO: find loot or prov!
-		view.actions.unfed = 1
+			// TODO: find loot or prov!
+			view.actions.unfed = 1
 	},
 	loot(lord) {
-		logi(`Fed %L${game.who} with Loot from %L${lord}.`)
-		add_lord_assets(lord, LOOT, -1)
-		if (--game.count === 0)
+		logi(`Fed L${game.who} with Loot from L${lord}.`)
+			add_lord_assets(lord, LOOT, -1)
+			if (--game.count === 0)
 			game.state = 'feed'
 	},
 	prov(lord) {
-		logi(`Fed %L${game.who} with Provender from %L${lord}.`)
+		logi(`Fed L${game.who} with Provender from L${lord}.`)
 		add_lord_assets(lord, PROV, -1)
 		if (--game.count === 0)
 			game.state = 'feed'
 	},
 	unfed() {
-		logi(`Did not feed %L${game.who}.`)
+		logi(`Did not feed L${game.who}.`)
 		add_lord_service(game.who, -1)
 		game.state = 'feed'
 	},
@@ -1731,19 +1938,19 @@ states.pay_lord = {
 		}
 	},
 	loot(lord) {
-		logi(`Paid %L${game.who} with Loot from %L${lord}.`)
+		logi(`Paid L${game.who} with Loot from L${lord}.`)
 		add_lord_assets(lord, LOOT, -1)
 		add_lord_service(game.who, 1)
 		pop_state()
 	},
 	coin(lord) {
-		logi(`Paid %L${game.who} with Coin from %L${lord}.`)
+		logi(`Paid L${game.who} with Coin from L${lord}.`)
 		add_lord_assets(lord, COIN, -1)
 		add_lord_service(game.who, 1)
 		pop_state()
 	},
 	veche_coin() {
-		logi(`Paid %L${game.who} with Coin from Veche.`)
+		logi(`Paid L${game.who} with Coin from Veche.`)
 		game.veche_coin --
 		add_lord_service(game.who, 1)
 		pop_state()
@@ -1947,6 +2154,7 @@ exports.view = function(state, current) {
 		view.prompt = `Waiting for ${game.active} \u2014 ${inactive}...`
 	} else {
 		view.actions = {}
+		view.who = game.who
 		if (states[game.state])
 			states[game.state].prompt(current)
 		else
