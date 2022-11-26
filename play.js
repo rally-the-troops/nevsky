@@ -244,7 +244,7 @@ const original_boxes = {
 }
 
 const calendar_xy = [
-	[0, 0],
+	[40,8],
 	[40,168],
 	[650,168],
 	[1313,168],
@@ -261,10 +261,12 @@ const calendar_xy = [
 	[3196,1120],
 	[3860,1120],
 	[4470,1120],
-	[4470, 2052],
+	[4462,2068],
 ].map(([x,y])=>[x/4|0,y/4|0])
 
 const locale_xy = []
+
+let expand_calendar = -1
 
 const ui = {
 	locale: [],
@@ -302,7 +304,8 @@ const ui = {
 }
 
 let locale_layout = new Array(data.locales.length).fill(0)
-let calendar_layout = new Array(18).fill(0)
+let calendar_layout_service = []
+let calendar_layout_cylinder = []
 
 function clean_name(name) {
 	return name.toLowerCase().replaceAll("&", "and").replaceAll(" ", "_")
@@ -380,6 +383,19 @@ function on_click_lord_service_marker(evt) {
 function on_focus_lord_service_marker(evt) {
 	let id = evt.target.my_id
 	document.getElementById("status").textContent = `(${id}) ${data.lords[id].full_name} - ${data.lords[id].title}`
+	if (expand_calendar !== view.lords.service[id]) {
+		expand_calendar = view.lords.service[id]
+		layout_calendar()
+	}
+}
+
+function on_blur_lord_service_marker(evt) {
+	let id = evt.target.my_id
+	on_blur(evt)
+	if (expand_calendar === view.lords.service[id]) {
+		expand_calendar = -1
+		layout_calendar()
+	}
 }
 
 function on_click_vassal_service_marker(evt) {
@@ -498,9 +514,9 @@ function on_log(text) {
 	text = text.replace(/</g, "&lt;")
 	text = text.replace(/>/g, "&gt;")
 
-	text = text.replace(/%C(\d+)/g, sub_card_capability)
-	text = text.replace(/%E(\d+)/g, sub_card_event)
-	text = text.replace(/%L(\d+)/g, sub_lord_name)
+	text = text.replace(/C(\d+)/g, sub_card_capability)
+	text = text.replace(/E(\d+)/g, sub_card_event)
+	text = text.replace(/L(\d+)/g, sub_lord_name)
 	text = text.replace(/%(\d+)/g, sub_locale_name)
 
 	if (text.match(/^\.h1/)) {
@@ -537,13 +553,59 @@ function layout_locale_item(loc, e) {
 	locale_layout[loc] ++
 }
 
-function layout_calendar_item(loc, e) {
-	let [x, y] = calendar_xy[loc]
-	y += 66 + calendar_layout[loc] * 42
-	x += 24 + calendar_layout[loc] * 6
-	e.style.top = (y + 4) + "px"
-	e.style.left = (x + 4) + "px"
-	calendar_layout[loc] ++
+function layout_calendar() {
+	for (let loc = 0; loc < 18; ++loc) {
+		let [cx, cy] = calendar_xy[loc]
+		let list = calendar_layout_service[loc]
+		for (let i = 0; i < list.length; ++i) {
+			let e = list[i]
+			let x = cx, y = cy, z = 60 - i
+			let d = 46 - 24
+			if (loc === expand_calendar)
+				d = 46
+			if (loc === 0) {
+				x += -6 + 46 * i
+				z = 1
+			} else if (loc === 17) {
+				x += 60 - 46 * i
+				z = 60 - i
+			} else {
+				x += (146 - 94 - 2)
+				y += (227 - 46 - 2) - i * d
+			}
+			e.style.top = y + "px"
+			e.style.left = x + "px"
+			e.style.zIndex = z
+		}
+
+		list = calendar_layout_cylinder[loc]
+		for (let i = 0; i < list.length; ++i) {
+			let e = list[i]
+			let x = cx, y = cy, z = 61
+			if (loc === 0) {
+				let k = calendar_layout_service[0].length
+				if (k > 0)
+					x += k * 46 + 46 + i * 46
+				else
+					x += 0 + i * 46
+			} else if (loc === 17) {
+				let k = calendar_layout_service[17].length
+				if (k > 0)
+					x += 60 - k * 46 - i * 46
+				else
+					x += 60 + i * 46
+			} else if (loc === 1) {
+				x += 46 + (i%2) * 46 + (i/2|0) * 12
+				y += 66 + (i/2|0) * 36
+			} else {
+				x += 6 + (i%3) * 46 + (i/3|0) * 24
+				y += 66 + (i/3|0) * 36
+			}
+			e.style.top = y + "px"
+			e.style.left = x + "px"
+			e.style.zIndex = z
+		}
+	}
 }
 
 function add_force(parent, type) {
@@ -628,14 +690,14 @@ function update_lord(ix) {
 		return
 	}
 	if (locale < 100) {
+		calendar_layout_service[service].push(ui.lord_service[ix])
 		layout_locale_item(locale, ui.lord_cylinder[ix])
-		layout_calendar_item(service, ui.lord_service[ix])
 		ui.lord_cylinder[ix].classList.remove("hide")
 		ui.lord_service[ix].classList.remove("hide")
 		ui.lord_mat[ix].classList.remove("hide")
 		update_lord_mat(ix)
 	} else {
-		layout_calendar_item(locale - 100, ui.lord_cylinder[ix])
+		calendar_layout_cylinder[locale - 100].push(ui.lord_cylinder[ix])
 		ui.lord_cylinder[ix].classList.remove("hide")
 		ui.lord_service[ix].classList.add("hide")
 		ui.lord_mat[ix].classList.add("hide")
@@ -644,7 +706,10 @@ function update_lord(ix) {
 	ui.lord_cylinder[ix].classList.toggle("action", is_lord_action(ix))
 	ui.lord_service[ix].classList.toggle("action", is_service_action(ix))
 
-	ui.lord_cylinder[ix].classList.toggle("selected", ix === view.who)
+	if (view.who === undefined)
+		ui.lord_cylinder[ix].classList.toggle("selected", ix === view.command)
+	else
+		ui.lord_cylinder[ix].classList.toggle("selected", ix === view.who)
 	ui.lord_mat[ix].classList.toggle("selected", ix === view.who)
 }
 
@@ -831,7 +896,10 @@ function on_update() {
 	restart_cache()
 
 	locale_layout.fill(0)
-	calendar_layout.fill(0)
+	for (let i = 0; i < 18; ++i) {
+		calendar_layout_cylinder[i] = []
+		calendar_layout_service[i] = []
+	}
 
 	for (let ix = 0; ix < data.lords.length; ++ix) {
 		if (view.lords[ix] === null) {
@@ -846,6 +914,8 @@ function on_update() {
 
 	for (let loc = 0; loc < data.locales.length; ++loc)
 		update_locale(loc)
+
+	layout_calendar()
 
 	update_veche()
 
@@ -880,6 +950,17 @@ function on_update() {
 
 	update_plan()
 	update_cards()
+
+	action_button("sail", "Sail")
+	action_button("march", "March")
+	action_button("siege", "Siege")
+	action_button("storm", "Storm")
+	action_button("sally", "Sally")
+	action_button("supply", "Supply")
+	action_button("forage", "Forage")
+	action_button("ravage", "Ravage")
+	action_button("tax", "Tax")
+	action_button("pass", "Pass")
 
 	action_button("ship", "Ship")
 	action_button("boat", "Boat")
@@ -1049,7 +1130,7 @@ function build_map() {
 		e.my_id = ix
 		e.addEventListener("mousedown", on_click_lord_service_marker)
 		e.addEventListener("mouseenter", on_focus_lord_service_marker)
-		e.addEventListener("mouseleave", on_blur)
+		e.addEventListener("mouseleave", on_blur_lord_service_marker)
 		document.getElementById("pieces").appendChild(e)
 
 		build_lord_mat(lord, ix, clean_name(lord.side), clean_name(lord.name))

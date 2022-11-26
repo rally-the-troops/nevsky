@@ -705,10 +705,15 @@ body.shift .mustered_vassals {
 
 /* PIECES */
 
-#legate, .cylinder, .service_marker, .marker {
+#legate, .cylinder, .marker {
 	transition-property: top, left;
 	transition-duration: 700ms;
 	transition-timing-function: ease;
+}
+
+.service_marker {
+	transition-property: top, left;
+	transition-duration: 100ms;
 }
 
 #legate {
