@@ -332,6 +332,7 @@ const ui = {
 	lord_capabilities: [],
 	cards: [],
 	boxes: {},
+	legate: document.getElementById("legate"),
 	veche: document.getElementById("veche"),
 	plan_dialog: document.getElementById("plan"),
 	plan_list: document.getElementById("plan_list"),
@@ -592,7 +593,7 @@ function on_log(text) {
 	return p
 }
 
-function layout_locale_item(loc, e, is_upper) {
+function layout_locale_item(loc, e, is_upper, yofs = 0) {
 	let [x, y] = locale_xy[loc]
 	let z = 0
 	if (is_upper) {
@@ -600,6 +601,7 @@ function layout_locale_item(loc, e, is_upper) {
 		z = 1
 	}
 	x += locale_layout[loc] * 44
+	y += yofs
 	e.classList.toggle("lieutenant", is_upper)
 	e.style.top = (y - 23) + "px"
 	e.style.left = (x - 23) + "px"
@@ -780,6 +782,20 @@ function update_lord(ix) {
 	else
 		ui.lord_cylinder[ix].classList.toggle("selected", ix === view.who)
 	ui.lord_mat[ix].classList.toggle("selected", ix === view.who)
+}
+
+function update_legate() {
+	if (view.legate < 0) {
+		ui.legate.classList.add("hide")
+	} else {
+		ui.legate.classList.remove("hide")
+		if (view.legate === 100) {
+			ui.legate.style.top = "1580px"
+			ui.legate.style.left = "170px"
+		} else {
+			layout_locale_item(view.legate, ui.legate, 0, -16)
+		}
+	}
 }
 
 function update_veche() {
@@ -986,6 +1002,7 @@ function on_update() {
 
 	layout_calendar()
 
+	update_legate()
 	update_veche()
 
 	update_current_card_display()

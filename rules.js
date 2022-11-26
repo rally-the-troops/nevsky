@@ -799,8 +799,7 @@ function setup_peipus() {
 	setup_lord_on_calendar(LORD_GAVRILO, 13)
 	setup_lord_on_calendar(LORD_VLADISLAV, 15)
 
-	// XXX
-	goto_campaign_plan()
+	// XXX goto_campaign_plan()
 }
 
 function setup_return_of_the_prince() {
