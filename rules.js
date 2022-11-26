@@ -397,9 +397,9 @@ function count_cards_in_plan(plan, lord) {
 function is_marshal(lord) {
 	switch (lord) {
 	case LORD_ANDREAS: return true
-	case LORD_HERMANN: return is_lord_on_map(LORD_ANDREAS)
+	case LORD_HERMANN: return !is_lord_on_map(LORD_ANDREAS)
 	case LORD_ALEKSANDR: return true
-	case LORD_ANDREY: return is_lord_on_map(LORD_ALEKSANDR)
+	case LORD_ANDREY: return !is_lord_on_map(LORD_ALEKSANDR)
 	default: return false
 	}
 }
@@ -1524,8 +1524,7 @@ states.campaign_plan = {
 				gen_action_plan(NOBODY)
 			for (let lord = first; lord <= last; ++lord) {
 				if (is_lord_on_map(lord) && count_cards_in_plan(plan, lord) < 3)
-					if (!is_lower_lord(lord))
-						gen_action_plan(lord)
+					gen_action_plan(lord)
 			}
 		} else {
 			if (upper === NOBODY)

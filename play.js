@@ -56,6 +56,38 @@ function max_plan_length() {
 	}
 }
 
+function map_has(map, key) {
+	let a = 0
+	let b = (map.length >> 1) - 1
+	while (a <= b) {
+		let m = (a + b) >> 1
+		let x = map[m<<1]
+		if (key < x)
+			b = m - 1
+		else if (key > x)
+			a = m + 1
+		else
+			return true
+	}
+	return false
+}
+
+function map_get(map, key, missing) {
+	let a = 0
+	let b = (map.length >> 1) - 1
+	while (a <= b) {
+		let m = (a + b) >> 1
+		let x = map[m<<1]
+		if (key < x)
+			b = m - 1
+		else if (key > x)
+			a = m + 1
+		else
+			return map[(m<<1)+1]
+	}
+	return missing
+}
+
 function set_has(set, item) {
 	let a = 0
 	let b = set.length - 1
@@ -201,6 +233,21 @@ function for_each_teutonic_card(fn) {
 function for_each_russian_card(fn) {
 	for (let i = 21; i < 42; ++i)
 		fn(i)
+}
+
+function is_upper_lord(lord) {
+	return map_has(view.lords.lieutenants, lord)
+}
+
+function is_lower_lord(lord) {
+	for (let i = 1; i < view.lords.lieutenants.length; i += 2)
+		if (view.lords.lieutenants[i] === lord)
+			return true
+	return false
+}
+
+function get_lower_lord(upper) {
+	return map_get(view.lords.lieutenants, upper, -1)
 }
 
 function for_each_friendly_card(fn) {
@@ -545,12 +592,20 @@ function on_log(text) {
 	return p
 }
 
-function layout_locale_item(loc, e) {
+function layout_locale_item(loc, e, is_upper) {
 	let [x, y] = locale_xy[loc]
+	let z = 0
+	if (is_upper) {
+		y -= 18
+		z = 1
+	}
 	x += locale_layout[loc] * 44
+	e.classList.toggle("lieutenant", is_upper)
 	e.style.top = (y - 23) + "px"
 	e.style.left = (x - 23) + "px"
-	locale_layout[loc] ++
+	e.style.zIndex = z
+	if (!is_upper)
+		locale_layout[loc] ++
 }
 
 function layout_calendar() {
@@ -691,7 +746,21 @@ function update_lord(ix) {
 	}
 	if (locale < 100) {
 		calendar_layout_service[service].push(ui.lord_service[ix])
-		layout_locale_item(locale, ui.lord_cylinder[ix])
+
+		if (!is_lower_lord(ix)) {
+			if (is_upper_lord(ix)) {
+				let lo = get_lower_lord(ix)
+				if (view.lords.locale[lo] === locale) {
+					layout_locale_item(locale, ui.lord_cylinder[ix], 1)
+					layout_locale_item(locale, ui.lord_cylinder[lo], 0)
+				} else {
+					layout_locale_item(locale, ui.lord_cylinder[ix], 0)
+				}
+			} else {
+				layout_locale_item(locale, ui.lord_cylinder[ix], 0)
+			}
+		}
+
 		ui.lord_cylinder[ix].classList.remove("hide")
 		ui.lord_service[ix].classList.remove("hide")
 		ui.lord_mat[ix].classList.remove("hide")
