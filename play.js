@@ -35,6 +35,8 @@ const SLED = 4
 const BOAT = 5
 const SHIP = 6
 
+const VECHE = 100
+
 const on_click_asset = [
 	(evt) => evt.button === 0 && send_action('prov', evt.target.my_id),
 	(evt) => evt.button === 0 && send_action('coin', evt.target.my_id),
@@ -44,6 +46,11 @@ const on_click_asset = [
 	(evt) => evt.button === 0 && send_action('boat', evt.target.my_id),
 	(evt) => evt.button === 0 && send_action('ship', evt.target.my_id),
 ]
+
+function on_click_veche_coin(evt) {
+	if (evt.button === 0)
+		send_action('veche_coin')
+}
 
 const SUMMER = 0
 const EARLY_WINTER = 1
@@ -690,10 +697,17 @@ function add_force(parent, type) {
 
 function add_asset(parent, type, n, lord) {
 	// TODO: reuse pool of elements?
-	if (is_asset_action(lord, asset_type_name[type]))
-		build_div(parent, "action asset " + asset_type_name[type] + " x"+n, lord, on_click_asset[type])
-	else
-		build_div(parent, "asset " + asset_type_name[type] + " x"+n, lord, on_click_asset[type])
+	if (lord === VECHE) {
+		if (view.actions && view.actions.veche_coin)
+			build_div(parent, "action asset " + asset_type_name[type] + " x"+n, VECHE, on_click_veche_coin)
+		else
+			build_div(parent, "asset " + asset_type_name[type] + " x"+n)
+	} else {
+		if (is_asset_action(lord, asset_type_name[type]))
+			build_div(parent, "action asset " + asset_type_name[type] + " x"+n, lord, on_click_asset[type])
+		else
+			build_div(parent, "asset " + asset_type_name[type] + " x"+n)
+	}
 }
 
 function add_veche_vp(parent) {
@@ -824,15 +838,15 @@ function update_veche() {
 
 	let n = view.veche_coin
 	while (n >= 3) {
-		add_asset(ui.veche, COIN, 3)
+		add_asset(ui.veche, COIN, 3, VECHE)
 		n -= 3
 	}
 	while (n >= 2) {
-		add_asset(ui.veche, COIN, 2)
+		add_asset(ui.veche, COIN, 2, VECHE)
 		n -= 2
 	}
 	while (n >= 1) {
-		add_asset(ui.veche, COIN, 1)
+		add_asset(ui.veche, COIN, 1, VECHE)
 		n -= 1
 	}
 

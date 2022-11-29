@@ -1920,123 +1920,121 @@ function can_action_sail() {
 
 // === CAMPAIGN: FEED ===
 
-function can_feed_own(lord) {
-	return get_lord_assets(lord, PROV) > 0 || get_lord_assets(lord, LOOT) > 0
-}
-
 function can_feed_from_shared(lord) {
 	let loc = get_lord_locale(lord)
 	return get_shared_assets(loc, PROV) > 0 || get_shared_assets(loc, LOOT) > 0
 }
 
-function has_friendly_lord_who_must_feed_own() {
+function has_friendly_lord_who_must_feed() {
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-		if (is_lord_unfed(lord) && can_feed_own(lord))
-			return true
-	return false
-}
-
-function has_friendly_lord_who_must_feed_shared() {
-	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-		if (is_lord_unfed(lord) && can_feed_from_shared(lord))
+		if (is_lord_unfed(lord))
 			return true
 	return false
 }
 
 function goto_feed() {
 	// Count how much food each lord needs
-	for (let lord = 0; lord <= last_lord; ++lord)
-		if (get_lord_moved(lord))
-			set_lord_unfed(lord, count_lord_forces(lord) / 6 + 1 | 0)
-	goto_feed_own()
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+		if (get_lord_moved(lord)) {
+			if (count_lord_forces(lord) >= 7)
+				set_lord_unfed(lord, 2)
+			else
+				set_lord_unfed(lord, 1)
+		} else {
+			set_lord_unfed(lord, 0)
+		}
+	}
+
+	game.state = "feed"
+	if (!has_friendly_lord_who_must_feed())
+		end_feed()
 }
 
-function goto_feed_own() {
-	game.state = "feed_own"
-	if (!has_friendly_lord_who_must_feed_own())
-		end_feed_own()
-}
+states.feed = {
+	prompt() {
+		view.prompt = "You must Feed lords who Moved or Fought."
 
-function end_feed_own() {
-	goto_feed_shared()
-}
+		let done = true
 
-function goto_feed_shared() {
-	game.state = "feed_shared"
-	if (!has_friendly_lord_who_must_feed_shared())
-		end_feed_shared()
-}
+		// Feed from own mat
+		if (done) {
+			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+				if (is_lord_unfed(lord)) {
+					console.log("unfed!", lord, lord_name[lord])
+					if (get_lord_assets(lord, PROV) > 0) {
+						gen_action_prov(lord)
+						done = false
+					}
+					if (get_lord_assets(lord, LOOT) > 0) {
+						gen_action_loot(lord)
+						done = false
+					}
+				}
+			}
+		}
 
-function end_feed_shared() {
-	goto_unfed()
-}
+		// Sharing
+		if (done) {
+			view.prompt = "You must Feed lords who Moved or Fought (shared)."
+			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+				if (is_lord_unfed(lord) && can_feed_from_shared(lord)) {
+					console.log("unfed2", lord, lord_name[lord])
+					gen_action_lord(lord)
+					done = false
+				}
+			}
+		}
 
-function resume_feed_lord_own() {
-	if (!is_lord_unfed(game.who) || !can_feed_own(game.who))
-		goto_feed_own()
+		// Unfed
+		if (done) {
+			view.prompt = "You must shift the Service of any unfed lords."
+			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+				if (is_lord_unfed(lord)) {
+					console.log("unfed2", lord, lord_name[lord])
+					gen_action_service(lord)
+					done = false
+				}
+			}
+		}
+
+		// All done!
+		if (done) {
+			view.prompt = "Feeding done."
+			view.actions.end_feed = 1
+		}
+	},
+	prov(lord) {
+		push_undo()
+		logi(`Fed L${lord}.`)
+		add_lord_assets(lord, PROV, -1)
+		feed_lord(lord)
+	},
+	loot(lord) {
+		push_undo()
+		logi(`Fed L${game.who} with Loot.`)
+		add_lord_assets(lord, LOOT, -1)
+		feed_lord(lord)
+	},
+	lord(lord) {
+		push_undo()
+		game.who = lord
+		game.state = "feed_lord"
+	},
+	service(lord) {
+		push_undo()
+		logi(`Unfed L${lord}.`)
+		add_lord_service(lord, -1)
+		set_lord_unfed(lord, 0)
+	},
+	end_feed() {
+		clear_undo()
+		end_feed()
+	},
 }
 
 function resume_feed_lord_shared() {
 	if (!is_lord_unfed(game.who) || !can_feed_from_shared(game.who))
-		goto_feed_shared()
-}
-
-states.feed_own = {
-	prompt() {
-		view.prompt = "You must Feed lords who Moved or Fought."
-		let done = true
-		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
-			if (is_lord_unfed(lord) && can_feed_own(lord)) {
-				gen_action_lord(lord)
-				done = false
-			}
-		}
-	},
-	lord(lord) {
-		push_undo()
-		game.who = lord
-		game.state = "feed_lord_own"
-	},
-}
-
-states.feed_shared = {
-	prompt() {
-		view.prompt = "You must Feed lords who Moved or Fought (shared)."
-		let done = true
-		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
-			if (get_lord_moved(lord) > 0 && can_feed_from_shared(lord)) {
-				gen_action_lord(lord)
-				done = false
-			}
-		}
-	},
-	lord(lord) {
-		push_undo()
-		game.who = lord
-		game.state = "feed_lord_shared"
-	},
-}
-
-states.feed_lord_own = {
-	prompt() {
-		view.prompt = `You must Feed ${lord_name[game.who]} ${game.count}x own Loot or Provender.`
-		if (get_lord_assets(game.who, PROV) > 0)
-			gen_action_prov(game.who)
-		if (get_lord_assets(game.who, LOOT) > 0)
-			gen_action_loot(game.who)
-	},
-	prov(lord) {
-		logi(`Fed L${game.who}.`)
-		add_lord_assets(lord, PROV, -1)
-		feed_lord(game.who)
-		resume_feed_lord_own()
-	},
-	loot(lord) {
-		logi(`Fed L${game.who} with Loot.`)
-		add_lord_assets(lord, LOOT, -1)
-		feed_lord(game.who)
-		resume_feed_lord_own()
-	},
+		game.state = 'feed'
 }
 
 states.feed_lord_shared = {
@@ -2053,12 +2051,14 @@ states.feed_lord_shared = {
 		}
 	},
 	prov(lord) {
+		push_undo()
 		logi(`Fed L${game.who} from L${lord}.`)
 		add_lord_assets(lord, PROV, -1)
 		feed_lord(game.who)
 		resume_feed_lord_shared()
 	},
 	loot(lord) {
+		push_undo()
 		logi(`Fed L${game.who} with Loot from L${lord}.`)
 		add_lord_assets(lord, LOOT, -1)
 		feed_lord(game.who)
@@ -2066,43 +2066,14 @@ states.feed_lord_shared = {
 	},
 }
 
-// === LEVY & CAMPAIGN: FEED (UNFED) ===
-
-function has_friendly_lord_who_is_unfed() {
-	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-		if (is_lord_unfed(lord))
-			return true
-	return false
-}
-
-function goto_unfed() {
-	game.state = "unfed"
-	if (!has_friendly_lord_who_is_unfed())
-		end_unfed()
-}
-
-states.unfed = {
-	prompt() {
-		view.prompt = "Shift the Service marker for any unfed lords."
-		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-			if (is_lord_unfed(lord))
-				gen_action_service(lord)
-	},
-	service(lord) {
-		logi(`Unfed L${lord}.`)
-		add_lord_service(game.who, -1)
-		set_lord_unfed(lord, 0)
-		goto_unfed()
-	},
-}
-
-function end_unfed() {
+function end_feed() {
+	clear_undo()
 	if (FEED_PAY_DISBAND) {
 		goto_pay()
 	} else {
 		set_active_enemy()
 		if (game.active === P2)
-			goto_feed_own()
+			goto_feed()
 		else
 			goto_pay()
 	}
@@ -2110,9 +2081,30 @@ function end_unfed() {
 
 // === LEVY & CAMPAIGN: PAY ===
 
+function can_pay_lord(lord) {
+	if (game.active === RUSSIANS) {
+		if (game.veche_coin > 0 && !is_lord_besieged(lord))
+			return true
+	}
+	let loc = get_lord_locale(lord)
+	if (get_shared_assets(loc, COIN) > 0)
+		return true
+	if (is_friendly_locale(loc))
+		if (get_shared_assets(loc, LOOT) > 0)
+			return true
+	return false
+}
+
+function has_friendly_lord_who_may_be_paid() {
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (is_lord_on_map(lord) && can_pay_lord(lord))
+			return true
+	return false
+}
+
 function goto_pay() {
 	game.state = "pay"
-	if (TODO)
+	if (!has_friendly_lord_who_may_be_paid())
 		end_pay()
 }
 
@@ -2120,7 +2112,7 @@ states.pay = {
 	prompt() {
 		view.prompt = "You may Pay your Lords."
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-			if (is_lord_on_map(lord))
+			if (is_lord_on_map(lord) && can_pay_lord(lord))
 				gen_action_lord(lord)
 		view.actions.end_pay = 1
 	},
@@ -2130,6 +2122,7 @@ states.pay = {
 		game.who = lord
 	},
 	end_pay() {
+		push_undo()
 		end_pay()
 	},
 }
@@ -2138,18 +2131,34 @@ states.pay_lord = {
 	prompt() {
 		view.prompt = `You may Pay ${lord_name[game.who]} with Coin or Loot.`
 		if (game.active === RUSSIANS) {
-			if (game.veche_coin > 0)
+			if (game.veche_coin > 0 && !is_lord_besieged(lord))
 				view.actions.veche_coin = 1
+		}
+		let loc = get_lord_locale(game.who)
+		let pay_with_loot = is_friendly_locale(loc)
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+			if (get_lord_locale(lord) === loc) {
+				if (get_lord_assets(lord, COIN) > 0)
+					gen_action_coin(lord)
+				if (pay_with_loot && get_lord_assets(lord, LOOT) > 0)
+					gen_action_loot(lord)
+			}
 		}
 	},
 	loot(lord) {
-		logi(`Paid L${game.who} with Loot from L${lord}.`)
+		if (game.who === lord)
+			logi(`Paid L${game.who} with Loot.`)
+		else
+			logi(`Paid L${game.who} with Loot from L${lord}.`)
 		add_lord_assets(lord, LOOT, -1)
 		add_lord_service(game.who, 1)
 		pop_state()
 	},
 	coin(lord) {
-		logi(`Paid L${game.who} with Coin from L${lord}.`)
+		if (game.who === lord)
+			logi(`Paid L${game.who} with Coin.`)
+		else
+			logi(`Paid L${game.who} with Coin from L${lord}.`)
 		add_lord_assets(lord, COIN, -1)
 		add_lord_service(game.who, 1)
 		pop_state()
@@ -2233,10 +2242,11 @@ states.disband = {
 }
 
 function end_disband() {
+	clear_undo()
 	set_active_enemy()
 	if (game.active === P2) {
 		if (FEED_PAY_DISBAND)
-			goto_feed_own()
+			goto_feed()
 		else
 			goto_pay()
 	} else {
