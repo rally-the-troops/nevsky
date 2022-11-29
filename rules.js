@@ -10,7 +10,7 @@ const P1 = TEUTONS
 const P2 = RUSSIANS
 
 // NOTE: With Hidden Mats option, the player order of feed/pay may matter.
-const FEED_PAY_DISBAND = false // feed, pay, disband in one go
+const FEED_PAY_DISBAND = true // feed, pay, disband in one go
 
 let game = null
 let view = null
@@ -306,10 +306,6 @@ function get_lord_routed_forces(lord, n) {
 	return pack4_get(game.lords.routed_forces[lord], n)
 }
 
-function get_lord_moved(lord) {
-	return pack1_get(game.lords.moved, lord)
-}
-
 function set_lord_locale(lord, locale) {
 	game.lords.locale[lord] = locale
 }
@@ -317,8 +313,8 @@ function set_lord_locale(lord, locale) {
 function set_lord_service(lord, service) {
 	if (service < 0)
 		service = 0
-	if (service > 16)
-		service = 16
+	if (service > 17)
+		service = 17
 	game.lords.service[lord] = service
 }
 
@@ -362,10 +358,6 @@ function add_lord_routed_forces(lord, n, x) {
 	set_lord_routed_forces(lord, n, get_lord_routed_forces(lord, n) + x)
 }
 
-function set_lord_moved(lord, x) {
-	game.lords.moved = pack1_set(game.lords.moved, lord, x)
-}
-
 function get_lord_vassal_count(lord) {
 	return data.lords[lord].vassals.length
 }
@@ -378,6 +370,33 @@ function get_lord_vassal_service(lord, n) {
 function set_lord_vassal_service(lord, n, x) {
 	let v = data.lords[lord].vassals[n]
 	game.vassals[v] = x
+}
+
+function clear_lords_moved() {
+	game.lords.moved = 0
+}
+
+function get_lord_moved(lord) {
+	return pack2_get(game.lords.moved, lord)
+}
+
+function set_lord_moved(lord, x) {
+	game.lords.moved = pack2_set(game.lords.moved, lord, x)
+}
+
+function set_lord_unfed(lord, n) {
+	// reuse "moved" flag for hunger
+	set_lord_moved(lord, n)
+}
+
+function is_lord_unfed(lord) {
+	// reuse "moved" flag for hunger
+	return get_lord_moved(lord)
+}
+
+function feed_lord(lord) {
+	// reuse "moved" flag for hunger
+	set_lord_moved(lord, get_lord_moved(lord) - 1)
 }
 
 // === GAME STATE HELPERS ===
@@ -732,9 +751,9 @@ exports.setup = function (seed, scenario, options) {
 			forces: Array(lord_count).fill(0),
 			routed_forces: Array(lord_count).fill(0),
 			cards: Array(lord_count << 1).fill(NOTHING),
-			lieutenants: [],
-			besieged: 0,
 			moved: 0,
+			besieged: 0,
+			lieutenants: [],
 		},
 		vassals: Array(vassal_count).fill(0),
 		legate: NOWHERE,
@@ -1023,7 +1042,7 @@ states.setup_lords = {
 }
 
 function end_setup_lords() {
-	game.lords.moved = 0
+	clear_lords_moved()
 	set_active_enemy()
 	if (game.active === P1) {
 		log_h1("Levy " + current_turn_name())
@@ -1198,7 +1217,7 @@ function goto_levy_muster() {
 }
 
 function end_levy_muster() {
-	game.lords.moved = 0
+	clear_lords_moved()
 	set_active_enemy()
 	if (game.active === P2)
 		goto_levy_muster()
@@ -1712,6 +1731,8 @@ function goto_actions() {
 
 function end_actions() {
 	set_active(P1)
+	game.command = NOBODY
+	game.who = NOBODY
 	goto_feed()
 }
 
@@ -1752,6 +1773,7 @@ states.actions = {
 	},
 	forage: do_action_forage,
 	ravage: do_action_ravage,
+	march: do_action_march,
 	pass() {
 		clear_undo()
 		end_actions()
@@ -1765,7 +1787,13 @@ states.actions = {
 // === ACTION: MARCH ===
 
 function can_action_march() {
-	return false
+	return true
+}
+
+function do_action_march() {
+	push_undo()
+	set_lord_moved(game.who, 1)
+	++game.count
 }
 
 // === ACTION: SIEGE ===
@@ -1892,74 +1920,189 @@ function can_action_sail() {
 
 // === CAMPAIGN: FEED ===
 
-function has_friendly_lord_who_moved_or_fought() {
+function can_feed_own(lord) {
+	return get_lord_assets(lord, PROV) > 0 || get_lord_assets(lord, LOOT) > 0
+}
+
+function can_feed_from_shared(lord) {
+	let loc = get_lord_locale(lord)
+	return get_shared_assets(loc, PROV) > 0 || get_shared_assets(loc, LOOT) > 0
+}
+
+function has_friendly_lord_who_must_feed_own() {
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-		if (get_lord_moved(lord))
+		if (is_lord_unfed(lord) && can_feed_own(lord))
+			return true
+	return false
+}
+
+function has_friendly_lord_who_must_feed_shared() {
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (is_lord_unfed(lord) && can_feed_from_shared(lord))
 			return true
 	return false
 }
 
 function goto_feed() {
-	game.state = "feed"
-	if (!has_friendly_lord_who_moved_or_fought())
-		end_feed()
+	// Count how much food each lord needs
+	for (let lord = 0; lord <= last_lord; ++lord)
+		if (get_lord_moved(lord))
+			set_lord_unfed(lord, count_lord_forces(lord) / 6 + 1 | 0)
+	goto_feed_own()
 }
 
-// TODO: feed_self
-// TODO: feed_other
+function goto_feed_own() {
+	game.state = "feed_own"
+	if (!has_friendly_lord_who_must_feed_own())
+		end_feed_own()
+}
 
-states.feed = {
+function end_feed_own() {
+	goto_feed_shared()
+}
+
+function goto_feed_shared() {
+	game.state = "feed_shared"
+	if (!has_friendly_lord_who_must_feed_shared())
+		end_feed_shared()
+}
+
+function end_feed_shared() {
+	goto_unfed()
+}
+
+function resume_feed_lord_own() {
+	if (!is_lord_unfed(game.who) || !can_feed_own(game.who))
+		goto_feed_own()
+}
+
+function resume_feed_lord_shared() {
+	if (!is_lord_unfed(game.who) || !can_feed_from_shared(game.who))
+		goto_feed_shared()
+}
+
+states.feed_own = {
 	prompt() {
 		view.prompt = "You must Feed lords who Moved or Fought."
-		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-			if (get_lord_moved(lord))
+		let done = true
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+			if (is_lord_unfed(lord) && can_feed_own(lord)) {
 				gen_action_lord(lord)
-		view.actions.end_feed = 1
+				done = false
+			}
+		}
 	},
 	lord(lord) {
 		push_undo()
 		game.who = lord
-		game.count = ((count_lord_forces(lord) / 6) | 0) + 1
-		game.state = "feed_lord"
-	},
-	end_feed() {
-		clear_undo()
-		end_feed()
+		game.state = "feed_lord_own"
 	},
 }
 
-states.feed_lord = {
+states.feed_shared = {
 	prompt() {
-		view.prompt = "You must Feed ${lord_name[game.who]} ${game.count}x Loot or Provender."
-		// TODO: find loot or prov!
-		view.actions.unfed = 1
+		view.prompt = "You must Feed lords who Moved or Fought (shared)."
+		let done = true
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+			if (get_lord_moved(lord) > 0 && can_feed_from_shared(lord)) {
+				gen_action_lord(lord)
+				done = false
+			}
+		}
+	},
+	lord(lord) {
+		push_undo()
+		game.who = lord
+		game.state = "feed_lord_shared"
+	},
+}
+
+states.feed_lord_own = {
+	prompt() {
+		view.prompt = `You must Feed ${lord_name[game.who]} ${game.count}x own Loot or Provender.`
+		if (get_lord_assets(game.who, PROV) > 0)
+			gen_action_prov(game.who)
+		if (get_lord_assets(game.who, LOOT) > 0)
+			gen_action_loot(game.who)
+	},
+	prov(lord) {
+		logi(`Fed L${game.who}.`)
+		add_lord_assets(lord, PROV, -1)
+		feed_lord(game.who)
+		resume_feed_lord_own()
+	},
+	loot(lord) {
+		logi(`Fed L${game.who} with Loot.`)
+		add_lord_assets(lord, LOOT, -1)
+		feed_lord(game.who)
+		resume_feed_lord_own()
+	},
+}
+
+states.feed_lord_shared = {
+	prompt() {
+		view.prompt = `You must Feed ${lord_name[game.who]} ${game.count}x shared Loot or Provender.`
+		let loc = get_lord_locale(game.who)
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+			if (get_lord_locale(lord) === loc) {
+				if (get_lord_assets(lord, PROV) > 0)
+					gen_action_prov(lord)
+				if (get_lord_assets(lord, LOOT) > 0)
+					gen_action_loot(lord)
+			}
+		}
+	},
+	prov(lord) {
+		logi(`Fed L${game.who} from L${lord}.`)
+		add_lord_assets(lord, PROV, -1)
+		feed_lord(game.who)
+		resume_feed_lord_shared()
 	},
 	loot(lord) {
 		logi(`Fed L${game.who} with Loot from L${lord}.`)
 		add_lord_assets(lord, LOOT, -1)
-		if (--game.count === 0)
-			game.state = "feed"
-	},
-	prov(lord) {
-		logi(`Fed L${game.who} with Provender from L${lord}.`)
-		add_lord_assets(lord, PROV, -1)
-		if (--game.count === 0)
-			game.state = "feed"
-	},
-	unfed() {
-		logi(`Did not feed L${game.who}.`)
-		add_lord_service(game.who, -1)
-		game.state = "feed"
+		feed_lord(game.who)
+		resume_feed_lord_shared()
 	},
 }
 
-function end_feed() {
+// === LEVY & CAMPAIGN: FEED (UNFED) ===
+
+function has_friendly_lord_who_is_unfed() {
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (is_lord_unfed(lord))
+			return true
+	return false
+}
+
+function goto_unfed() {
+	game.state = "unfed"
+	if (!has_friendly_lord_who_is_unfed())
+		end_unfed()
+}
+
+states.unfed = {
+	prompt() {
+		view.prompt = "Shift the Service marker for any unfed lords."
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+			if (is_lord_unfed(lord))
+				gen_action_service(lord)
+	},
+	service(lord) {
+		logi(`Unfed L${lord}.`)
+		add_lord_service(game.who, -1)
+		set_lord_unfed(lord, 0)
+		goto_unfed()
+	},
+}
+
+function end_unfed() {
 	if (FEED_PAY_DISBAND) {
 		goto_pay()
 	} else {
 		set_active_enemy()
 		if (game.active === P2)
-			goto_feed()
+			goto_feed_own()
 		else
 			goto_pay()
 	}
@@ -2093,7 +2236,7 @@ function end_disband() {
 	set_active_enemy()
 	if (game.active === P2) {
 		if (FEED_PAY_DISBAND)
-			goto_feed()
+			goto_feed_own()
 		else
 			goto_pay()
 	} else {
@@ -2111,7 +2254,7 @@ function goto_remove_markers() {
 	if (game.events.length > 0)
 		game.events = game.events.filter((c) => data.cards[c].when !== "this_campaign")
 
-	game.lords.moved = 0
+	clear_lords_moved()
 	goto_command_activation()
 }
 
@@ -2220,6 +2363,18 @@ function gen_action_plan(lord) {
 	gen_action("plan", lord)
 }
 
+function gen_action_prov(lord) {
+	gen_action("prov", lord)
+}
+
+function gen_action_coin(lord) {
+	gen_action("coin", lord)
+}
+
+function gen_action_loot(lord) {
+	gen_action("loot", lord)
+}
+
 exports.view = function (state, current) {
 	load_state(state)
 
@@ -2305,6 +2460,11 @@ function pack1_get(word, n) {
 	return (word >>> n) & 1
 }
 
+function pack2_get(word, n) {
+	n = n << 1
+	return (word >>> n) & 3
+}
+
 function pack4_get(word, n) {
 	n = n << 2
 	return (word >>> n) & 15
@@ -2312,6 +2472,11 @@ function pack4_get(word, n) {
 
 function pack1_set(word, n, x) {
 	return (word & ~(1 << n)) | (x << n)
+}
+
+function pack2_set(word, n, x) {
+	n = n << 1
+	return (word & ~(3 << n)) | (x << n)
 }
 
 function pack4_set(word, n, x) {

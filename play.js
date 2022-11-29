@@ -1,5 +1,9 @@
 "use strict"
 
+// TODO: tooltip on cylinders
+//	fealty rating and starting assets + forces on calendar
+//	current assets and forces on map
+
 // TODO: held events, this_turn events
 
 const MAP_DPI = 75
@@ -30,6 +34,16 @@ const CART = 3
 const SLED = 4
 const BOAT = 5
 const SHIP = 6
+
+const on_click_asset = [
+	(evt) => evt.button === 0 && send_action('prov', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('coin', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('loot', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('cart', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('sled', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('boat', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('ship', evt.target.my_id),
+]
 
 const SUMMER = 0
 const EARLY_WINTER = 1
@@ -115,6 +129,10 @@ function pack4_get(word, n) {
 
 function is_lord_action(lord) {
 	return !!(view.actions && view.actions.lord && set_has(view.actions.lord, lord))
+}
+
+function is_asset_action(lord, action) {
+	return !!(view.actions && view.actions[action] && set_has(view.actions[action], lord))
 }
 
 function is_plan_action(lord) {
@@ -424,7 +442,7 @@ function on_focus_cylinder(evt) {
 function on_click_lord_service_marker(evt) {
 	if (evt.button === 0) {
 		let id = evt.target.my_id
-		send_action('lord_service', id)
+		send_action('service', id)
 	}
 }
 
@@ -670,9 +688,12 @@ function add_force(parent, type) {
 	build_div(parent, "unit " + force_type_name[type], type)
 }
 
-function add_asset(parent, type, n) {
+function add_asset(parent, type, n, lord) {
 	// TODO: reuse pool of elements?
-	build_div(parent, "asset " + asset_type_name[type] + " x"+n, type)
+	if (is_asset_action(lord, asset_type_name[type]))
+		build_div(parent, "action asset " + asset_type_name[type] + " x"+n, lord, on_click_asset[type])
+	else
+		build_div(parent, "asset " + asset_type_name[type] + " x"+n, lord, on_click_asset[type])
 }
 
 function add_veche_vp(parent) {
@@ -690,26 +711,26 @@ function update_forces(parent, forces) {
 	}
 }
 
-function update_assets(parent, assets) {
+function update_assets(id, parent, assets) {
 	parent.replaceChildren()
 	for (let i = 0; i < asset_type_count; ++i) {
 		let n = pack4_get(assets, i)
 		while (n >= 4) {
-			add_asset(parent, i, 4)
+			add_asset(parent, i, 4, id)
 			n -= 4
 		}
 		if (asset_type_x3[i]) {
 			while (n >= 3) {
-				add_asset(parent, i, 3)
+				add_asset(parent, i, 3, id)
 				n -= 3
 			}
 		}
 		while (n >= 2) {
-			add_asset(parent, i, 2)
+			add_asset(parent, i, 2, id)
 			n -= 2
 		}
 		while (n >= 1) {
-			add_asset(parent, i, 1)
+			add_asset(parent, i, 1, id)
 			n -= 1
 		}
 	}
@@ -730,7 +751,7 @@ function update_vassals(ready_parent, mustered_parent, lord_ix) {
 }
 
 function update_lord_mat(ix) {
-	update_assets(ui.assets[ix], view.lords.assets[ix])
+	update_assets(ix, ui.assets[ix], view.lords.assets[ix])
 	update_vassals(ui.ready_vassals[ix], ui.mustered_vassals[ix], ix)
 	update_forces(ui.forces[ix], view.lords.forces[ix])
 	update_forces(ui.routed[ix], view.lords.routed_forces[ix])
