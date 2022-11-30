@@ -8,6 +8,8 @@
 
 const MAP_DPI = 75
 
+const CALENDAR = 100
+
 const round = Math.round
 const floor = Math.floor
 const ceil = Math.ceil
@@ -164,6 +166,7 @@ function is_card_action(c) {
 
 const force_type_count = 7
 const force_type_name = [ "knights", "sergeants", "light_horse", "asiatic_horse", "men_at_arms", "militia", "serfs" ]
+const force_type_tip = [ "knights", "sergeants", "light horse", "asiatic horse", "men-at-arms", "militia", "serfs" ]
 
 const asset_type_count = 7
 const asset_type_name = [ "prov", "coin", "loot", "cart", "sled", "boat", "ship" ]
@@ -442,8 +445,59 @@ function on_click_plan(evt) {
 }
 
 function on_focus_cylinder(evt) {
-	let id = evt.target.my_id
-	document.getElementById("status").textContent = `(${id}) ${data.lords[id].full_name} [${data.lords[id].command}] - ${data.lords[id].title}`
+	let lord = evt.target.my_id
+	let info = data.lords[lord]
+	let loc = view.lords.locale[lord]
+	if (loc >= CALENDAR) {
+		document.getElementById("status").textContent = `${info.full_name} - ${info.fealty} Fealty`
+	} else {
+		let tip = `${info.full_name}`
+
+		/*
+		if (view.turn & 1)
+			tip += ` - ${info.command} Command`
+		else
+			tip += ` - ${info.lordship} Lordship`
+		*/
+
+		let first = true
+		let assets = view.lords.assets[lord]
+		for (let i = 0; i < asset_type_count; ++i) {
+			let x = pack4_get(assets, i)
+			if (x > 0) {
+				if (first)
+					tip += " \u2013 "
+				else
+					tip += ", "
+				tip += `${x} ${asset_type_name[i]}`
+				first = false
+			}
+		}
+
+		first = true
+		let forces = view.lords.forces[lord]
+		let routed = view.lords.routed[lord]
+		for (let i = 0; i < force_type_count; ++i) {
+			let x = pack4_get(forces, i) + pack4_get(routed, i)
+			if (x > 0) {
+				if (first)
+					tip += " \u2013 "
+				else
+					tip += ", "
+				tip += `${x} ${force_type_tip[i]}`
+				first = false
+			}
+		}
+
+		let c = view.lords.cards[(lord<<1)]
+		if (c >= 0)
+			tip += ` \u2013 ${data.cards[c].capability}`
+		c = view.lords.cards[(lord<<1) + 1]
+		if (c >= 0)
+			tip += `, ${data.cards[c].capability}`
+
+		document.getElementById("status").textContent = tip
+	}
 }
 
 function on_click_lord_service_marker(evt) {
@@ -454,10 +508,11 @@ function on_click_lord_service_marker(evt) {
 }
 
 function on_focus_lord_service_marker(evt) {
-	let id = evt.target.my_id
-	document.getElementById("status").textContent = `(${id}) ${data.lords[id].full_name} - ${data.lords[id].title}`
-	if (expand_calendar !== view.lords.service[id]) {
-		expand_calendar = view.lords.service[id]
+	let lord = evt.target.my_id
+	let info = data.lords[lord]
+	document.getElementById("status").textContent = `${info.full_name} - ${info.title}`
+	if (expand_calendar !== view.lords.service[lord]) {
+		expand_calendar = view.lords.service[lord]
 		layout_calendar()
 	}
 }
@@ -768,7 +823,7 @@ function update_lord_mat(ix) {
 	update_assets(ix, ui.assets[ix], view.lords.assets[ix])
 	update_vassals(ui.ready_vassals[ix], ui.mustered_vassals[ix], ix)
 	update_forces(ui.forces[ix], view.lords.forces[ix])
-	update_forces(ui.routed[ix], view.lords.routed_forces[ix])
+	update_forces(ui.routed[ix], view.lords.routed[ix])
 }
 
 function update_lord(ix) {

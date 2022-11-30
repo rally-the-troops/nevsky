@@ -303,7 +303,7 @@ function get_lord_forces(lord, n) {
 }
 
 function get_lord_routed_forces(lord, n) {
-	return pack4_get(game.lords.routed_forces[lord], n)
+	return pack4_get(game.lords.routed[lord], n)
 }
 
 function set_lord_locale(lord, locale) {
@@ -351,7 +351,7 @@ function set_lord_routed_forces(lord, n, x) {
 		x = 0
 	if (x > 15)
 		x = 15
-	game.lords.routed_forces[lord] = pack4_set(game.lords.routed_forces[lord], n, x)
+	game.lords.routed[lord] = pack4_set(game.lords.routed[lord], n, x)
 }
 
 function add_lord_routed_forces(lord, n, x) {
@@ -749,7 +749,7 @@ exports.setup = function (seed, scenario, options) {
 			service: Array(lord_count).fill(NEVER),
 			assets: Array(lord_count).fill(0),
 			forces: Array(lord_count).fill(0),
-			routed_forces: Array(lord_count).fill(0),
+			routed: Array(lord_count).fill(0),
 			cards: Array(lord_count << 1).fill(NOTHING),
 			moved: 0,
 			besieged: 0,
@@ -1743,30 +1743,29 @@ states.actions = {
 		view.prompt = `${lord_name[game.who]} has ${avail}x actions.`
 
 		if (avail > 0) {
-			if (can_action_march())
-				view.actions.march = 1
-
-			if (can_action_siege())
-				view.actions.siege = 1
-			if (can_action_storm())
-				view.actions.storm = 1
-			if (can_action_sally())
-				view.actions.sally = 1
-
-			if (can_action_supply())
-				view.actions.supply = 1
-			if (can_action_forage())
-				view.actions.forage = 1
-			if (can_action_ravage())
-				view.actions.ravage = 1
-
-			if (can_action_tax())
-				view.actions.tax = 1
-
-			if (can_action_sail())
-				view.actions.sail = 1
-
-			view.actions.pass = 1
+			if (is_lord_besieged(game.who)) {
+				if (can_action_sally())
+					view.actions.sally = 1
+				view.actions.pass = 1
+			} else {
+				if (can_action_march())
+					view.actions.march = 1
+				if (can_action_siege())
+					view.actions.siege = 1
+				if (can_action_storm())
+					view.actions.storm = 1
+				if (can_action_supply())
+					view.actions.supply = 1
+				if (can_action_forage())
+					view.actions.forage = 1
+				if (can_action_ravage())
+					view.actions.ravage = 1
+				if (can_action_tax())
+					view.actions.tax = 1
+				if (can_action_sail())
+					view.actions.sail = 1
+				view.actions.pass = 1
+			}
 		} else {
 			view.actions.done = 1
 		}
@@ -1776,6 +1775,7 @@ states.actions = {
 	march: do_action_march,
 	pass() {
 		clear_undo()
+		log("Passed.")
 		end_actions()
 	},
 	done() {
@@ -1824,8 +1824,6 @@ function can_action_supply() {
 
 function can_action_forage() {
 	let where = get_lord_locale(game.who)
-	if (is_lord_besieged(game.who))
-		return false
 	if (has_ravaged_marker(where))
 		return false
 	if (current_season() === SUMMER)
@@ -1847,8 +1845,6 @@ function do_action_forage() {
 
 function can_action_ravage() {
 	let where = get_lord_locale(game.who)
-	if (is_lord_besieged(game.who))
-		return false
 
 	// TODO: cost 2 if enemy lord is adjacent in 2nd ed
 	// TODO: adjacent ability
@@ -2209,7 +2205,7 @@ function disband_lord(lord) {
 	set_lord_capability(lord, 1, NOTHING)
 	game.lords.assets[lord] = 0
 	game.lords.forces[lord] = 0
-	game.lords.routed_forces[lord] = 0
+	game.lords.routed[lord] = 0
 
 	set_lord_besieged(lord, 0)
 	set_lord_moved(lord, 0)
