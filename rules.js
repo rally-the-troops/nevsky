@@ -279,35 +279,35 @@ function enemy_player() {
 }
 
 function get_lord_locale(lord) {
-	return game.lords.locale[lord]
+	return game.pieces.locale[lord]
 }
 
 function get_lord_service(lord) {
-	return game.lords.service[lord]
+	return game.pieces.service[lord]
 }
 
 function get_lord_capability(lord, n) {
-	return game.lords.cards[(lord << 1) + n]
+	return game.pieces.capabilities[(lord << 1) + n]
 }
 
 function set_lord_capability(lord, n, x) {
-	game.lords.cards[(lord << 1) + n] = x
+	game.pieces.capabilities[(lord << 1) + n] = x
 }
 
 function get_lord_assets(lord, n) {
-	return pack4_get(game.lords.assets[lord], n)
+	return pack4_get(game.pieces.assets[lord], n)
 }
 
 function get_lord_forces(lord, n) {
-	return pack4_get(game.lords.forces[lord], n)
+	return pack4_get(game.pieces.forces[lord], n)
 }
 
 function get_lord_routed_forces(lord, n) {
-	return pack4_get(game.lords.routed[lord], n)
+	return pack4_get(game.pieces.routed[lord], n)
 }
 
 function set_lord_locale(lord, locale) {
-	game.lords.locale[lord] = locale
+	game.pieces.locale[lord] = locale
 }
 
 function set_lord_service(lord, service) {
@@ -315,7 +315,7 @@ function set_lord_service(lord, service) {
 		service = 0
 	if (service > 17)
 		service = 17
-	game.lords.service[lord] = service
+	game.pieces.service[lord] = service
 }
 
 function add_lord_service(lord, n) {
@@ -327,7 +327,7 @@ function set_lord_assets(lord, n, x) {
 		x = 0
 	if (x > 8)
 		x = 8
-	game.lords.assets[lord] = pack4_set(game.lords.assets[lord], n, x)
+	game.pieces.assets[lord] = pack4_set(game.pieces.assets[lord], n, x)
 }
 
 function add_lord_assets(lord, n, x) {
@@ -339,7 +339,7 @@ function set_lord_forces(lord, n, x) {
 		x = 0
 	if (x > 15)
 		x = 15
-	game.lords.forces[lord] = pack4_set(game.lords.forces[lord], n, x)
+	game.pieces.forces[lord] = pack4_set(game.pieces.forces[lord], n, x)
 }
 
 function add_lord_forces(lord, n, x) {
@@ -351,7 +351,7 @@ function set_lord_routed_forces(lord, n, x) {
 		x = 0
 	if (x > 15)
 		x = 15
-	game.lords.routed[lord] = pack4_set(game.lords.routed[lord], n, x)
+	game.pieces.routed[lord] = pack4_set(game.pieces.routed[lord], n, x)
 }
 
 function add_lord_routed_forces(lord, n, x) {
@@ -373,15 +373,15 @@ function set_lord_vassal_service(lord, n, x) {
 }
 
 function clear_lords_moved() {
-	game.lords.moved = 0
+	game.pieces.moved = 0
 }
 
 function get_lord_moved(lord) {
-	return pack2_get(game.lords.moved, lord)
+	return pack2_get(game.pieces.moved, lord)
 }
 
 function set_lord_moved(lord, x) {
-	game.lords.moved = pack2_set(game.lords.moved, lord, x)
+	game.pieces.moved = pack2_set(game.pieces.moved, lord, x)
 }
 
 function set_lord_unfed(lord, n) {
@@ -475,7 +475,7 @@ function is_card_in_use(c) {
 		return true
 	if (set_has(game.capabilities, c))
 		return true
-	if (game.lords.cards.includes(c))
+	if (game.pieces.capabilities.includes(c))
 		return true
 	if (c === 18 || c === 19 || c === 20)
 		return true
@@ -490,15 +490,15 @@ function is_lord_on_map(lord) {
 }
 
 function is_lord_besieged(lord) {
-	return pack1_get(game.lords.besieged, lord)
+	return pack1_get(game.pieces.besieged, lord)
 }
 
 function is_lord_unbesieged(lord) {
-	return !pack1_get(game.lords.besieged, lord)
+	return !pack1_get(game.pieces.besieged, lord)
 }
 
 function set_lord_besieged(lord, x) {
-	game.lords.besieged = pack1_set(game.lords.besieged, lord, x)
+	game.pieces.besieged = pack1_set(game.pieces.besieged, lord, x)
 }
 
 function is_lord_on_calendar(lord) {
@@ -634,39 +634,39 @@ function can_add_transport(who, what) {
 }
 
 function is_upper_lord(lord) {
-	return map_has(game.lords.lieutenants, lord)
+	return map_has(game.pieces.lieutenants, lord)
 }
 
 function is_lower_lord(lord) {
-	for (let i = 1; i < game.lords.lieutenants.length; i += 2)
-		if (game.lords.lieutenants[i] === lord)
+	for (let i = 1; i < game.pieces.lieutenants.length; i += 2)
+		if (game.pieces.lieutenants[i] === lord)
 			return true
 	return false
 }
 
 function get_upper_lord(lower) {
-	for (let i = 0; i < game.lords.lieutenants.length; i += 2)
-		if (game.lords.lieutenants[i+1] === lower)
+	for (let i = 0; i < game.pieces.lieutenants.length; i += 2)
+		if (game.pieces.lieutenants[i+1] === lower)
 			return i
 	return NOBODY
 }
 
 function get_lower_lord(upper) {
-	return map_get(game.lords.lieutenants, upper, NOBODY)
+	return map_get(game.pieces.lieutenants, upper, NOBODY)
 }
 
 function set_lower_lord(upper, lower) {
-	map_set(game.lords.lieutenants, upper, lower)
+	map_set(game.pieces.lieutenants, upper, lower)
 }
 
 function add_lieutenant(upper) {
-	map_set(game.lords.lieutenants, upper, NOBODY)
+	map_set(game.pieces.lieutenants, upper, NOBODY)
 }
 
 function remove_lieutenant(lord) {
-	for (let i = 0; i < game.lords.lieutenants.length; i += 2) {
-		if(game.lords.lieutenants[i] === lord || game.lords.lieutenants[i+1] === lord) {
-			array_remove_pair(game.lords.lieutenants, i)
+	for (let i = 0; i < game.pieces.lieutenants.length; i += 2) {
+		if(game.pieces.lieutenants[i] === lord || game.pieces.lieutenants[i+1] === lord) {
+			array_remove_pair(game.pieces.lieutenants, i)
 			return
 		}
 	}
@@ -750,7 +750,7 @@ exports.setup = function (seed, scenario, options) {
 			assets: Array(lord_count).fill(0),
 			forces: Array(lord_count).fill(0),
 			routed: Array(lord_count).fill(0),
-			cards: Array(lord_count << 1).fill(NOTHING),
+			capabilities: Array(lord_count << 1).fill(NOTHING),
 			moved: 0,
 			besieged: 0,
 			lieutenants: [],
@@ -1667,11 +1667,11 @@ states.campaign_plan = {
 }
 
 function end_campaign_plan() {
-	if (game.lords.lieutenants.length > 0) {
+	if (game.pieces.lieutenants.length > 0) {
 		log(`Lieutenants`)
-		for (let i = 0; i < game.lords.lieutenants.length; i += 2) {
-			let upper = game.lords.lieutenants[i]
-			let lower = game.lords.lieutenants[i + 1]
+		for (let i = 0; i < game.pieces.lieutenants.length; i += 2) {
+			let upper = game.pieces.lieutenants[i]
+			let lower = game.pieces.lieutenants[i + 1]
 			log(`>L${upper} over L${lower}`)
 		}
 	}
@@ -2203,9 +2203,9 @@ function disband_lord(lord) {
 
 	set_lord_capability(lord, 0, NOTHING)
 	set_lord_capability(lord, 1, NOTHING)
-	game.lords.assets[lord] = 0
-	game.lords.forces[lord] = 0
-	game.lords.routed[lord] = 0
+	game.pieces.assets[lord] = 0
+	game.pieces.forces[lord] = 0
+	game.pieces.routed[lord] = 0
 
 	set_lord_besieged(lord, 0)
 	set_lord_moved(lord, 0)
@@ -2390,7 +2390,7 @@ exports.view = function (state, current) {
 		log: game.log,
 
 		turn: game.turn,
-		lords: game.lords,
+		pieces: game.pieces,
 		vassals: game.vassals,
 		events: game.events,
 		capabilities: game.capabilities,
