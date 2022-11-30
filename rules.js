@@ -580,14 +580,14 @@ function add_ravaged_marker(loc) {
 
 function has_enemy_castle(loc) {
 	if (game.active === P1)
-		return set_has(game.locales.p2_castles, loc)
-	return set_has(game.locales.p1_castles, loc)
+		return set_has(game.locales.castles2, loc)
+	return set_has(game.locales.castles1, loc)
 }
 
 function has_friendly_castle(loc) {
 	if (game.active === P1)
-		return set_has(game.locales.p1_castles, loc)
-	return set_has(game.locales.p2_castles, loc)
+		return set_has(game.locales.castles1, loc)
+	return set_has(game.locales.castles2, loc)
 }
 
 function has_conquered_stronghold(loc) {
@@ -735,10 +735,10 @@ exports.setup = function (seed, scenario, options) {
 		state: "setup_lords",
 		stack: [],
 
-		p1_hand: [],
-		p2_hand: [],
-		p1_plan: [],
-		p2_plan: [],
+		hand1: [],
+		hand2: [],
+		plan1: [],
+		plan2: [],
 
 		turn: 0,
 		capabilities: [], // global capabilities
@@ -762,8 +762,8 @@ exports.setup = function (seed, scenario, options) {
 			ravaged: [],
 			sieges: [],
 
-			p1_castles: [],
-			p2_castles: [],
+			castles1: [],
+			castles2: [],
 			walls: [],
 		},
 
@@ -858,7 +858,7 @@ function setup_peipus() {
 	game.call_to_arms.veche_vp = 4
 	game.call_to_arms.veche_coin = 3
 
-	set_add(game.locales.p2_castles, LOC_KOPORYE)
+	set_add(game.locales.castles2, LOC_KOPORYE)
 	set_add(game.locales.conquered, LOC_IZBORSK)
 	set_add(game.locales.conquered, LOC_PSKOV)
 	set_add(game.locales.ravaged, LOC_VOD)
@@ -890,7 +890,7 @@ function setup_return_of_the_prince() {
 	game.call_to_arms.veche_vp = 3
 	game.call_to_arms.veche_coin = 2
 
-	set_add(game.locales.p1_castles, LOC_KOPORYE)
+	set_add(game.locales.castles1, LOC_KOPORYE)
 	set_add(game.locales.conquered, LOC_KAIBOLOVO)
 	set_add(game.locales.conquered, LOC_KOPORYE)
 	set_add(game.locales.conquered, LOC_IZBORSK)
@@ -923,7 +923,7 @@ function setup_return_of_the_prince_nicolle() {
 	game.call_to_arms.veche_vp = 3
 	game.call_to_arms.veche_coin = 2
 
-	set_add(game.locales.p1_castles, LOC_KOPORYE)
+	set_add(game.locales.castles1, LOC_KOPORYE)
 	set_add(game.locales.conquered, LOC_KAIBOLOVO)
 	set_add(game.locales.conquered, LOC_KOPORYE)
 	set_add(game.locales.ravaged, LOC_VOD)
@@ -1008,8 +1008,8 @@ function setup_pleskau_quickstart() {
 
 	goto_campaign_plan()
 
-	game.p1_plan = [ LORD_YAROSLAV, LORD_RUDOLF, LORD_HERMANN, LORD_HERMANN, LORD_RUDOLF, LORD_HERMANN ]
-	game.p2_plan = [ LORD_GAVRILO, LORD_VLADISLAV, LORD_DOMASH, LORD_GAVRILO, LORD_DOMASH, LORD_DOMASH ]
+	game.plan1 = [ LORD_YAROSLAV, LORD_RUDOLF, LORD_HERMANN, LORD_HERMANN, LORD_RUDOLF, LORD_HERMANN ]
+	game.plan2 = [ LORD_GAVRILO, LORD_VLADISLAV, LORD_DOMASH, LORD_GAVRILO, LORD_DOMASH, LORD_DOMASH ]
 
 	// goto_command_activation()
 }
@@ -1192,9 +1192,9 @@ states.levy_arts_of_war = {
 		let c = game.what.shift()
 		log(`Held event card.`)
 		if (game.active === P1)
-			game.p1_hand.push(c)
+			game.hand1.push(c)
 		else
-			game.p2_hand.push(c)
+			game.hand2.push(c)
 		resume_levy_arts_of_war()
 	},
 	discard() {
@@ -1553,8 +1553,8 @@ function goto_campaign_plan() {
 
 	set_active(BOTH)
 	game.state = "campaign_plan"
-	game.p1_plan = []
-	game.p2_plan = []
+	game.plan1 = []
+	game.plan2 = []
 }
 
 function plan_has_lieutenant(first, last) {
@@ -1589,7 +1589,7 @@ function plan_can_make_lieutenant(plan, upper, first, last) {
 
 states.campaign_plan = {
 	prompt(current) {
-		let plan = current === P1 ? game.p1_plan : game.p2_plan
+		let plan = current === P1 ? game.plan1 : game.plan2
 		let first = current === P1 ? first_p1_lord : first_p2_lord
 		let last = current === P1 ? last_p1_lord : last_p2_lord
 		let upper = plan_selected_lieutenant(first, last)
@@ -1645,11 +1645,11 @@ states.campaign_plan = {
 			set_lower_lord(upper, lord)
 	},
 	plan(lord, current) {
-		let plan = current === P1 ? game.p1_plan : game.p2_plan
+		let plan = current === P1 ? game.plan1 : game.plan2
 		plan.push(lord)
 	},
 	undo(_, current) {
-		let plan = current === P1 ? game.p1_plan : game.p2_plan
+		let plan = current === P1 ? game.plan1 : game.plan2
 		let first = current === P1 ? first_p1_lord : first_p2_lord
 		let last = current === P1 ? last_p1_lord : last_p2_lord
 		for (let lord = first; lord <= last; ++lord)
@@ -1687,18 +1687,18 @@ function end_campaign_plan() {
 // === CAMPAIGN: COMMAND ACTIVATION ===
 
 function goto_command_activation() {
-	if (game.p2_plan.length === 0) {
+	if (game.plan2.length === 0) {
 		game.command = NOBODY
 		goto_end_campaign()
 		return
 	}
 
-	if (game.p2_plan.length > game.p1_plan.length) {
+	if (game.plan2.length > game.plan1.length) {
 		set_active(P2)
-		game.command = game.p2_plan.shift()
+		game.command = game.plan2.shift()
 	} else {
 		set_active(P1)
-		game.command = game.p1_plan.shift()
+		game.command = game.plan1.shift()
 	}
 
 	if (game.command === NOBODY) {
@@ -2408,9 +2408,9 @@ exports.view = function (state, current) {
 	}
 
 	if (current === P1)
-		view.hand = game.p1_hand
+		view.hand = game.hand1
 	if (current === P2)
-		view.hand = game.p2_hand
+		view.hand = game.hand2
 
 	if (game.state === "game_over") {
 		view.prompt = game.victory

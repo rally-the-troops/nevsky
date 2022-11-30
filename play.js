@@ -215,7 +215,7 @@ function is_p2_locale(loc) {
 
 function count_vp1() {
 	let vp = 0
-	for (let loc of view.locales.p1_castles)
+	for (let loc of view.locales.castles1)
 		vp += 2
 	for (let loc of view.locales.conquered)
 		if (is_p2_locale(loc))
@@ -228,7 +228,7 @@ function count_vp1() {
 
 function count_vp2() {
 	let vp = view.call_to_arms.veche_vp * 2
-	for (let loc of view.locales.p2_castles)
+	for (let loc of view.locales.castles2)
 		vp += 2
 	for (let loc of view.locales.conquered)
 		if (is_p1_locale(loc))
@@ -370,8 +370,8 @@ const ui = {
 	arts_of_war_dialog: document.getElementById("arts_of_war"),
 	arts_of_war_list: document.getElementById("arts_of_war_list"),
 	events: document.getElementById("events"),
-	p1_capabilities: document.getElementById("p1_capabilities"),
-	p2_capabilities: document.getElementById("p2_capabilities"),
+	capabilities1: document.getElementById("capabilities1"),
+	capabilities2: document.getElementById("capabilities2"),
 	hand: document.getElementById("hand"),
 	command: document.getElementById("command"),
 	turn: document.getElementById("turn"),
@@ -935,12 +935,12 @@ function update_locale(loc) {
 			ui.locale_markers[loc].appendChild(get_cached_element(cn))
 	}
 
-	if (set_has(view.locales.p1_castles, loc)) {
+	if (set_has(view.locales.castles1, loc)) {
 		let cn = "marker rectangle castle teutonic"
 		ui.locale_markers[loc].appendChild(get_cached_element(cn))
 	}
 
-	if (set_has(view.locales.p2_castles, loc)) {
+	if (set_has(view.locales.castles2, loc)) {
 		let cn = "marker rectangle castle russian"
 		ui.locale_markers[loc].appendChild(get_cached_element(cn))
 	}
@@ -1038,16 +1038,16 @@ function update_cards() {
 	for (let c of view.events)
 		ui.events.appendChild(ui.cards[c])
 
-	ui.p1_capabilities.replaceChildren()
+	ui.capabilities1.replaceChildren()
 	for_each_teutonic_card(c => {
 		if (view.capabilities.includes(c))
-			ui.p1_capabilities.appendChild(ui.cards[c])
+			ui.capabilities1.appendChild(ui.cards[c])
 	})
 
-	ui.p2_capabilities.replaceChildren()
+	ui.capabilities2.replaceChildren()
 	for_each_russian_card(c => {
 		if (view.capabilities.includes(c))
-			ui.p2_capabilities.appendChild(ui.cards[c])
+			ui.capabilities2.appendChild(ui.cards[c])
 	})
 
 	ui.hand.replaceChildren()
@@ -1177,7 +1177,7 @@ function build_div(parent, className, id, onclick) {
 }
 
 function build_lord_mat(lord, ix, side, name) {
-	let parent = document.getElementById(side === 'teutonic' ? "p1_court" : "p2_court")
+	let parent = document.getElementById(side === 'teutonic' ? "court1" : "court2")
 	let mat = build_div(parent, `mat ${side} ${name} hide`)
 	let bg = build_div(mat, "background")
 	ui.forces[ix] = build_div(bg, "forces")
