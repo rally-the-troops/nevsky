@@ -287,11 +287,11 @@ function get_lord_service(lord) {
 }
 
 function get_lord_capability(lord, n) {
-	return game.lords.cards[(lord << 1) + n]
+	return game.lords.capabilities[(lord << 1) + n]
 }
 
 function set_lord_capability(lord, n, x) {
-	game.lords.cards[(lord << 1) + n] = x
+	game.lords.capabilities[(lord << 1) + n] = x
 }
 
 function get_lord_assets(lord, n) {
@@ -364,12 +364,12 @@ function get_lord_vassal_count(lord) {
 
 function get_lord_vassal_service(lord, n) {
 	let v = data.lords[lord].vassals[n]
-	return game.vassals[v]
+	return game.lords.vassals[v]
 }
 
 function set_lord_vassal_service(lord, n, x) {
 	let v = data.lords[lord].vassals[n]
-	game.vassals[v] = x
+	game.lords.vassals[v] = x
 }
 
 function clear_lords_moved() {
@@ -475,7 +475,7 @@ function is_card_in_use(c) {
 		return true
 	if (set_has(game.capabilities, c))
 		return true
-	if (game.lords.cards.includes(c))
+	if (game.lords.capabilities.includes(c))
 		return true
 	if (c === 18 || c === 19 || c === 20)
 		return true
@@ -512,7 +512,7 @@ function is_lord_ready(lord) {
 }
 
 function is_vassal_ready(vassal) {
-	return game.vassals[vassal] === 0
+	return game.lords.vassals[vassal] === 0
 }
 
 function is_friendly_lord(lord) {
@@ -567,27 +567,27 @@ function is_region(loc) {
 }
 
 function has_conquered_marker(loc) {
-	return set_has(game.conquered, loc)
+	return set_has(game.locales.conquered, loc)
 }
 
 function has_ravaged_marker(loc) {
-	return set_has(game.ravaged, loc)
+	return set_has(game.locales.ravaged, loc)
 }
 
 function add_ravaged_marker(loc) {
-	set_add(game.ravaged, loc)
+	set_add(game.locales.ravaged, loc)
 }
 
 function has_enemy_castle(loc) {
 	if (game.active === P1)
-		return set_has(game.p2_castles, loc)
-	return set_has(game.p1_castles, loc)
+		return set_has(game.locales.p2_castles, loc)
+	return set_has(game.locales.p1_castles, loc)
 }
 
 function has_friendly_castle(loc) {
 	if (game.active === P1)
-		return set_has(game.p1_castles, loc)
-	return set_has(game.p2_castles, loc)
+		return set_has(game.locales.p1_castles, loc)
+	return set_has(game.locales.p2_castles, loc)
 }
 
 function has_conquered_stronghold(loc) {
@@ -705,13 +705,13 @@ function muster_lord(lord, locale, service) {
 	set_lord_forces(lord, SERFS, info.forces.serfs | 0)
 
 	for (let v of info.vassals)
-		game.vassals[v] = 0
+		game.lords.vassals[v] = 0
 }
 
 function muster_vassal(lord, vassal) {
 	let info = data.vassals[vassal]
 
-	game.vassals[vassal] = 1
+	game.lords.vassals[vassal] = 1
 
 	add_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
 	add_lord_forces(lord, SERGEANTS, info.forces.serfs | 0)
@@ -735,14 +735,14 @@ exports.setup = function (seed, scenario, options) {
 		state: "setup_lords",
 		stack: [],
 
-		turn: 0,
-
 		p1_hand: [],
 		p2_hand: [],
 		p1_plan: [],
 		p2_plan: [],
-		events: [], // this levy/this campaign cards
+
+		turn: 0,
 		capabilities: [], // global capabilities
+		events: [], // this levy/this campaign cards
 
 		lords: {
 			locale: Array(lord_count).fill(NOWHERE),
@@ -750,29 +750,33 @@ exports.setup = function (seed, scenario, options) {
 			assets: Array(lord_count).fill(0),
 			forces: Array(lord_count).fill(0),
 			routed: Array(lord_count).fill(0),
-			cards: Array(lord_count << 1).fill(NOTHING),
-			moved: 0,
+			capabilities: Array(lord_count << 1).fill(NOTHING),
 			besieged: 0,
+			moved: 0,
 			lieutenants: [],
+			vassals: Array(vassal_count).fill(0),
 		},
-		vassals: Array(vassal_count).fill(0),
-		legate: NOWHERE,
-		veche_vp: 0,
-		veche_coin: 0,
 
-		conquered: [],
-		ravaged: [],
-		sieges: [],
+		locales: {
+			conquered: [],
+			ravaged: [],
+			sieges: [],
 
-		p1_castles: [],
-		p2_castles: [],
-		walls: [],
+			p1_castles: [],
+			p2_castles: [],
+			walls: [],
+		},
+
+		call_to_arms: {
+			legate: NOWHERE,
+			veche_vp: 0,
+			veche_coin: 0,
+		},
 
 		command: NOBODY,
 		who: NOBODY,
 		where: NOWHERE,
 		what: NOTHING,
-		levy: 0, // lordship used
 		count: 0,
 	}
 
@@ -811,7 +815,7 @@ exports.setup = function (seed, scenario, options) {
 function setup_pleskau() {
 	game.turn = 1 << 1
 
-	game.veche_vp = 1
+	game.call_to_arms.veche_vp = 1
 
 	muster_lord(LORD_HERMANN, LOC_DORPAT, 4)
 	muster_lord(LORD_KNUD_ABEL, LOC_REVAL, 3)
@@ -826,13 +830,13 @@ function setup_pleskau() {
 function setup_watland() {
 	game.turn = 4 << 1
 
-	game.veche_vp = 1
-	game.veche_coin = 1
+	game.call_to_arms.veche_vp = 1
+	game.call_to_arms.veche_coin = 1
 
-	set_add(game.conquered, LOC_IZBORSK)
-	set_add(game.conquered, LOC_PSKOV)
-	set_add(game.ravaged, LOC_PSKOV)
-	set_add(game.ravaged, LOC_DUBROVNO)
+	set_add(game.locales.conquered, LOC_IZBORSK)
+	set_add(game.locales.conquered, LOC_PSKOV)
+	set_add(game.locales.ravaged, LOC_PSKOV)
+	set_add(game.locales.ravaged, LOC_DUBROVNO)
 
 	muster_lord(LORD_ANDREAS, LOC_FELLIN, 7)
 	muster_lord(LORD_KNUD_ABEL, LOC_WESENBERG, 6)
@@ -851,18 +855,18 @@ function setup_watland() {
 function setup_peipus() {
 	game.turn = 13 << 1
 
-	game.veche_vp = 4
-	game.veche_coin = 3
+	game.call_to_arms.veche_vp = 4
+	game.call_to_arms.veche_coin = 3
 
-	set_add(game.p2_castles, LOC_KOPORYE)
-	set_add(game.conquered, LOC_IZBORSK)
-	set_add(game.conquered, LOC_PSKOV)
-	set_add(game.ravaged, LOC_VOD)
-	set_add(game.ravaged, LOC_ZHELTSY)
-	set_add(game.ravaged, LOC_TESOVO)
-	set_add(game.ravaged, LOC_SABLIA)
-	set_add(game.ravaged, LOC_PSKOV)
-	set_add(game.ravaged, LOC_DUBROVNO)
+	set_add(game.locales.p2_castles, LOC_KOPORYE)
+	set_add(game.locales.conquered, LOC_IZBORSK)
+	set_add(game.locales.conquered, LOC_PSKOV)
+	set_add(game.locales.ravaged, LOC_VOD)
+	set_add(game.locales.ravaged, LOC_ZHELTSY)
+	set_add(game.locales.ravaged, LOC_TESOVO)
+	set_add(game.locales.ravaged, LOC_SABLIA)
+	set_add(game.locales.ravaged, LOC_PSKOV)
+	set_add(game.locales.ravaged, LOC_DUBROVNO)
 
 	muster_lord(LORD_HERMANN, LOC_DORPAT, 16)
 	muster_lord(LORD_YAROSLAV, LOC_PSKOV, 14)
@@ -883,20 +887,20 @@ function setup_peipus() {
 function setup_return_of_the_prince() {
 	game.turn = 9 << 1
 
-	game.veche_vp = 3
-	game.veche_coin = 2
+	game.call_to_arms.veche_vp = 3
+	game.call_to_arms.veche_coin = 2
 
-	set_add(game.p1_castles, LOC_KOPORYE)
-	set_add(game.conquered, LOC_KAIBOLOVO)
-	set_add(game.conquered, LOC_KOPORYE)
-	set_add(game.conquered, LOC_IZBORSK)
-	set_add(game.conquered, LOC_PSKOV)
-	set_add(game.ravaged, LOC_VOD)
-	set_add(game.ravaged, LOC_ZHELTSY)
-	set_add(game.ravaged, LOC_TESOVO)
-	set_add(game.ravaged, LOC_SABLIA)
-	set_add(game.ravaged, LOC_PSKOV)
-	set_add(game.ravaged, LOC_DUBROVNO)
+	set_add(game.locales.p1_castles, LOC_KOPORYE)
+	set_add(game.locales.conquered, LOC_KAIBOLOVO)
+	set_add(game.locales.conquered, LOC_KOPORYE)
+	set_add(game.locales.conquered, LOC_IZBORSK)
+	set_add(game.locales.conquered, LOC_PSKOV)
+	set_add(game.locales.ravaged, LOC_VOD)
+	set_add(game.locales.ravaged, LOC_ZHELTSY)
+	set_add(game.locales.ravaged, LOC_TESOVO)
+	set_add(game.locales.ravaged, LOC_SABLIA)
+	set_add(game.locales.ravaged, LOC_PSKOV)
+	set_add(game.locales.ravaged, LOC_DUBROVNO)
 
 	muster_lord(LORD_ANDREAS, LOC_KOPORYE, 12)
 	muster_lord(LORD_ALEKSANDR, LOC_NOVGOROD, 14)
@@ -916,16 +920,16 @@ function setup_return_of_the_prince() {
 function setup_return_of_the_prince_nicolle() {
 	game.turn = 9 << 1
 
-	game.veche_vp = 3
-	game.veche_coin = 2
+	game.call_to_arms.veche_vp = 3
+	game.call_to_arms.veche_coin = 2
 
-	set_add(game.p1_castles, LOC_KOPORYE)
-	set_add(game.conquered, LOC_KAIBOLOVO)
-	set_add(game.conquered, LOC_KOPORYE)
-	set_add(game.ravaged, LOC_VOD)
-	set_add(game.ravaged, LOC_ZHELTSY)
-	set_add(game.ravaged, LOC_TESOVO)
-	set_add(game.ravaged, LOC_SABLIA)
+	set_add(game.locales.p1_castles, LOC_KOPORYE)
+	set_add(game.locales.conquered, LOC_KAIBOLOVO)
+	set_add(game.locales.conquered, LOC_KOPORYE)
+	set_add(game.locales.ravaged, LOC_VOD)
+	set_add(game.locales.ravaged, LOC_ZHELTSY)
+	set_add(game.locales.ravaged, LOC_TESOVO)
+	set_add(game.locales.ravaged, LOC_SABLIA)
 
 	muster_lord(LORD_ANDREAS, LOC_RIGA, 12)
 	muster_lord(LORD_HERMANN, LOC_DORPAT, 12)
@@ -945,8 +949,8 @@ function setup_return_of_the_prince_nicolle() {
 function setup_crusade_on_novgorod() {
 	game.turn = 1 << 1
 
-	game.veche_vp = 1
-	game.veche_coin = 0
+	game.call_to_arms.veche_vp = 1
+	game.call_to_arms.veche_coin = 0
 
 	muster_lord(LORD_HERMANN, LOC_DORPAT, 4)
 	muster_lord(LORD_KNUD_ABEL, LOC_REVAL, 3)
@@ -989,7 +993,7 @@ function setup_pleskau_quickstart() {
 	set_lord_capability(LORD_YAROSLAV, 0, find_card("T3"))
 
 	set_add(game.capabilities, find_card("T13"))
-	game.legate = LOC_DORPAT
+	game.call_to_arms.legate = LOC_DORPAT
 
 	set_add(game.capabilities, find_card("R8"))
 	muster_lord(LORD_DOMASH, LOC_NOVGOROD)
@@ -1000,7 +1004,7 @@ function setup_pleskau_quickstart() {
 	set_lord_capability(LORD_GAVRILO, 0, find_card("R2"))
 	set_lord_capability(LORD_GAVRILO, 1, find_card("R6"))
 
-	game.veche_coin += 1
+	game.call_to_arms.veche_coin += 1
 
 	goto_campaign_plan()
 
@@ -2079,7 +2083,7 @@ function end_feed() {
 
 function can_pay_lord(lord) {
 	if (game.active === RUSSIANS) {
-		if (game.veche_coin > 0 && !is_lord_besieged(lord))
+		if (game.call_to_arms.veche_coin > 0 && !is_lord_besieged(lord))
 			return true
 	}
 	let loc = get_lord_locale(lord)
@@ -2126,10 +2130,12 @@ states.pay = {
 states.pay_lord = {
 	prompt() {
 		view.prompt = `You may Pay ${lord_name[game.who]} with Coin or Loot.`
+
 		if (game.active === RUSSIANS) {
-			if (game.veche_coin > 0 && !is_lord_besieged(lord))
+			if (game.call_to_arms.veche_coin > 0 && !is_lord_besieged(lord))
 				view.actions.veche_coin = 1
 		}
+
 		let loc = get_lord_locale(game.who)
 		let pay_with_loot = is_friendly_locale(loc)
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
@@ -2161,7 +2167,7 @@ states.pay_lord = {
 	},
 	veche_coin() {
 		logi(`Paid L${game.who} with Coin from Veche.`)
-		game.veche_coin--
+		game.call_to_arms.veche_coin--
 		add_lord_service(game.who, 1)
 		pop_state()
 	},
@@ -2211,7 +2217,7 @@ function disband_lord(lord) {
 	set_lord_moved(lord, 0)
 
 	for (let v of data.lords[lord].vassals)
-		game.vassals[v] = 0
+		game.lords.vassals[v] = 0
 
 	// TODO: check lifted siege
 }
@@ -2390,22 +2396,12 @@ exports.view = function (state, current) {
 		log: game.log,
 
 		turn: game.turn,
-		lords: game.lords,
-		vassals: game.vassals,
 		events: game.events,
 		capabilities: game.capabilities,
 
-		conquered: game.conquered,
-		ravaged: game.ravaged,
-		sieges: game.sieges,
-
-		p1_castles: game.p1_castles,
-		p2_castles: game.p2_castles,
-		walls: game.walls,
-
-		legate: game.legate,
-		veche_vp: game.veche_vp,
-		veche_coin: game.veche_coin,
+		lords: game.lords,
+		locales: game.locales,
+		call_to_arms: game.call_to_arms,
 
 		command: game.command,
 		hand: null,
