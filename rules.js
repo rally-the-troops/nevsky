@@ -3,6 +3,8 @@
 // TODO: game.who = array for feeding
 // TODO: highlight shield on mat instead of mat
 
+const data = require("./data.js")
+
 const TODO = false
 
 const BOTH = "Both"
@@ -22,16 +24,6 @@ let states = {}
 exports.roles = [ P1, P2 ]
 
 exports.scenarios = [
-	"Pleskau - 1240",
-	"Watland - 1241",
-	"Peipus - 1242",
-	"Return of the Prince - 1241 to 1242",
-	"Return of the Prince - Nicolle Variant",
-	"Crusade on Novgorod - 1240 to 1242",
-	"Pleskau - 1240 (Quickstart)",
-]
-
-exports.scenarios = [
 	"Pleskau",
 	"Watland",
 	"Peipus",
@@ -40,6 +32,23 @@ exports.scenarios = [
 	"Crusade on Novgorod",
 	"Pleskau (Quickstart)",
 ]
+
+const scenario_remove_no_event_cards = [
+	"Pleskau",
+	"Watland",
+	"Peipus",
+	"Pleskau (Quickstart)"
+]
+
+const scenario_last_turn = {
+	"Pleskau": 2,
+	"Watland": 8,
+	"Peipus": 16,
+	"Return of the Prince": 16,
+	"Return of the Prince (Nicolle)": 16,
+	"Crusade on Novgorod": 16,
+	"Pleskau (Quickstart)": 2,
+}
 
 // unit types
 const KNIGHTS = 0
@@ -58,8 +67,6 @@ const CART = 3
 const SLED = 4
 const BOAT = 5
 const SHIP = 6
-
-const data = require("./data.js")
 
 function find_card(name) {
 	return data.cards.findIndex((x) => x.name === name)
@@ -85,9 +92,11 @@ const first_p2_locale = 24
 const last_p2_locale = 52
 
 const first_p1_card = 0
-const last_p1_card = 20
+const last_p1_card = 17
+const last_p1_card_no_event = 20
 const first_p2_card = 21
-const last_p2_card = 41
+const last_p2_card = 38
+const last_p2_card_no_event = 41
 
 const LORD_ANDREAS = find_lord("Andreas")
 const LORD_HEINRICH = find_lord("Heinrich")
@@ -730,6 +739,7 @@ exports.setup = function (seed, scenario, options) {
 		seed,
 		scenario,
 		options,
+
 		log: [],
 		undo: [],
 
@@ -882,8 +892,6 @@ function setup_peipus() {
 	setup_lord_on_calendar(LORD_RUDOLF, 13)
 	setup_lord_on_calendar(LORD_GAVRILO, 13)
 	setup_lord_on_calendar(LORD_VLADISLAV, 15)
-
-	// XXX goto_campaign_plan()
 }
 
 function setup_return_of_the_prince() {
@@ -1060,17 +1068,27 @@ function end_setup_lords() {
 // === LEVY: ARTS OF WAR (FIRST TURN) ===
 
 function draw_two_cards() {
-	// TODO: no PASS cards in some scenarios in 2nd ed
+	let remove_no_event_cards = scenario_remove_no_event_cards.includes(game.scenario)
+
 	let deck = []
 	if (game.active === P1) {
 		for (let c = first_p1_card; c <= last_p1_card; ++c)
 			if (!is_card_in_use(c))
 				deck.push(c)
+		if (!remove_no_event)
+			for (let c = last_p1_card; c <= last_p1_card_no_event; ++c)
+				if (!is_card_in_use(c))
+					deck.push(c)
 	} else {
 		for (let c = first_p2_card; c <= last_p2_card; ++c)
 			if (!is_card_in_use(c))
 				deck.push(c)
+		if (!remove_no_event_cards)
+			for (let c = last_p2_card; c <= last_p2_card_no_event; ++c)
+				if (!is_card_in_use(c))
+					deck.push(c)
 	}
+
 	let result = []
 	let i = random(deck.length)
 	result.push(deck[i])
