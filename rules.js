@@ -1,5 +1,8 @@
 "use strict"
 
+// TODO: game.who = array for feeding
+// TODO: highlight shield on mat instead of mat
+
 const TODO = false
 
 const BOTH = "Both"
@@ -723,7 +726,6 @@ function muster_vassal(lord, vassal) {
 }
 
 exports.setup = function (seed, scenario, options) {
-	console.log("DO SETUP", seed, scenario)
 	game = {
 		seed,
 		scenario,
@@ -1069,8 +1071,6 @@ function draw_two_cards() {
 			if (!is_card_in_use(c))
 				deck.push(c)
 	}
-	console.log("deck", deck)
-
 	let result = []
 	let i = random(deck.length)
 	result.push(deck[i])
@@ -1440,7 +1440,6 @@ states.muster_lord_transport = {
 
 function lord_has_capability(lord, c) {
 	let name = data.cards[c].capability
-	console.log("has cap?", c, name)
 	let c1 = get_lord_capability(lord, 0)
 	if (c1 >= 0 && data.cards[c1].capability === name)
 		return true
@@ -1634,9 +1633,11 @@ states.campaign_plan = {
 			view.actions.undo = 0
 	},
 	lord(lord, current) {
-		let first = current === P1 ? first_p1_lord : first_p2_lord
-		let last = current === P1 ? last_p1_lord : last_p2_lord
-		let upper = plan_selected_lieutenant(first, last)
+		let upper
+		if (current === P1)
+			upper = plan_selected_lieutenant(first_p1_lord, last_p1_lord)
+		else
+			upper = plan_selected_lieutenant(first_p2_lord, last_p2_lord)
 		if (lord === upper)
 			remove_lieutenant(upper)
 		else if (upper === NOBODY)
@@ -1645,20 +1646,25 @@ states.campaign_plan = {
 			set_lower_lord(upper, lord)
 	},
 	plan(lord, current) {
-		let plan = current === P1 ? game.plan1 : game.plan2
-		plan.push(lord)
+		if (current === P1)
+			game.plan1.push(lord)
+		else
+			game.plan2.push(lord)
 	},
 	undo(_, current) {
-		let plan = current === P1 ? game.plan1 : game.plan2
-		let first = current === P1 ? first_p1_lord : first_p2_lord
-		let last = current === P1 ? last_p1_lord : last_p2_lord
-		for (let lord = first; lord <= last; ++lord)
-			if (is_upper_lord(lord))
-				remove_lieutenant(lord)
-		plan.length = 0
+		if (current === P1) {
+			for (let lord = first_p1_lord; lord <= last_p1_lord; ++lord)
+				if (is_upper_lord(lord))
+					remove_lieutenant(lord)
+			game.plan1.length = 0
+		} else {
+			for (let lord = first_p2_lord; lord <= last_p2_lord; ++lord)
+				if (is_upper_lord(lord))
+					remove_lieutenant(lord)
+			game.plan2.length = 0
+		}
 	},
 	end_plan(_, current) {
-		console.log("active", game.active)
 		if (game.active === BOTH) {
 			if (current === P1)
 				set_active(P2)
@@ -1672,7 +1678,7 @@ states.campaign_plan = {
 
 function end_campaign_plan() {
 	if (game.lords.lieutenants.length > 0) {
-		log(`Lieutenants`)
+		log("Lieutenants")
 		for (let i = 0; i < game.lords.lieutenants.length; i += 2) {
 			let upper = game.lords.lieutenants[i]
 			let lower = game.lords.lieutenants[i + 1]
@@ -1734,6 +1740,8 @@ function goto_actions() {
 }
 
 function end_actions() {
+	log_br()
+
 	set_active(P1)
 	game.command = NOBODY
 	game.who = NOBODY
@@ -1960,7 +1968,6 @@ states.feed = {
 		if (done) {
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 				if (is_lord_unfed(lord)) {
-					console.log("unfed!", lord, lord_name[lord])
 					if (get_lord_assets(lord, PROV) > 0) {
 						gen_action_prov(lord)
 						done = false
@@ -1978,7 +1985,6 @@ states.feed = {
 			view.prompt = "You must Feed lords who Moved or Fought (shared)."
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 				if (is_lord_unfed(lord) && can_feed_from_shared(lord)) {
-					console.log("unfed2", lord, lord_name[lord])
 					gen_action_lord(lord)
 					done = false
 				}
@@ -1990,7 +1996,6 @@ states.feed = {
 			view.prompt = "You must shift the Service of any unfed lords."
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 				if (is_lord_unfed(lord)) {
-					console.log("unfed2", lord, lord_name[lord])
 					gen_action_service(lord)
 					done = false
 				}
@@ -2005,13 +2010,13 @@ states.feed = {
 	},
 	prov(lord) {
 		push_undo()
-		logi(`Fed L${lord}.`)
+		log(`Fed L${lord}.`)
 		add_lord_assets(lord, PROV, -1)
 		feed_lord(lord)
 	},
 	loot(lord) {
 		push_undo()
-		logi(`Fed L${game.who} with Loot.`)
+		log(`Fed L${game.who} with Loot.`)
 		add_lord_assets(lord, LOOT, -1)
 		feed_lord(lord)
 	},
@@ -2022,7 +2027,7 @@ states.feed = {
 	},
 	service(lord) {
 		push_undo()
-		logi(`Unfed L${lord}.`)
+		log(`Unfed L${lord}.`)
 		add_lord_service(lord, -1)
 		set_lord_unfed(lord, 0)
 	},
@@ -2052,14 +2057,14 @@ states.feed_lord_shared = {
 	},
 	prov(lord) {
 		push_undo()
-		logi(`Fed L${game.who} from L${lord}.`)
+		log(`Fed L${game.who} from L${lord}.`)
 		add_lord_assets(lord, PROV, -1)
 		feed_lord(game.who)
 		resume_feed_lord_shared()
 	},
 	loot(lord) {
 		push_undo()
-		logi(`Fed L${game.who} with Loot from L${lord}.`)
+		log(`Fed L${game.who} with Loot from L${lord}.`)
 		add_lord_assets(lord, LOOT, -1)
 		feed_lord(game.who)
 		resume_feed_lord_shared()
@@ -2132,7 +2137,7 @@ states.pay_lord = {
 		view.prompt = `You may Pay ${lord_name[game.who]} with Coin or Loot.`
 
 		if (game.active === RUSSIANS) {
-			if (game.call_to_arms.veche_coin > 0 && !is_lord_besieged(lord))
+			if (game.call_to_arms.veche_coin > 0 && !is_lord_besieged(game.who))
 				view.actions.veche_coin = 1
 		}
 
@@ -2149,24 +2154,24 @@ states.pay_lord = {
 	},
 	loot(lord) {
 		if (game.who === lord)
-			logi(`Paid L${game.who} with Loot.`)
+			log(`Paid L${game.who} with Loot.`)
 		else
-			logi(`Paid L${game.who} with Loot from L${lord}.`)
+			log(`Paid L${game.who} with Loot from L${lord}.`)
 		add_lord_assets(lord, LOOT, -1)
 		add_lord_service(game.who, 1)
 		pop_state()
 	},
 	coin(lord) {
 		if (game.who === lord)
-			logi(`Paid L${game.who} with Coin.`)
+			log(`Paid L${game.who} with Coin.`)
 		else
-			logi(`Paid L${game.who} with Coin from L${lord}.`)
+			log(`Paid L${game.who} with Coin from L${lord}.`)
 		add_lord_assets(lord, COIN, -1)
 		add_lord_service(game.who, 1)
 		pop_state()
 	},
 	veche_coin() {
-		logi(`Paid L${game.who} with Coin from Veche.`)
+		log(`Paid L${game.who} with Coin from Veche.`)
 		game.call_to_arms.veche_coin--
 		add_lord_service(game.who, 1)
 		pop_state()
