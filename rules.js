@@ -657,7 +657,7 @@ function remove_siege_marker(loc) {
 }
 
 function remove_all_siege_markers(loc) {
-	map_delete(game.locales.siege, loc)
+	map_delete(game.locales.sieges, loc)
 }
 
 function has_enemy_castle(loc) {
@@ -1936,8 +1936,145 @@ function can_action_march() {
 
 function do_action_march() {
 	push_undo()
+	game.state = 'march'
+}
+
+function get_road(from, to) {
+	for (let road of data.locales[from].ways)
+		if (road[0] === to)
+			return road
+	return null
+}
+
+function has_two_ways(from, to) {
+	return get_road(from, to).length > 2
+}
+
+states.march = {
+	prompt() {
+		view.prompt = `March: Select destination.`
+
+		// TODO: Group March & lieutenants
+
+		let from = get_lord_locale(game.who)
+		for (let [to] of data.locales[from].ways)
+			gen_action_locale(to)
+	},
+	locale(to) {
+		push_undo()
+		let from = get_lord_locale(game.who)
+		let road = get_road(from, to)
+		if (road.length > 2) {
+			game.state = 'march_way'
+			game.where = to
+		} else {
+			march_lord(game.who, road[1], to)
+		}
+	},
+}
+
+states.march_way = {
+	prompt() {
+		view.prompt = `March: Select way.`
+
+		let from = get_lord_locale(game.who)
+		let to = game.where
+
+		let road = get_road(from, to)
+		for (let i = 1; i < road.length; ++i)
+			gen_action_way(road[i])
+	},
+	way(way) {
+		let from = get_lord_locale(game.who)
+		let to = game.where
+		game.where = NOWHERE
+		march_lord(game.who, way, to)
+	},
+}
+
+function march_lord(lord, way, to) {
+	// TODO: laden/unladen discard prov and loot
+	// game.state = 'march_laden'
+
+	let from = get_lord_locale(game.who)
+
+	if (data.ways[way].name)
+		log(`Marched via ${data.ways[way].name} to %${to}.`)
+	else
+		log(`Marched to %${to}.`)
+
+	if (is_trade_route(to))
+		conquer_trade_route(to)
+
+	if (is_unbesieged_enemy_stronghold(to))
+		add_siege_marker(to)
+
+	set_lord_locale(game.who, to)
 	set_lord_moved(game.who, 1)
-	++game.count
+
+	if (is_enemy_stronghold(from))
+		remove_all_siege_markers(from)
+
+	// TODO: lift siege
+	// TODO: stop and siege
+	// TODO: approach
+
+	game.count += 1
+	game.state = "actions"
+}
+
+states.march_laden = {
+	prompt() {
+		let from = get_lord_locale(game.who)
+		let prov = get_lord_assets(game.who, PROV)
+		let loot = get_lord_assets(game.who, LOOT)
+		let carts = get_lord_assets(game.who, CART)
+		let sleds = get_lord_assets(game.who, SLED)
+		let boats = get_lord_assets(game.who, BOAT)
+
+		// TODO: Group March & lieutenants
+
+		let laden = 0 // 0=unladen, 1=laden, 2=immobile
+
+		view.prompt = `March`
+
+		console.log(USABLE_TRANSPORT[current_season()])
+
+		if (laden > 0) {
+			if (loot > 0)
+				gen_action_loot(game.who)
+			if (prov > 0)
+				gen_action_prov(game.who)
+		}
+
+		if (laden === 0 || (laden === 1 && get_available_actions() >= 2)) {
+		}
+
+	},
+	prov(lord) {
+		push_undo()
+		drop_prov(lord)
+	},
+	loot(lord) {
+		push_undo()
+		drop_loot(lord)
+	},
+	locale(loc) {
+		push_undo()
+		log(`Sailed to %${loc}.`)
+
+		if (is_trade_route(loc))
+			conquer_trade_route(loc)
+
+		if (is_unbesieged_enemy_stronghold(loc))
+			add_siege_marker(loc)
+
+		set_lord_locale(game.who, loc)
+		set_lord_moved(game.who, 1)
+
+		use_all_actions()
+		game.state = "actions"
+	},
 }
 
 // === ACTION: SIEGE ===
@@ -2051,7 +2188,7 @@ states.tax = {
 		gen_action_locale(here)
 	},
 	locale(loc) {
-		log(`Taxed at %${loc}`)
+		log(`Taxed %${loc}.`)
 		add_lord_assets(game.who, COIN, 1)
 		use_all_actions()
 		game.state = "actions"
@@ -2617,6 +2754,10 @@ function gen_action(action, argument) {
 	if (!(action in view.actions))
 		view.actions[action] = []
 	set_add(view.actions[action], argument)
+}
+
+function gen_action_way(way) {
+	gen_action("way", way)
 }
 
 function gen_action_locale(locale) {

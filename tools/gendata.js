@@ -211,10 +211,10 @@ defloc("Novgorodan Rus", 0, "region", "Velikaya River")
 defloc("Novgorodan Rus", 0, "region", "Vod")
 defloc("Novgorodan Rus", 0, "region", "Zhelcha River")
 
-waterway("Dorpat, Narwia, Gdov, Uzmen").name = "Pleipat W"
-waterway("Gdov, Uzmen").name = "Pleipat E"
-waterway("Fellin, Dorpat, Odenpäh").name = "Wirz"
 trackway("Dorpat, Odenpäh, Ugaunia").name = "Crossroads"
+waterway("Gdov, Uzmen").name = "Peipus E"
+waterway("Dorpat, Narwia, Gdov, Uzmen").name = "Peipus W"
+waterway("Fellin, Dorpat, Odenpäh").name = "Wirz"
 
 waterway("Uzmen, Pskov")
 waterway("Uzmen, Zhelcha River")

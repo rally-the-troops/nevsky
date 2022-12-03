@@ -160,6 +160,10 @@ function is_locale_action(locale) {
 	return !!(view.actions && view.actions.locale && set_has(view.actions.locale, locale))
 }
 
+function is_way_action(way) {
+	return !!(view.actions && view.actions.way && set_has(view.actions.way, way))
+}
+
 function is_card_action(c) {
 	return !!(view.actions && view.actions.card && set_has(view.actions.card, c))
 }
@@ -375,6 +379,7 @@ const ui = {
 	lord_capabilities: [],
 	cards: [],
 	boxes: {},
+	ways: [],
 	legate: document.getElementById("legate"),
 	veche: document.getElementById("veche"),
 	plan_dialog: document.getElementById("plan"),
@@ -436,6 +441,13 @@ function on_click_locale(evt) {
 function on_focus_locale(evt) {
 	let id = evt.target.my_id
 	document.getElementById("status").textContent = `(${id}) ${data.locales[id].name} - ${data.locales[id].type}`
+}
+
+function on_click_way(evt) {
+	if (evt.button === 0) {
+		let id = evt.target.my_id
+		send_action('way', id)
+	}
 }
 
 function on_click_cylinder(evt) {
@@ -1110,6 +1122,13 @@ function on_update() {
 	for (let loc = 0; loc < data.locales.length; ++loc)
 		update_locale(loc)
 
+	for (let way = 0; way < ui.ways.length; ++way) {
+		if (is_way_action(way))
+			ui.ways[way].classList.add("action")
+		else
+			ui.ways[way].classList.remove("action")
+	}
+
 	layout_calendar()
 
 	update_legate()
@@ -1247,6 +1266,13 @@ function build_plan() {
 	ui.plan_actions.appendChild(elt)
 }
 
+function build_way(name, sel) {
+	let way = data.ways.findIndex(w => w.name === name)
+	ui.ways[way] = document.querySelector(sel)
+	ui.ways[way].my_id = way
+	ui.ways[way].addEventListener("mousedown", on_click_way)
+}
+
 function build_map() {
 	data.locales.forEach((locale, ix) => {
 		let e = ui.locale[ix] = document.createElement("div")
@@ -1263,7 +1289,7 @@ function build_map() {
 			w += 16
 			h += 5
 		} else if (locale.type === 'region') {
-			locale_xy[ix] = [ round(x + w / 2), round(y + h / 2) ]
+			locale_xy[ix] = [ round(x + w / 2), round(y + h / 2) - 32 ]
 			x -= 3
 			y -= 4
 		} else {
@@ -1358,6 +1384,11 @@ function build_map() {
 		e.style.height = h + "px"
 		document.getElementById("boxes").appendChild(e)
 	}
+
+	build_way("Crossroads", ".way.crossroads")
+	build_way("Peipus E", ".way.peipus-east")
+	build_way("Peipus W", ".way.peipus-north")
+	build_way("Wirz", ".way.wirz")
 
 	build_plan()
 
