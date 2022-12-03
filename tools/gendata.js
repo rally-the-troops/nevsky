@@ -430,7 +430,7 @@ let lords = [
 		name: "Yaroslav",
 		full_name: "Yaroslav",
 		title: "Exile of Pskov",
-		seats: seats("Odenpäh, Pskov"),
+		seats: seats("Odenpäh"),
 		marshal: 0,
 		fealty: 4,
 		service: 2,

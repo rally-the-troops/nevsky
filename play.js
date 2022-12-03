@@ -253,6 +253,21 @@ function is_card_in_use(c) {
 	return false
 }
 
+function has_global_capability(cap) {
+	for (let c of view.capabilities)
+		if (data.cards[c].capability === cap)
+			return true
+	return false
+}
+
+function is_vassal_ready(vassal) {
+	return view.lords.vassals[vassal] === 0
+}
+
+function is_vassal_mustered(vassal) {
+	return view.lords.vassals[vassal] > 0
+}
+
 function for_each_teutonic_card(fn) {
 	for (let i = 0; i < 21; ++i)
 		fn(i)
@@ -808,12 +823,16 @@ function update_assets(id, parent, assets) {
 function update_vassals(ready_parent, mustered_parent, lord_ix) {
 	for (let v of data.lords[lord_ix].vassals) {
 		let e = ui.vassal_service[v]
-		if (view.lords.vassals[v] === 0) {
+		if (is_vassal_ready(v)) {
 			e.classList.remove("hide")
 			ready_parent.appendChild(e)
-		} else {
+		}
+		else if (is_vassal_mustered(v)) {
 			e.classList.remove("hide")
 			mustered_parent.appendChild(e)
+		}
+		else {
+			e.classList.add("hide")
 		}
 		e.classList.toggle("action", is_vassal_action(v))
 	}
