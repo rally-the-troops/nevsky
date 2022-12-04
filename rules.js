@@ -16,6 +16,7 @@ const P2 = RUSSIANS
 
 // NOTE: With Hidden Mats option, the player order of feed/pay may matter.
 const FEED_PAY_DISBAND = true // feed, pay, disband in one go
+const AUTO_TAX = false
 
 let game = null
 let view = null
@@ -893,6 +894,7 @@ exports.setup = function (seed, scenario, options) {
 		who: NOBODY,
 		where: NOWHERE,
 		what: NOTHING,
+		approach: 0,
 		count: 0,
 	}
 
@@ -1920,7 +1922,7 @@ states.actions = {
 	pass() {
 		clear_undo()
 		log("Passed.")
-		end_actions()
+		use_all_actions() // TODO: maybe only one action?
 	},
 	done() {
 		clear_undo()
@@ -1939,6 +1941,7 @@ function do_action_march() {
 	game.state = 'march'
 }
 
+// TODO: rename 'road' to something better
 function get_road(from, to) {
 	for (let road of data.locales[from].ways)
 		if (road[0] === to)
@@ -1968,7 +1971,7 @@ states.march = {
 			game.state = 'march_way'
 			game.where = to
 		} else {
-			march_lord(game.who, road[1], to)
+			march_with_lord(game.who, road[1], to)
 		}
 	},
 }
@@ -1988,17 +1991,20 @@ states.march_way = {
 		let from = get_lord_locale(game.who)
 		let to = game.where
 		game.where = NOWHERE
-		march_lord(game.who, way, to)
+		march_with_lord(game.who, way, to)
 	},
 }
 
-function march_lord(lord, way, to) {
+function march_with_lord(lord, way, to) {
+	let from = get_lord_locale(game.who)
+	let road = get_road(from, to)
+
+	game.approach = way
+
 	// TODO: laden/unladen discard prov and loot
 	// game.state = 'march_laden'
 
-	let from = get_lord_locale(game.who)
-
-	if (data.ways[way].name)
+	if (road.length > 2 && data.ways[way].name)
 		log(`Marched via ${data.ways[way].name} to %${to}.`)
 	else
 		log(`Marched to %${to}.`)
@@ -2178,7 +2184,11 @@ function can_action_tax() {
 
 function do_action_tax() {
 	push_undo()
-	game.state = "tax"
+	if (AUTO_TAX) {
+		tax_with_lord(game.who)
+	} else {
+		game.state = "tax"
+	}
 }
 
 states.tax = {
@@ -2188,11 +2198,16 @@ states.tax = {
 		gen_action_locale(here)
 	},
 	locale(loc) {
-		log(`Taxed %${loc}.`)
-		add_lord_assets(game.who, COIN, 1)
-		use_all_actions()
-		game.state = "actions"
+		tax_with_lord(game.who)
 	},
+}
+
+function tax_with_lord(lord) {
+	let here = get_lord_locale(lord)
+	log(`Taxed %${here}.`)
+	add_lord_assets(lord, COIN, 1)
+	use_all_actions()
+	game.state = "actions"
 }
 
 // === ACTION: SAIL ===
@@ -2416,7 +2431,7 @@ states.feed = {
 	},
 	loot(lord) {
 		push_undo()
-		log(`Fed L${game.who} with Loot.`)
+		log(`Fed L${lord} with Loot.`)
 		add_lord_assets(lord, LOOT, -1)
 		feed_lord(lord)
 	},
