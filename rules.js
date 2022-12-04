@@ -2130,13 +2130,22 @@ function do_action_forage() {
 
 // === ACTION: RAVAGE ===
 
+function can_ravage_locale(loc) {
+	return (
+		is_enemy_territory(loc) &&
+		!has_conquered_marker(loc) &&
+		!has_ravaged_marker(loc) &&
+		!is_friendly_locale(loc)
+	)
+}
+
 function can_action_ravage() {
 	let where = get_lord_locale(game.who)
 
 	// TODO: cost 2 if enemy lord is adjacent in 2nd ed
 	// TODO: adjacent ability
 
-	if (is_enemy_territory(where) && !has_ravaged_marker(where))
+	if (can_ravage_locale(loc))
 		return true
 
 	return false
