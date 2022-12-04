@@ -685,15 +685,18 @@ function is_friendly_stronghold(loc) {
 }
 
 function is_enemy_stronghold(loc) {
-	// TODO: use full "is enemy locale" check here, or just color of stronghold?
-	if (is_stronghold(loc) || has_enemy_castle(loc))
-		return is_enemy_locale(loc)
+	if (is_stronghold(loc)) {
+		if (is_enemy_territory(loc) && !has_conquered_marker(loc))
+			return true
+		if (is_friendly_territory(loc) && has_conquered_marker(loc))
+			return true
+	}
+	if (has_enemy_castle(loc))
+		return true
 	return false
 }
 
 function is_unbesieged_enemy_stronghold(loc) {
-	// NOTE: if using full "enemy locale" here, unbesieged check is not
-	// necessary (if besieged, friendly lords are there making it a "neutral" stronghold
 	return is_enemy_stronghold(loc) && !has_siege_marker(loc)
 }
 
@@ -717,24 +720,8 @@ function is_friendly_locale(loc) {
 	return false
 }
 
-function is_enemy_locale(loc) {
-	if (loc !== NOWHERE && loc < CALENDAR) {
-		if (has_friendly_lord(loc))
-			return false
-		if (is_enemy_territory(loc)) {
-			if (has_conquered_marker(loc))
-				return false
-			if (has_friendly_castle(loc))
-				return false
-			return true
-		} else {
-			if (is_stronghold(loc) && has_conquered_marker(loc))
-				return true
-			if (has_enemy_castle(loc))
-				return true
-		}
-	}
-	return false
+function is_not_friendly_locale(loc) {
+	return !is_friendly_locale(loc)
 }
 
 function for_each_friendly_arts_of_war(fn) {
