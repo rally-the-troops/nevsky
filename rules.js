@@ -182,19 +182,25 @@ const LOC_TESOVO = find_locale("Tesovo")
 const LOC_SABLIA = find_locale("Sablia")
 
 // Capability usage tracking flags
-const FLAG_TEUTONIC_RAIDERS = 1 << 0
-const FLAG_TEUTONIC_CONVERTS = 1 << 1
-const FLAG_TEUTONIC_WARRIOR_MONKS = 1 << 2
-const FLAG_TEUTONIC_HILLFORTS = 1 << 3
-const FLAG_RUSSIAN_LODYA_BOATS = 1 << 4
-const FLAG_RUSSIAN_LODYA_SHIPS = 1 << 5
+const FLAG_LEGATE = 1 << 0
+const FLAG_TEUTONIC_RAIDERS = 1 << 1
+const FLAG_TEUTONIC_CONVERTS = 1 << 2
+const FLAG_TEUTONIC_ORDENSBURGEN = 1 << 3
+const FLAG_TEUTONIC_WARRIOR_MONKS = 1 << 4
+const FLAG_TEUTONIC_HILLFORTS = 1 << 5
+const FLAG_RUSSIAN_LODYA_BOATS = 1 << 6
+const FLAG_RUSSIAN_LODYA_SHIPS = 1 << 7
 
 const AOW_TEUTONIC_RAIDERS = AOW_T2
 const AOW_TEUTONIC_COGS = AOW_T18
 const AOW_TEUTONIC_CONVERTS = AOW_T3
+const AOW_TEUTONIC_ORDENSBURGEN = AOW_T12
 const AOW_TEUTONIC_BALISTARII = [ AOW_T4, AOW_T5, AOW_T6 ]
 
 const AOW_RUSSIAN_RAIDERS = [ AOW_R12, AOW_R14 ]
+const AOW_RUSSIAN_LUCHNIKI = [ AOW_R1, AOW_R2 ]
+const AOW_RUSSIAN_DRUZHINA = [ AOW_R5, AOW_R6 ]
+const AOW_RUSSIAN_HOUSE_OF_SUZDAL = AOW_R11
 
 // TODO: advanced service
 const VASSAL_UNAVAILABLE = 0
@@ -260,6 +266,22 @@ const USABLE_TRANSPORT = [
 	[ SLED ],
 	[ BOAT, SHIP ]
 ]
+
+const COMMANDERIES = [
+	LOC_ADSEL,
+	LOC_FELLIN,
+	LOC_LEAL,
+	LOC_WENDEN
+]
+
+function is_commandery(loc) {
+	return (
+		loc === LOC_ADSEL ||
+		loc === LOC_FELLIN ||
+		loc === LOC_LEAL ||
+		loc === LOC_WENDEN
+	)
+}
 
 function current_turn() {
 	return game.turn >> 1
@@ -609,6 +631,14 @@ function is_vassal_mustered(vassal) {
 	return game.lords.vassals[vassal] === VASSAL_MUSTERED
 }
 
+function is_teutonic_lord(lord) {
+	return lord >= first_p1_lord && lord <= last_p1_lord
+}
+
+function is_russian_lord(lord) {
+	return lord >= first_p2_lord && lord <= last_p2_lord
+}
+
 function is_friendly_lord(lord) {
 	return lord >= first_friendly_lord && lord <= last_friendly_lord
 }
@@ -622,22 +652,50 @@ function is_lord_at_friendly_locale(lord) {
 	return is_friendly_locale(loc)
 }
 
+function for_each_seat(lord, fn) {
+	let list = data.lords[lord].seats
+
+	for (let seat of list)
+		fn(seat)
+
+	if (is_teutonic_lord(lord)) {
+		if (has_global_capability("Ordensburgen")) {
+			for (let commandery of COMMANDERIES)
+				if (!set_has(list, commandery))
+					fn(seat)
+		}
+	}
+
+	if (is_russian_lord(lord)) {
+		if (has_global_capability("Archbishopric"))
+			if (!set_has(list, LOC_NOVGOROD))
+				fn(LOC_NOVGOROD)
+	}
+
+	if (lord === LORD_YAROSLAV) {
+		if (has_conquered_marker(LOC_PSKOV))
+			if (!set_has(list, LOC_PSKOV))
+				fn(LOC_PSKOV)
+	}
+}
+
 function is_lord_at_seat(lord) {
-	// TODO: extra seats from capabilities
-	// TODO: Yaroslav and Pskov if conquered
 	let here = get_lord_locale(lord)
-	for (let seat of data.lords[lord].seats)
-		if (here === seat)
-			return true
-	return false
+	let result = false
+	for_each_seat(lord, seat => {
+		if (seat === here)
+			result = true
+	})
+	return result
 }
 
 function has_free_seat(lord) {
-	// TODO: extra seats from capabilities
-	for (let loc of data.lords[lord].seats)
-		if (is_friendly_locale(loc))
-			return true
-	return false
+	let result = false
+	for_each_seat(lord, seat => {
+		if (!result && is_friendly_locale(seat))
+			result = true
+	})
+	return result
 }
 
 function has_friendly_lord(loc) {
@@ -1677,9 +1735,10 @@ states.levy_muster_lord = {
 states.muster_lord_at_seat = {
 	prompt() {
 		view.prompt = `Muster: Select seat for ${lord_name[game.who]}.`
-		for (let loc of data.lords[game.who].seats)
+		for_each_seat(game.who, seat => {
 			if (is_friendly_locale(loc))
 				gen_action_locale(loc)
+		})
 	},
 	locale(loc) {
 		push_undo()
@@ -2053,6 +2112,13 @@ function goto_actions() {
 	game.state = "actions"
 	game.who = game.command
 	game.count = 0
+
+	if (game.active === TEUTONS) {
+		if (has_global_capability("Ordensburgen")) {
+			if (is_commandery(get_lord_locale(game.who)))
+				set_flag(FLAG_TEUTONIC_ORDENSBURGEN)
+		}
+	}
 }
 
 function end_actions() {
@@ -2063,14 +2129,49 @@ function end_actions() {
 	game.who = NOBODY
 	game.group = 0
 
+	clear_flag(FLAG_LEGATE)
 	clear_flag(FLAG_TEUTONIC_RAIDERS)
 	clear_flag(FLAG_TEUTONIC_CONVERTS)
+	clear_flag(FLAG_TEUTONIC_ORDENSBURGEN)
 
 	goto_feed()
 }
 
+function this_lord_has_russian_druzhina() {
+	if (game.active === RUSSIANS)
+		if (lord_has_capability(game.who, AOW_RUSSIAN_DRUZHINA))
+			return count_lord_forces(game.who, KNIGHTS) > 0
+	return false
+}
+
+function this_lord_has_house_of_suzdal() {
+	if (game.active === RUSSIANS)
+		if (lord_has_capability(game.who, AOW_RUSSIAN_DRUZHINA))
+			return is_lord_on_map(LORD_ALEKSANDR) || is_lord_on_map(LORD_ANDREY)
+	return false
+}
+
 function get_available_actions() {
-	return data.lords[game.command].command - game.count
+	let n = data.lords[game.command].command
+
+	if (game.active === TEUTONS) {
+		if (has_flag(FLAG_LEGATE))
+			++n
+		if (has_flag(FLAG_TEUTONIC_ORDENSBURGEN))
+			++n
+		if (game.who === LORD_HEINRICH || game.who === LORD_KNUD_ABEL)
+			if (has_global_capability("Treaty of Stensby"))
+				++n
+	}
+
+	if (game.active === RUSSIANS) {
+		if (this_lord_has_russian_druzhina())
+			++n
+		if (this_lord_has_house_of_suzdal())
+			++n
+	}
+
+	return n - game.count
 }
 
 function use_all_actions() {
@@ -2082,6 +2183,11 @@ states.actions = {
 		let avail = get_available_actions()
 
 		view.prompt = `${lord_name[game.who]} has ${avail}x actions.`
+
+		if (game.active === TEUTONS) {
+			if (game.count === 0 && is_located_with_legate())
+				view.actions.legate = 1
+		}
 
 		if (avail > 0) {
 			if (is_lord_besieged(game.who)) {

@@ -138,7 +138,7 @@ function defloc(region, stronghold, type, name) {
 
 function defway(type, list) {
 	let ix = ways.length
-	list = list.map(name=>locmap[name]).sort((a,b)=>a-b)
+	list = list.map(name=>locmap[name]).sort(cmpnum)
 	ways.push({type, locales: list})
 	for (let from of list) {
 		for (let to of list) {
@@ -294,7 +294,7 @@ trackway("Velikaya River, Velikiye Luki")
 
 let seaports = [
 	"Riga", "Pernau", "Leal", "Reval", "Narwia", "Luga", "Koporye", "Neva"
-].map(name => locmap[name]).sort((a,b)=>a-b)
+].map(name => locmap[name]).sort(cmpnum)
 
 function dumplist(name, list) {
 	print(name + ":[")
@@ -318,7 +318,7 @@ locales.forEach(loc => {
 })
 
 function seats(list) {
-	return list.split(", ").map(name => locmap[name]).sort((a,b)=>a-b)
+	return list.split(", ").map(name => locmap[name]).sort(cmpnum)
 }
 
 let lords = [
