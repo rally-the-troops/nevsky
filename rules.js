@@ -663,6 +663,20 @@ function remove_all_siege_markers(loc) {
 	map_delete(game.locales.sieges, loc)
 }
 
+function conquer_trade_route(loc) {
+	if (game.active === RUSSIANS) {
+		if (has_conquered_marker(loc)) {
+			log(`Conquered %${loc}`)
+			remove_conquered_marker(loc)
+		}
+	} else {
+		if (!has_conquered_marker(loc)) {
+			log(`Conquered %${loc}`)
+			add_conquered_marker(loc)
+		}
+	}
+}
+
 function has_enemy_castle(loc) {
 	if (game.active === P1)
 		return set_has(game.locales.castles2, loc)
@@ -889,7 +903,7 @@ function muster_lord(lord, locale, service) {
 	set_lord_assets(lord, SHIP, info.assets.ship | 0)
 
 	set_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
-	set_lord_forces(lord, SERGEANTS, info.forces.serfs | 0)
+	set_lord_forces(lord, SERGEANTS, info.forces.sergeants | 0)
 	set_lord_forces(lord, LIGHT_HORSE, info.forces.light_horse | 0)
 	set_lord_forces(lord, ASIATIC_HORSE, info.forces.asiatic_horse | 0)
 	set_lord_forces(lord, MEN_AT_ARMS, info.forces.men_at_arms | 0)
@@ -906,7 +920,7 @@ function muster_vassal(lord, vassal) {
 	game.lords.vassals[vassal] = 1
 
 	add_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
-	add_lord_forces(lord, SERGEANTS, info.forces.serfs | 0)
+	add_lord_forces(lord, SERGEANTS, info.forces.sergeants | 0)
 	add_lord_forces(lord, LIGHT_HORSE, info.forces.light_horse | 0)
 	add_lord_forces(lord, ASIATIC_HORSE, info.forces.asiatic_horse | 0)
 	add_lord_forces(lord, MEN_AT_ARMS, info.forces.men_at_arms | 0)
@@ -1997,7 +2011,7 @@ states.actions = {
 	sail: do_action_sail,
 	tax: do_action_tax,
 	pass() {
-		clear_undo()
+		push_undo()
 		log("Passed.")
 		use_all_actions() // TODO: maybe only one action?
 	},
@@ -2015,10 +2029,8 @@ function can_action_march() {
 
 function do_action_march() {
 	push_undo()
-	goto_march()
-}
+	game.state = 'march'
 
-function goto_march() {
 	// Initialize group on first March!
 	if (!game.group) {
 		// 4.1.3 Lieutenants MUST take lower lord
@@ -2028,7 +2040,6 @@ function goto_march() {
 		else
 			game.group = []
 	}
-	game.state = 'march'
 }
 
 states.march = {
@@ -2120,7 +2131,7 @@ states.march_laden = {
 					view.actions.laden = 1
 				view.actions.unladen = 0
 			} else {
-				view.actions.laden = 1
+				view.actions.laden = 0
 				view.actions.unladen = 1
 			}
 		} else {
@@ -2343,20 +2354,6 @@ function drop_loot() {
 	add_lord_assets(lord, LOOT, -1)
 }
 
-function conquer_trade_route(loc) {
-	if (game.active === RUSSIANS) {
-		if (has_conquered_marker(loc)) {
-			log(`Conquered %${loc}`)
-			remove_conquered_marker(loc)
-		}
-	} else {
-		if (!has_conquered_marker(loc)) {
-			log(`Conquered %${loc}`)
-			add_conquered_marker(loc)
-		}
-	}
-}
-
 function has_enough_available_ships_for_horses() {
 	// TODO: Cogs
 
@@ -2399,7 +2396,7 @@ function can_action_sail() {
 	if (game.count > 0)
 		return false
 
-	// At a seaport
+	// at a seaport
 	let where = get_lord_locale(game.who)
 	if (!is_seaport(where))
 		return false
@@ -2409,11 +2406,11 @@ function can_action_sail() {
 	if (season !== SUMMER && season !== RASPUTITSA)
 		return false
 
-	// Need enough ships for horses
+	// with enough ships to carry all the horses
 	if (!has_enough_available_ships_for_horses())
-		return true
+		return false
 
-	// TODO: check valid destinations
+	// TODO: and a valid destination
 
 	return true
 }
@@ -2422,56 +2419,86 @@ function do_action_sail() {
 	push_undo()
 	game.state = 'sail'
 
-	// TODO: enough ships for all of the lords
-	push_designate_group()
+	// 4.1.3 Lieutenants MUST take lower lord
+	let lower = get_lower_lord(game.who)
+	if (lower !== NOBODY)
+		game.group = [ lower ]
+	else
+		game.group = []
 }
 
 states.sail = {
 	prompt() {
-		let from = get_lord_locale(game.who)
+		let here = get_lord_locale(game.who)
 		let horses = count_group_horses()
 		let ships = count_group_assets(SHIP)
 		let prov = count_group_assets(PROV)
 		let loot = count_group_assets(LOOT)
 
 		let overflow = 0
+		let min_overflow = 0
 		if (game.active === TEUTONS) {
-			overflow = (horses + loot * 2 + prov) - horses
+			overflow = (horses + loot * 2 + prov) - ships
+			min_overflow = horses - ships
 		}
 		if (game.active === RUSSIANS) {
-			overflow = (horses * 2 + loot * 2 + prov) - horses
+			overflow = (horses * 2 + loot * 2 + prov) - ships
+			min_overflow = horses * 2 - ships
 		}
 
-		let can_sail = overflow <= 0
+		console.log("SAIL", ships, overflow, min_overflow)
 
-		if (can_sail) {
+		if (overflow <= 0) {
 			view.prompt = `Sail: Choose a destination Seaport.`
 			for (let to of data.seaports) {
-				if (to === from)
+				if (to === here)
 					continue
 				if (!has_enemy_lord(to))
 					gen_action_locale(to)
 			}
-		} else {
+		} else if (min_overflow <= 0) {
 			view.prompt = `Sail: Discard Loot or Provender.`
 
 			// TODO: how strict is greed?
 			if (loot > 0 || prov > 0) {
 				for_each_group_lord(lord => {
 					if (loot > 0)
-						if (get_lord_assets(lord, LOOT))
-							gen_action_loot(game.who)
+						if (get_lord_assets(lord, LOOT) > 0)
+							gen_action_loot(lord)
 					if (prov > 0)
-						if (get_lord_assets(lord, PROV))
-							gen_action_prov(game.who)
+						if (get_lord_assets(lord, PROV) > 0)
+							gen_action_prov(lord)
 				})
 			}
-
-			// TODO: disallow entering impossible state earlier
-			if (loot + prov === 0)
-				view.prompt = ` Not enough ships!`
+		} else {
+			view.prompt = ` Not enough ships!`
 		}
 
+		// 4.3.2 Marshals MAY take other lords
+		if (is_marshal(game.who)) {
+			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+				if (lord !== game.who && !is_lower_lord(lord))
+					if (get_lord_locale(lord) === here)
+						// TODO: toggle instead of undo, but then no discarding?
+						if (!set_has(game.group, lord))
+							gen_action_lord(lord)
+		}
+
+		// 1.4.1 Teutonic lords MAY take the Legate
+		if (game.active === TEUTONS && is_located_with_legate(game.who)) {
+			view.actions.legate = 1
+		}
+
+	},
+	lord(lord) {
+		// TODO: toggle instead of undo, unless we discarded loot/prov
+		push_undo()
+		set_toggle(game.group, lord)
+		if (is_upper_lord(lord))
+			set_toggle(game.group, get_lower_lord(lord))
+	},
+	legate() {
+		set_toggle(game.group, LEGATE)
 	},
 	prov(lord) {
 		push_undo()
@@ -2481,18 +2508,20 @@ states.sail = {
 		push_undo()
 		drop_loot(lord)
 	},
-	locale(loc) {
+	locale(to) {
 		push_undo()
-		log(`Sailed to %${loc}`)
+		log(`Sailed to %${to}`)
 
-		if (is_trade_route(loc))
-			conquer_trade_route(loc)
+		if (is_trade_route(to))
+			conquer_trade_route(to)
 
-		if (is_unbesieged_enemy_stronghold(loc))
-			add_siege_marker(loc)
+		if (is_unbesieged_enemy_stronghold(to))
+			add_siege_marker(to)
 
-		set_lord_locale(game.who, loc)
-		set_lord_moved(game.who, 1)
+		for_each_group_lord(lord => {
+			set_lord_locale(lord, to)
+			set_lord_moved(lord, 1)
+		})
 
 		use_all_actions()
 		game.state = "actions"
@@ -2596,7 +2625,7 @@ states.feed = {
 	lord(lord) {
 		push_undo()
 		game.who = lord
-		game.state = "feed_lord"
+		game.state = "feed_lord_shared"
 	},
 	service(lord) {
 		push_undo()
@@ -2611,13 +2640,15 @@ states.feed = {
 }
 
 function resume_feed_lord_shared() {
-	if (!is_lord_unfed(game.who) || !can_feed_from_shared(game.who))
+	if (!is_lord_unfed(game.who) || !can_feed_from_shared(game.who)) {
+		game.who = NOBODY
 		game.state = 'feed'
+	}
 }
 
 states.feed_lord_shared = {
 	prompt() {
-		view.prompt = `Feed: You must Feed ${lord_name[game.who]} ${game.count}x shared Loot or Provender.`
+		view.prompt = `Feed: You must Feed ${lord_name[game.who]} shared Loot or Provender.`
 		let loc = get_lord_locale(game.who)
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 			if (get_lord_locale(lord) === loc) {
