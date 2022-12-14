@@ -19,6 +19,7 @@ const MAP_DPI = 75
 
 const NOWHERE = -1
 const CALENDAR = 100
+const LEGATE = 100
 
 const round = Math.round
 const floor = Math.floor
@@ -176,6 +177,14 @@ function is_way_action(way) {
 
 function is_card_action(c) {
 	return !!(view.actions && view.actions.card && set_has(view.actions.card, c))
+}
+
+function is_legate_action() {
+	return !!(view.actions && view.actions.legate)
+}
+
+function is_legate_selected() {
+	return view.who === LEGATE || !!(view.group && set_has(view.group, LEGATE))
 }
 
 const force_type_count = 7
@@ -591,6 +600,11 @@ function on_focus_vassal_service_marker(evt) {
 	document.getElementById("status").textContent = `(${id}) ${lord.name} / ${vassal.name}`
 }
 
+function on_click_legate(evt) {
+	if (evt.button === 0)
+		send_action('legate')
+}
+
 function on_blur(evt) {
 	document.getElementById("status").textContent = ""
 }
@@ -951,6 +965,8 @@ function update_legate() {
 		ui.legate.classList.add("hide")
 	} else {
 		ui.legate.classList.remove("hide")
+		ui.legate.classList.toggle("action", is_legate_action())
+		ui.legate.classList.toggle("selected", is_legate_selected())
 		if (view.call_to_arms.legate === 100) {
 			ui.legate.style.top = "1580px"
 			ui.legate.style.left = "170px"
@@ -1420,6 +1436,8 @@ function build_map() {
 		e.addEventListener("mouseleave", on_blur)
 		document.getElementById("pieces").appendChild(e)
 	})
+
+	document.getElementById("legate").addEventListener("mousedown", on_click_legate)
 
 	for (let name in original_boxes) {
 		let x = round(original_boxes[name][0] * MAP_DPI / 300)

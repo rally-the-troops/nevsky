@@ -2045,6 +2045,8 @@ function do_action_march() {
 states.march = {
 	prompt() {
 		view.prompt = `March: Select destination.`
+		view.group = game.group
+
 		let here = get_lord_locale(game.who)
 
 		for (let [to] of data.locales[here].ways)
@@ -2089,6 +2091,7 @@ states.march = {
 states.march_way = {
 	prompt() {
 		view.prompt = `March: Select way.`
+		view.group = game.group
 		let from = get_lord_locale(game.who)
 		let to = game.where
 		let ways = list_ways(from, to)
@@ -2123,6 +2126,7 @@ states.march_laden = {
 		let loot = count_group_assets(LOOT)
 
 		view.prompt = `March with ${loot} loot, ${prov} prov, and ${transport} usable transport.`
+		view.group = game.group
 
 		if (prov <= transport * 2) {
 			if (loot > 0 || prov > transport) {
@@ -2191,6 +2195,9 @@ function march_with_group_2(laden) {
 		set_lord_locale(lord, to)
 		set_lord_moved(lord, 1)
 	})
+	if (set_has(game.group, LEGATE)) {
+		game.call_to_arms.legate = to
+	}
 
 	if (is_enemy_stronghold(from))
 		remove_all_siege_markers(from)
@@ -2429,6 +2436,8 @@ function do_action_sail() {
 
 states.sail = {
 	prompt() {
+		view.group = game.group
+
 		let here = get_lord_locale(game.who)
 		let horses = count_group_horses()
 		let ships = count_group_assets(SHIP)
@@ -2445,8 +2454,6 @@ states.sail = {
 			overflow = (horses * 2 + loot * 2 + prov) - ships
 			min_overflow = horses * 2 - ships
 		}
-
-		console.log("SAIL", ships, overflow, min_overflow)
 
 		if (overflow <= 0) {
 			view.prompt = `Sail: Choose a destination Seaport.`
@@ -2471,7 +2478,7 @@ states.sail = {
 				})
 			}
 		} else {
-			view.prompt = ` Not enough ships!`
+			view.prompt = `Sail: Too few ships to carry all the horses!`
 		}
 
 		// 4.3.2 Marshals MAY take other lords
@@ -2522,6 +2529,9 @@ states.sail = {
 			set_lord_locale(lord, to)
 			set_lord_moved(lord, 1)
 		})
+		if (set_has(game.group, LEGATE)) {
+			game.call_to_arms.legate = to
+		}
 
 		use_all_actions()
 		game.state = "actions"
@@ -3033,8 +3043,6 @@ exports.view = function (state, current) {
 	} else {
 		view.actions = {}
 		view.who = game.who
-		if (game.group && game.group.length > 0)
-			view.group = game.group
 		if (states[game.state])
 			states[game.state].prompt(current)
 		else
