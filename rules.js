@@ -98,6 +98,44 @@ const first_p2_card = 21
 const last_p2_card = 38
 const last_p2_card_no_event = 41
 
+const AOW_T1 = find_card("T1")
+const AOW_T2 = find_card("T2")
+const AOW_T3 = find_card("T3")
+const AOW_T4 = find_card("T4")
+const AOW_T5 = find_card("T5")
+const AOW_T6 = find_card("T6")
+const AOW_T7 = find_card("T7")
+const AOW_T8 = find_card("T8")
+const AOW_T9 = find_card("T9")
+const AOW_T10 = find_card("T10")
+const AOW_T11 = find_card("T11")
+const AOW_T12 = find_card("T12")
+const AOW_T13 = find_card("T13")
+const AOW_T14 = find_card("T14")
+const AOW_T15 = find_card("T15")
+const AOW_T16 = find_card("T16")
+const AOW_T17 = find_card("T17")
+const AOW_T18 = find_card("T18")
+
+const AOW_R1 = find_card("R1")
+const AOW_R2 = find_card("R2")
+const AOW_R3 = find_card("R3")
+const AOW_R4 = find_card("R4")
+const AOW_R5 = find_card("R5")
+const AOW_R6 = find_card("R6")
+const AOW_R7 = find_card("R7")
+const AOW_R8 = find_card("R8")
+const AOW_R9 = find_card("R9")
+const AOW_R10 = find_card("R10")
+const AOW_R11 = find_card("R11")
+const AOW_R12 = find_card("R12")
+const AOW_R13 = find_card("R13")
+const AOW_R14 = find_card("R14")
+const AOW_R15 = find_card("R15")
+const AOW_R16 = find_card("R16")
+const AOW_R17 = find_card("R17")
+const AOW_R18 = find_card("R18")
+
 const LORD_ANDREAS = find_lord("Andreas")
 const LORD_HEINRICH = find_lord("Heinrich")
 const LORD_HERMANN = find_lord("Hermann")
@@ -143,47 +181,10 @@ const LOC_ZHELTSY = find_locale("Zheltsy")
 const LOC_TESOVO = find_locale("Tesovo")
 const LOC_SABLIA = find_locale("Sablia")
 
-const AOW_T1 = find_card("T1")
-const AOW_T2 = find_card("T2")
-const AOW_T3 = find_card("T3")
-const AOW_T4 = find_card("T4")
-const AOW_T5 = find_card("T5")
-const AOW_T6 = find_card("T6")
-const AOW_T7 = find_card("T7")
-const AOW_T8 = find_card("T8")
-const AOW_T9 = find_card("T9")
-const AOW_T10 = find_card("T10")
-const AOW_T11 = find_card("T11")
-const AOW_T12 = find_card("T12")
-const AOW_T13 = find_card("T13")
-const AOW_T14 = find_card("T14")
-const AOW_T15 = find_card("T15")
-const AOW_T16 = find_card("T16")
-const AOW_T17 = find_card("T17")
-const AOW_T18 = find_card("T18")
-
-const AOW_R1 = find_card("R1")
-const AOW_R2 = find_card("R2")
-const AOW_R3 = find_card("R3")
-const AOW_R4 = find_card("R4")
-const AOW_R5 = find_card("R5")
-const AOW_R6 = find_card("R6")
-const AOW_R7 = find_card("R7")
-const AOW_R8 = find_card("R8")
-const AOW_R9 = find_card("R9")
-const AOW_R10 = find_card("R10")
-const AOW_R11 = find_card("R11")
-const AOW_R12 = find_card("R12")
-const AOW_R13 = find_card("R13")
-const AOW_R14 = find_card("R14")
-const AOW_R15 = find_card("R15")
-const AOW_R16 = find_card("R16")
-const AOW_R17 = find_card("R17")
-const AOW_R18 = find_card("R18")
-
 const AOW_TEUTONIC_RAIDERS = AOW_T2
 const AOW_RUSSIAN_RAIDERS = [ AOW_R12, AOW_R14 ]
 
+const AOW_TEUTONIC_COGS = AOW_T18
 const AOW_TEUTONIC_CONVERTS = AOW_T3
 const AOW_TEUTONIC_BALISTARII = [ AOW_T4, AOW_T5, AOW_T6 ]
 
@@ -902,6 +903,15 @@ function group_has_capability(c) {
 			if (lord_has_capability(lord, c))
 				return true
 	return false
+}
+
+function count_group_ships() {
+	let n = count_lord_ships(game.who)
+	if (game.group)
+		for (let lord of game.group)
+			if (lord !== LEGATE)
+				n += count_lord_ships(lord)
+	return n
 }
 
 function count_group_assets(asset) {
@@ -2099,7 +2109,7 @@ states.actions = {
 
 // === ACTION: MARCH ===
 
-function has_teutonic_converts() {
+function group_has_teutonic_converts() {
 	if (game.active === TEUTONS) {
 		if (group_has_capability(AOW_TEUTONIC_CONVERTS))
 			if (count_group_forces(LIGHT_HORSE) > 0)
@@ -2345,14 +2355,14 @@ function do_action_forage() {
 
 // === ACTION: RAVAGE ===
 
-function has_teutonic_raiders() {
+function this_lord_has_teutonic_raiders() {
 	if (game.active === TEUTONS)
 		if (lord_has_capability(game.who, AOW_TEUTONIC_RAIDERS))
 			return count_lord_horses(game.who) > 0
 	return false
 }
 
-function has_russian_raiders() {
+function this_lord_has_russian_raiders() {
 	if (game.active === RUSSIANS)
 		if (lord_has_capability(game.who, AOW_RUSSIAN_RAIDERS))
 			return get_lord_forces(game.who, LIGHT_HORSE) + get_lord_forces(game.who, ASIATIC_HORSE) > 0
@@ -2376,13 +2386,13 @@ function can_action_ravage() {
 	if (can_ravage_locale(here))
 		return true
 
-	if (has_teutonic_raiders()) {
+	if (this_lord_has_teutonic_raiders()) {
 		for (let there of data.locales[here].adjacent_by_trackway)
 			if (can_ravage_locale(there) && !has_enemy_lord(there))
 				return true
 	}
 
-	if (has_russian_raiders()) {
+	if (this_lord_has_russian_raiders()) {
 		for (let there of data.locales[here].adjacent_by_trackway)
 			if (can_ravage_locale(there) && !has_enemy_lord(there))
 				return true
@@ -2393,7 +2403,7 @@ function can_action_ravage() {
 
 function do_action_ravage() {
 	push_undo()
-	if (has_teutonic_raiders() || has_russian_raiders()) {
+	if (this_lord_has_teutonic_raiders() || this_lord_has_russian_raiders()) {
 		game.state = "ravage"
 	} else {
 		let here = get_lord_locale(game.who)
@@ -2409,13 +2419,13 @@ states.ravage = {
 		if (can_ravage_locale(here))
 			gen_action_locale(here)
 
-		if (has_teutonic_raiders()) {
+		if (this_lord_has_teutonic_raiders()) {
 			for (let there of data.locales[here].adjacent_by_trackway)
 				if (can_ravage_locale(there) && !has_enemy_lord(there))
 					gen_action_locale(there)
 		}
 
-		if (has_russian_raiders()) {
+		if (this_lord_has_russian_raiders()) {
 			for (let there of data.locales[here].adjacent_by_trackway)
 				if (can_ravage_locale(there) && !has_enemy_lord(there))
 					gen_action_locale(there)
@@ -2483,6 +2493,13 @@ function drop_loot(lord) {
 	add_lord_assets(lord, LOOT, -1)
 }
 
+function count_lord_ships(lord) {
+	let n = get_lord_assets(lord, SHIP)
+	if (lord_has_capability(AOW_TEUTONIC_COGS))
+		return n * 2
+	return n
+}
+
 function has_enough_available_ships_for_horses() {
 	// TODO: Cogs
 
@@ -2492,32 +2509,29 @@ function has_enough_available_ships_for_horses() {
 	if (game.active === RUSSIANS)
 		horse_size = 2
 
-	let ships = get_lord_assets(game.who, SHIP)
+	let ships = count_lord_ships(game.who)
 	let horses = count_lord_horses(game.who) * horse_size
 
 	let lower = get_lower_lord(game.who)
 	if (lower !== NOBODY) {
-		ships += get_lord_assets(lower, SHIP)
+		ships += count_lord_ships(lower)
 		horses += count_lord_horses(lower) * horse_size
 	}
-
-	if (ships >= horses)
-		return true
 
 	if (is_marshal(game.who)) {
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 			if (lord !== game.who && !is_lower_lord(lord) && get_lord_locale(lord) === here) {
-				let extra_ships = get_lord_assets(lord, SHIP)
+				let extra_ships = count_lord_ships(lord)
 				let extra_horses = count_lord_horses(lord) * horse_size
 				if (extra_ships >= extra_horses)
 					ships += extra_ships - extra_horses
 			}
 		}
-		if (ships >= horses)
-			return true
 	}
 
-	return false
+	// TODO: share Cogs anywhere
+
+	return ships >= horses
 }
 
 function can_action_sail() {
@@ -2561,10 +2575,12 @@ states.sail = {
 		view.group = game.group
 
 		let here = get_lord_locale(game.who)
+		let ships = count_group_ships()
 		let horses = count_group_horses()
-		let ships = count_group_assets(SHIP)
 		let prov = count_group_assets(PROV)
 		let loot = count_group_assets(LOOT)
+
+		// TODO: share Cogs anywhere
 
 		let overflow = 0
 		let min_overflow = 0
