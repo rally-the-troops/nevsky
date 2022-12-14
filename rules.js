@@ -146,6 +146,11 @@ const LOC_SABLIA = find_locale("Sablia")
 const AOW_TEUTONIC_RAIDERS = find_card("T2")
 const AOW_RUSSIAN_RAIDERS = find_card("R14")
 
+// TODO: advanced service
+const VASSAL_UNAVAILABLE = 0
+const VASSAL_READY = 1
+const VASSAL_MUSTERED = 2
+
 const NOBODY = -1
 const NOWHERE = -1
 const NOTHING = -1
@@ -375,20 +380,6 @@ function add_lord_routed_forces(lord, n, x) {
 	set_lord_routed_forces(lord, n, get_lord_routed_forces(lord, n) + x)
 }
 
-function get_lord_vassal_count(lord) {
-	return data.lords[lord].vassals.length
-}
-
-function get_lord_vassal_service(lord, n) {
-	let v = data.lords[lord].vassals[n]
-	return game.lords.vassals[v]
-}
-
-function set_lord_vassal_service(lord, n, x) {
-	let v = data.lords[lord].vassals[n]
-	game.lords.vassals[v] = x
-}
-
 function clear_lords_moved() {
 	game.lords.moved = 0
 }
@@ -544,12 +535,16 @@ function is_vassal_available(vassal) {
 	return 0
 }
 
+function is_vassal_unavailable(vassal) {
+	return game.lords.vassals[vassal] === VASSAL_UNAVAILABLE
+}
+
 function is_vassal_ready(vassal) {
-	return game.lords.vassals[vassal] === 0
+	return game.lords.vassals[vassal] === VASSAL_READY
 }
 
 function is_vassal_mustered(vassal) {
-	return game.lords.vassals[vassal] > 0
+	return game.lords.vassals[vassal] === VASSAL_MUSTERED
 }
 
 function is_friendly_lord(lord) {
@@ -912,14 +907,18 @@ function muster_lord(lord, locale, service) {
 	set_lord_forces(lord, MILITIA, info.forces.militia | 0)
 	set_lord_forces(lord, SERFS, info.forces.serfs | 0)
 
-	for (let v of info.vassals)
-		game.lords.vassals[v] = is_vassal_available(v)
+	for (let v of info.vassals) {
+		if (is_vassal_available(v))
+			game.lords.vassals[v] = VASSAL_READY
+		else
+			game.lords.vassals[v] = VASSAL_UNAVAILABLE
+	}
 }
 
 function muster_vassal(lord, vassal) {
 	let info = data.vassals[vassal]
 
-	game.lords.vassals[vassal] = 1
+	game.lords.vassals[vassal] = VASSAL_MUSTERED
 
 	add_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
 	add_lord_forces(lord, SERGEANTS, info.forces.sergeants | 0)
@@ -962,7 +961,7 @@ exports.setup = function (seed, scenario, options) {
 			besieged: 0,
 			moved: 0,
 			lieutenants: [],
-			vassals: Array(vassal_count).fill(0),
+			vassals: Array(vassal_count).fill(VASSAL_UNAVAILABLE),
 		},
 
 		locales: {
@@ -2394,7 +2393,7 @@ function drop_prov(lord) {
 	add_lord_assets(lord, PROV, -1)
 }
 
-function drop_loot() {
+function drop_loot(lord) {
 	log("Discarded Loot")
 	add_lord_assets(lord, LOOT, -1)
 }
@@ -2874,7 +2873,7 @@ function disband_lord(lord) {
 	set_lord_moved(lord, 0)
 
 	for (let v of data.lords[lord].vassals)
-		game.lords.vassals[v] = 0
+		game.lords.vassals[v] = VASSAL_UNAVAILABLE
 
 	// TODO: check lifted siege
 }

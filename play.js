@@ -17,6 +17,10 @@ const LORD_ANDREY = find_lord("Andrey")
 
 const MAP_DPI = 75
 
+const VASSAL_UNAVAILABLE = 0
+const VASSAL_READY = 1
+const VASSAL_MUSTERED = 2
+
 const NOWHERE = -1
 const CALENDAR = 100
 const LEGATE = 100
@@ -298,11 +302,11 @@ function has_global_capability(cap) {
 }
 
 function is_vassal_ready(vassal) {
-	return view.lords.vassals[vassal] === 0
+	return view.lords.vassals[vassal] === VASSAL_READY
 }
 
 function is_vassal_mustered(vassal) {
-	return view.lords.vassals[vassal] > 0
+	return view.lords.vassals[vassal] === VASSAL_MUSTERED
 }
 
 function for_each_teutonic_card(fn) {
