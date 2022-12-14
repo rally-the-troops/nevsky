@@ -143,8 +143,49 @@ const LOC_ZHELTSY = find_locale("Zheltsy")
 const LOC_TESOVO = find_locale("Tesovo")
 const LOC_SABLIA = find_locale("Sablia")
 
-const AOW_TEUTONIC_RAIDERS = find_card("T2")
-const AOW_RUSSIAN_RAIDERS = find_card("R14")
+const AOW_T1 = find_card("T1")
+const AOW_T2 = find_card("T2")
+const AOW_T3 = find_card("T3")
+const AOW_T4 = find_card("T4")
+const AOW_T5 = find_card("T5")
+const AOW_T6 = find_card("T6")
+const AOW_T7 = find_card("T7")
+const AOW_T8 = find_card("T8")
+const AOW_T9 = find_card("T9")
+const AOW_T10 = find_card("T10")
+const AOW_T11 = find_card("T11")
+const AOW_T12 = find_card("T12")
+const AOW_T13 = find_card("T13")
+const AOW_T14 = find_card("T14")
+const AOW_T15 = find_card("T15")
+const AOW_T16 = find_card("T16")
+const AOW_T17 = find_card("T17")
+const AOW_T18 = find_card("T18")
+
+const AOW_R1 = find_card("R1")
+const AOW_R2 = find_card("R2")
+const AOW_R3 = find_card("R3")
+const AOW_R4 = find_card("R4")
+const AOW_R5 = find_card("R5")
+const AOW_R6 = find_card("R6")
+const AOW_R7 = find_card("R7")
+const AOW_R8 = find_card("R8")
+const AOW_R9 = find_card("R9")
+const AOW_R10 = find_card("R10")
+const AOW_R11 = find_card("R11")
+const AOW_R12 = find_card("R12")
+const AOW_R13 = find_card("R13")
+const AOW_R14 = find_card("R14")
+const AOW_R15 = find_card("R15")
+const AOW_R16 = find_card("R16")
+const AOW_R17 = find_card("R17")
+const AOW_R18 = find_card("R18")
+
+const AOW_TEUTONIC_RAIDERS = AOW_T2
+const AOW_RUSSIAN_RAIDERS = [ AOW_R12, AOW_R14 ]
+
+const AOW_TEUTONIC_CONVERTS = AOW_T3
+const AOW_TEUTONIC_BALISTARII = [ AOW_T4, AOW_T5, AOW_T6 ]
 
 // TODO: advanced service
 const VASSAL_UNAVAILABLE = 0
@@ -840,6 +881,11 @@ function is_located_with_legate(lord) {
 	return get_lord_locale(lord) === game.call_to_arms.legate
 }
 
+function is_first_march() {
+	// TODO: more robust check?
+	return game.group === 0
+}
+
 function for_each_group_lord(fn) {
 	fn(game.who)
 	if (game.group)
@@ -848,12 +894,31 @@ function for_each_group_lord(fn) {
 				fn(lord)
 }
 
+function group_has_capability(c) {
+	if (lord_has_capability(game.who, c))
+		return true
+	for (lord of game.group)
+		if (lord !== LEGATE)
+			if (lord_has_capability(lord, c))
+				return true
+	return false
+}
+
 function count_group_assets(asset) {
 	let n = get_lord_assets(game.who, asset)
 	if (game.group)
 		for (let lord of game.group)
 			if (lord !== LEGATE)
 				n += get_lord_assets(lord, asset)
+	return n
+}
+
+function count_group_forces(type) {
+	let n = count_lord_forces(game.who, type)
+	if (game.group)
+		for (let lord of game.group)
+			if (lord !== LEGATE)
+				n += count_lord_forces(lord, type)
 	return n
 }
 
@@ -1194,22 +1259,22 @@ function setup_pleskau_quickstart() {
 	add_lord_assets(LORD_KNUD_ABEL, BOAT, 1)
 
 	muster_vassal(LORD_HERMANN, data.lords[LORD_HERMANN].vassals[0])
-	set_lord_capability(LORD_HERMANN, 0, find_card("T4"))
-	set_lord_capability(LORD_HERMANN, 1, find_card("T14"))
+	set_lord_capability(LORD_HERMANN, 0, AOW_T4)
+	set_lord_capability(LORD_HERMANN, 1, AOW_T14)
 
-	set_lord_capability(LORD_YAROSLAV, 0, find_card("T3"))
+	set_lord_capability(LORD_YAROSLAV, 0, AOW_T3)
 
-	set_add(game.capabilities, find_card("T13"))
+	set_add(game.capabilities, AOW_T13)
 	game.call_to_arms.legate = LOC_DORPAT
 
-	set_add(game.capabilities, find_card("R8"))
+	set_add(game.capabilities, AOW_R8)
 	muster_lord(LORD_DOMASH, LOC_NOVGOROD)
 	add_lord_assets(LORD_DOMASH, BOAT, 2)
 	add_lord_assets(LORD_DOMASH, CART, 2)
 
 	muster_vassal(LORD_GAVRILO, data.lords[LORD_GAVRILO].vassals[0])
-	set_lord_capability(LORD_GAVRILO, 0, find_card("R2"))
-	set_lord_capability(LORD_GAVRILO, 1, find_card("R6"))
+	set_lord_capability(LORD_GAVRILO, 0, AOW_R2)
+	set_lord_capability(LORD_GAVRILO, 1, AOW_R6)
 
 	game.call_to_arms.veche_coin += 1
 
@@ -1653,7 +1718,7 @@ states.muster_lord_transport = {
 	},
 }
 
-function lord_has_capability(lord, c) {
+function lord_has_capability_card(lord, c) {
 	let name = data.cards[c].capability
 	let c1 = get_lord_capability(lord, 0)
 	if (c1 >= 0 && data.cards[c1].capability === name)
@@ -1662,6 +1727,16 @@ function lord_has_capability(lord, c) {
 	if (c2 >= 0 && data.cards[c2].capability === name)
 		return true
 	return false
+}
+
+function lord_has_capability(lord, card_or_list) {
+	if (Array.isArray(card_or_list)) {
+		for (let card of card_or_list)
+			if (lord_has_capability_card(lord, card))
+				return true
+		return false
+	}
+	return lord_has_capability_card(lord, card)
 }
 
 function can_add_lord_capability(lord) {
@@ -2024,6 +2099,15 @@ states.actions = {
 
 // === ACTION: MARCH ===
 
+function has_teutonic_converts() {
+	if (game.active === TEUTONS) {
+		if (group_has_capability(AOW_TEUTONIC_CONVERTS))
+			if (count_group_forces(LIGHT_HORSE) > 0)
+				return true
+	}
+	return false
+}
+
 function can_action_march() {
 	return true
 }
@@ -2261,17 +2345,17 @@ function do_action_forage() {
 
 // === ACTION: RAVAGE ===
 
-function has_teutonic_raiders(lord) {
+function has_teutonic_raiders() {
 	if (game.active === TEUTONS)
-		if (lord_has_capability(lord, AOW_TEUTONIC_RAIDERS))
-			return count_lord_horses(lord) > 0
+		if (lord_has_capability(game.who, AOW_TEUTONIC_RAIDERS))
+			return count_lord_horses(game.who) > 0
 	return false
 }
 
-function has_russian_raiders(lord) {
+function has_russian_raiders() {
 	if (game.active === RUSSIANS)
-		if (lord_has_capability(lord, AOW_RUSSIAN_RAIDERS))
-			return get_lord_forces(lord, LIGHT_HORSE) + get_lord_forces(lord, ASIATIC_HORSE) > 0
+		if (lord_has_capability(game.who, AOW_RUSSIAN_RAIDERS))
+			return get_lord_forces(game.who, LIGHT_HORSE) + get_lord_forces(game.who, ASIATIC_HORSE) > 0
 	return false
 }
 
@@ -2292,13 +2376,13 @@ function can_action_ravage() {
 	if (can_ravage_locale(here))
 		return true
 
-	if (has_teutonic_raiders(game.who)) {
+	if (has_teutonic_raiders()) {
 		for (let there of data.locales[here].adjacent_by_trackway)
 			if (can_ravage_locale(there) && !has_enemy_lord(there))
 				return true
 	}
 
-	if (has_russian_raiders(game.who)) {
+	if (has_russian_raiders()) {
 		for (let there of data.locales[here].adjacent_by_trackway)
 			if (can_ravage_locale(there) && !has_enemy_lord(there))
 				return true
@@ -2309,7 +2393,7 @@ function can_action_ravage() {
 
 function do_action_ravage() {
 	push_undo()
-	if (has_teutonic_raiders(game.who) || has_russian_raiders(game.who)) {
+	if (has_teutonic_raiders() || has_russian_raiders()) {
 		game.state = "ravage"
 	} else {
 		let here = get_lord_locale(game.who)
@@ -2325,13 +2409,13 @@ states.ravage = {
 		if (can_ravage_locale(here))
 			gen_action_locale(here)
 
-		if (has_teutonic_raiders(game.who)) {
+		if (has_teutonic_raiders()) {
 			for (let there of data.locales[here].adjacent_by_trackway)
 				if (can_ravage_locale(there) && !has_enemy_lord(there))
 					gen_action_locale(there)
 		}
 
-		if (has_russian_raiders(game.who)) {
+		if (has_russian_raiders()) {
 			for (let there of data.locales[here].adjacent_by_trackway)
 				if (can_ravage_locale(there) && !has_enemy_lord(there))
 					gen_action_locale(there)
@@ -2346,14 +2430,15 @@ states.ravage = {
 function ravage_location(here, there) {
 	log(`Ravaged at %${there}`)
 
-	// TODO: Raiders - ranged ravage with/without loot
-	if (here !== there) {
-	}
-
 	add_ravaged_marker(there)
 	add_lord_assets(game.who, PROV, 1)
-	if (!is_region(there))
-		add_lord_assets(game.who, LOOT, 1)
+
+	if (!is_region(there)) {
+		// R12 Raiders - take no loot from adjacent
+		if (here === there || game.active !== RUSSIANS)
+			add_lord_assets(game.who, LOOT, 1)
+	}
+
 	game.count += 1
 	game.state = "actions"
 }
