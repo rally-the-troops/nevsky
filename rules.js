@@ -16,7 +16,6 @@ const P2 = RUSSIANS
 
 // NOTE: With Hidden Mats option, the player order of feed/pay may matter.
 const FEED_PAY_DISBAND = true // feed, pay, disband in one go
-const AUTO_TAX = false
 
 let game = null
 let view = null
@@ -143,6 +142,9 @@ const LOC_VOD = find_locale("Vod")
 const LOC_ZHELTSY = find_locale("Zheltsy")
 const LOC_TESOVO = find_locale("Tesovo")
 const LOC_SABLIA = find_locale("Sablia")
+
+const AOW_TEUTONIC_RAIDERS = find_card("T2")
+const AOW_RUSSIAN_RAIDERS = find_card("R14")
 
 const NOBODY = -1
 const NOWHERE = -1
@@ -2260,6 +2262,20 @@ function do_action_forage() {
 
 // === ACTION: RAVAGE ===
 
+function has_teutonic_raiders(lord) {
+	if (game.active === TEUTONS)
+		if (lord_has_capability(lord, AOW_TEUTONIC_RAIDERS))
+			return count_lord_horses(lord) > 0
+	return false
+}
+
+function has_russian_raiders(lord) {
+	if (game.active === RUSSIANS)
+		if (lord_has_capability(lord, AOW_RUSSIAN_RAIDERS))
+			return get_lord_forces(lord, LIGHT_HORSE) + get_lord_forces(lord, ASIATIC_HORSE) > 0
+	return false
+}
+
 function can_ravage_locale(loc) {
 	return (
 		is_enemy_territory(loc) &&
@@ -2270,40 +2286,77 @@ function can_ravage_locale(loc) {
 }
 
 function can_action_ravage() {
-	let where = get_lord_locale(game.who)
+	let here = get_lord_locale(game.who)
 
-	// TODO: cost 2 if enemy lord is adjacent in 2nd ed
-	// TODO: adjacent ability
+	// TODO: cost 2 if enemy lord is adjacent (2nd ed)
 
-	if (can_ravage_locale(where))
+	if (can_ravage_locale(here))
 		return true
+
+	if (has_teutonic_raiders(game.who)) {
+		for (let there of data.locales[here].adjacent_by_trackway)
+			if (can_ravage_locale(there) && !has_enemy_lord(there))
+				return true
+	}
+
+	if (has_russian_raiders(game.who)) {
+		for (let there of data.locales[here].adjacent_by_trackway)
+			if (can_ravage_locale(there) && !has_enemy_lord(there))
+				return true
+	}
 
 	return false
 }
 
 function do_action_ravage() {
 	push_undo()
-	game.state = "ravage"
+	if (has_teutonic_raiders(game.who) || has_russian_raiders(game.who)) {
+		game.state = "ravage"
+	} else {
+		let here = get_lord_locale(game.who)
+		ravage_location(here, here)
+	}
 }
 
 states.ravage = {
 	prompt() {
 		view.prompt = `Ravage: Choose enemy territory to ravage!`
-		let where = get_lord_locale(game.who)
+		let here = get_lord_locale(game.who)
 
-		// TODO: adjacent from abilities
+		if (can_ravage_locale(here))
+			gen_action_locale(here)
 
-		gen_action_locale(where)
+		if (has_teutonic_raiders(game.who)) {
+			for (let there of data.locales[here].adjacent_by_trackway)
+				if (can_ravage_locale(there) && !has_enemy_lord(there))
+					gen_action_locale(there)
+		}
+
+		if (has_russian_raiders(game.who)) {
+			for (let there of data.locales[here].adjacent_by_trackway)
+				if (can_ravage_locale(there) && !has_enemy_lord(there))
+					gen_action_locale(there)
+		}
 	},
-	locale(loc) {
-		log(`Ravaged at %${loc}`)
-		add_ravaged_marker(loc)
-		add_lord_assets(game.who, PROV, 1)
-		if (!is_region(loc))
-			add_lord_assets(game.who, LOOT, 1)
-		game.count += 1
-		game.state = "actions"
+	locale(there) {
+		let here = get_lord_locale(game.who)
+		ravage_location(here, there)
 	},
+}
+
+function ravage_location(here, there) {
+	log(`Ravaged at %${there}`)
+
+	// TODO: Raiders - ranged ravage with/without loot
+	if (here !== there) {
+	}
+
+	add_ravaged_marker(there)
+	add_lord_assets(game.who, PROV, 1)
+	if (!is_region(there))
+		add_lord_assets(game.who, LOOT, 1)
+	game.count += 1
+	game.state = "actions"
 }
 
 // === ACTION: TAX ===
@@ -2323,22 +2376,7 @@ function can_action_tax() {
 
 function do_action_tax() {
 	push_undo()
-	if (AUTO_TAX) {
-		tax_with_lord(game.who)
-	} else {
-		game.state = "tax"
-	}
-}
-
-states.tax = {
-	prompt() {
-		view.prompt = `Tax: Choose seat to Tax.`
-		let here = get_lord_locale(game.who)
-		gen_action_locale(here)
-	},
-	locale(loc) {
-		tax_with_lord(game.who)
-	},
+	tax_with_lord(game.who)
 }
 
 function tax_with_lord(lord) {

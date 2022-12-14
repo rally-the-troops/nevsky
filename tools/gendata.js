@@ -4,6 +4,8 @@
 
 const fs = require('fs')
 
+function cmpnum(a,b) { return a - b }
+
 // :r !python3 genboxes.py
 const boxes = {
 "Wesenberg": [1448,3625,304,60],
@@ -301,6 +303,20 @@ function dumplist(name, list) {
 	print("],")
 }
 
+locales.forEach(loc => {
+	loc.adjacent = []
+	loc.adjacent_by_trackway = []
+	for (let [to, way] of loc.ways) {
+		if (!loc.adjacent.includes(to))
+			loc.adjacent.push(to)
+		if (ways[way].type === "trackway")
+			if (!loc.adjacent_by_trackway.includes(to))
+				loc.adjacent_by_trackway.push(to)
+	}
+	loc.adjacent.sort(cmpnum)
+	loc.adjacent_by_trackway.sort(cmpnum)
+})
+
 function seats(list) {
 	return list.split(", ").map(name => locmap[name]).sort((a,b)=>a-b)
 }
@@ -588,8 +604,6 @@ let lords = [
 
 let AOW = {}
 let cards = []
-
-function cmpnum(a,b) { return a - b }
 
 function arts_of_war_event(name, event, when) {
 	let c = { name, event, when, capability: null, this_lord: false, lords: null }
