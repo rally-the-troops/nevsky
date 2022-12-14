@@ -181,12 +181,20 @@ const LOC_ZHELTSY = find_locale("Zheltsy")
 const LOC_TESOVO = find_locale("Tesovo")
 const LOC_SABLIA = find_locale("Sablia")
 
-const AOW_TEUTONIC_RAIDERS = AOW_T2
-const AOW_RUSSIAN_RAIDERS = [ AOW_R12, AOW_R14 ]
+// Capability usage tracking flags
+const FLAG_TEUTONIC_RAIDERS = 1 << 0
+const FLAG_TEUTONIC_CONVERTS = 1 << 1
+const FLAG_TEUTONIC_WARRIOR_MONKS = 1 << 2
+const FLAG_TEUTONIC_HILLFORTS = 1 << 3
+const FLAG_RUSSIAN_LODYA_BOATS = 1 << 4
+const FLAG_RUSSIAN_LODYA_SHIPS = 1 << 5
 
+const AOW_TEUTONIC_RAIDERS = AOW_T2
 const AOW_TEUTONIC_COGS = AOW_T18
 const AOW_TEUTONIC_CONVERTS = AOW_T3
 const AOW_TEUTONIC_BALISTARII = [ AOW_T4, AOW_T5, AOW_T6 ]
+
+const AOW_RUSSIAN_RAIDERS = [ AOW_R12, AOW_R14 ]
 
 // TODO: advanced service
 const VASSAL_UNAVAILABLE = 0
@@ -541,6 +549,18 @@ function is_card_in_use(c) {
 	return false
 }
 
+function has_flag(bit) {
+	return game.flags & bit > 0
+}
+
+function set_flag(bit) {
+	game.flags |= bit
+}
+
+function clear_flag(bit) {
+	game.flags &= ~bit
+}
+
 function is_lord_on_map(lord) {
 	let loc = get_lord_locale(lord)
 	return loc !== NOWHERE && loc < CALENDAR
@@ -882,11 +902,6 @@ function is_located_with_legate(lord) {
 	return get_lord_locale(lord) === game.call_to_arms.legate
 }
 
-function is_first_march() {
-	// TODO: more robust check?
-	return game.group === 0
-}
-
 function for_each_group_lord(fn) {
 	fn(game.who)
 	if (game.group)
@@ -1062,6 +1077,7 @@ exports.setup = function (seed, scenario, options) {
 		what: NOTHING,
 		approach: 0,
 		count: 0,
+		flags: 0,
 	}
 
 	update_aliases()
@@ -2046,6 +2062,10 @@ function end_actions() {
 	game.command = NOBODY
 	game.who = NOBODY
 	game.group = 0
+
+	clear_flag(FLAG_TEUTONIC_RAIDERS)
+	clear_flag(FLAG_TEUTONIC_CONVERTS)
+
 	goto_feed()
 }
 
@@ -2108,6 +2128,10 @@ states.actions = {
 }
 
 // === ACTION: MARCH ===
+
+function is_first_march() {
+	return has_flag(FLAG_TEUTONIC_CONVERTS)
+}
 
 function group_has_teutonic_converts() {
 	if (game.active === TEUTONS) {
@@ -2275,6 +2299,8 @@ function march_with_group_2(laden) {
 	let way = game.approach
 	let to = game.where
 
+	set_flag(FLAG_TEUTONIC_CONVERTS)
+
 	if (data.ways[way].name)
 		log(`Marched via ${data.ways[way].name} to %${to}.`)
 	else
@@ -2355,10 +2381,15 @@ function do_action_forage() {
 
 // === ACTION: RAVAGE ===
 
+function has_not_used_teutonic_raiders() {
+	return !has_flag(FLAG_TEUTONIC_RAIDERS)
+}
+
 function this_lord_has_teutonic_raiders() {
 	if (game.active === TEUTONS)
-		if (lord_has_capability(game.who, AOW_TEUTONIC_RAIDERS))
-			return count_lord_horses(game.who) > 0
+		if (has_not_used_teutonic_raiders())
+			if (lord_has_capability(game.who, AOW_TEUTONIC_RAIDERS))
+				return count_lord_horses(game.who) > 0
 	return false
 }
 
@@ -2442,6 +2473,9 @@ function ravage_location(here, there) {
 
 	add_ravaged_marker(there)
 	add_lord_assets(game.who, PROV, 1)
+
+	if (here !== there && game.active === TEUTONS)
+		set_flag(FLAG_TEUTONIC_RAIDERS)
 
 	if (!is_region(there)) {
 		// R12 Raiders - take no loot from adjacent
