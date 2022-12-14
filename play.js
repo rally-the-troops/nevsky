@@ -6,8 +6,18 @@
 
 // TODO: held events, this_turn events
 
+function find_lord(name) {
+	return data.lords.findIndex((x) => x.name === name)
+}
+
+const LORD_ANDREAS = find_lord("Andreas")
+const LORD_HERMANN = find_lord("Hermann")
+const LORD_ALEKSANDR = find_lord("Aleksandr")
+const LORD_ANDREY = find_lord("Andrey")
+
 const MAP_DPI = 75
 
+const NOWHERE = -1
 const CALENDAR = 100
 
 const round = Math.round
@@ -241,6 +251,20 @@ function count_vp2() {
 		if (is_p1_locale(loc))
 			vp += 1
 	return vp
+}
+
+function get_lord_locale(lord) {
+	return view.lords.locale[lord]
+}
+
+function is_lord_on_map(lord) {
+	let loc = get_lord_locale(lord)
+	return loc !== NOWHERE && loc < CALENDAR
+}
+
+function is_marshal(lord) {
+	if (lord === LORD_HERMANN) return !is_lord_on_map(LORD_ANDREAS)
+	if (lord === LORD_ANDREY) return !is_lord_on_map(LORD_ALEKSANDR)
 }
 
 function is_card_in_use(c) {
@@ -618,12 +642,14 @@ function sub_card_event(match, p1) {
 
 function on_focus_locale_tip(loc) {
 	ui.locale[loc].classList.add("tip")
-	ui.locale_extra[loc].classList.add("tip")
+	if (ui.locale_extra[loc])
+		ui.locale_extra[loc].classList.add("tip")
 }
 
 function on_blur_locale_tip(loc) {
 	ui.locale[loc].classList.remove("tip")
-	ui.locale_extra[loc].classList.remove("tip")
+	if (ui.locale_extra[loc])
+		ui.locale_extra[loc].classList.remove("tip")
 }
 
 function on_click_locale_tip(loc) {
@@ -857,6 +883,16 @@ function update_lord_mat(ix) {
 	update_forces(ui.routed[ix], view.lords.routed[ix])
 }
 
+function is_lord_mat_selected(ix) {
+	return ix === view.who
+}
+
+function is_cylinder_selected(ix) {
+	if (view.who === undefined)
+		return ix === view.command
+	return ix === view.who || !!(view.group && set_has(view.group, ix))
+}
+
 function update_lord(ix) {
 	let locale = view.lords.locale[ix]
 	let service = view.lords.service[ix]
@@ -898,11 +934,16 @@ function update_lord(ix) {
 	ui.lord_cylinder[ix].classList.toggle("action", is_lord_action(ix))
 	ui.lord_service[ix].classList.toggle("action", is_service_action(ix))
 
+	if (ix === LORD_HERMANN)
+		ui.lord_cylinder[ix].classList.toggle("marshal", !is_lord_on_map(LORD_ANDREAS))
+	if (ix === LORD_ANDREY)
+		ui.lord_cylinder[ix].classList.toggle("marshal", !is_lord_on_map(LORD_ALEKSANDR))
+
 	if (view.who === undefined)
 		ui.lord_cylinder[ix].classList.toggle("selected", ix === view.command)
 	else
-		ui.lord_cylinder[ix].classList.toggle("selected", ix === view.who)
-	ui.lord_mat[ix].classList.toggle("selected", ix === view.who)
+		ui.lord_cylinder[ix].classList.toggle("selected", is_cylinder_selected(ix))
+	ui.lord_mat[ix].classList.toggle("selected", is_lord_mat_selected(ix))
 }
 
 function update_legate() {
@@ -1166,6 +1207,9 @@ function on_update() {
 	update_plan()
 	update_cards()
 
+	action_button("laden", "Laden")
+	action_button("unladen", "Unladen")
+
 	action_button("sail", "Sail")
 	action_button("march", "March")
 	action_button("siege", "Siege")
@@ -1292,6 +1336,12 @@ function build_map() {
 			locale_xy[ix] = [ round(x + w / 2), round(y + h / 2) - 32 ]
 			x -= 3
 			y -= 4
+			// XXX
+			x -= 8
+			y -= 6
+			w += 16
+			h += 12
+
 		} else {
 			locale_xy[ix] = [ round(x + w / 2), y - 36 ]
 			x -= 2

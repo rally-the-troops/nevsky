@@ -113,6 +113,8 @@ const LORD_GAVRILO = find_lord("Gavrilo")
 const LORD_KARELIANS = find_lord("Karelians")
 const LORD_VLADISLAV = find_lord("Vladislav")
 
+const LEGATE = 100
+
 const LOC_REVAL = find_locale("Reval")
 const LOC_WESENBERG = find_locale("Wesenberg")
 const LOC_DORPAT = find_locale("Dorpat")
@@ -737,6 +739,53 @@ function can_add_transport(who, what) {
 	return get_lord_assets(who, what) < 8
 }
 
+function count_lord_transport(lord, way) {
+	let type = data.ways[way].type
+	let season = current_season()
+	let n = 0
+	switch (type) {
+		case "trackway":
+			switch (season) {
+				case SUMMER:
+					n += get_lord_assets(lord, CART)
+					break
+				case EARLY_WINTER:
+				case LATE_WINTER:
+					n += get_lord_assets(lord, SLED)
+					break
+				case RASPUTITSA:
+					break
+			}
+			break
+		case "waterway":
+			switch (season) {
+				case SUMMER:
+					n += get_lord_assets(lord, BOAT)
+					break
+				case EARLY_WINTER:
+				case LATE_WINTER:
+					n += get_lord_assets(lord, SLED)
+					break
+				case RASPUTITSA:
+					n += get_lord_assets(lord, BOAT)
+					break
+			}
+			break
+	}
+	return n
+}
+
+function list_ways(from, to) {
+	for (let ways of data.locales[from].ways)
+		if (ways[0] === to)
+			return ways
+	return null
+}
+
+function has_two_ways(from, to) {
+	return list_ways(from, to).length > 2
+}
+
 function is_upper_lord(lord) {
 	return map_has(game.lords.lieutenants, lord)
 }
@@ -774,6 +823,45 @@ function remove_lieutenant(lord) {
 			return
 		}
 	}
+}
+
+function is_located_with_legate(lord) {
+	return get_lord_locale(lord) === game.call_to_arms.legate
+}
+
+function for_each_group_lord(fn) {
+	fn(game.who)
+	if (game.group)
+		for (let lord of game.group)
+			if (lord !== LEGATE)
+				fn(lord)
+}
+
+function count_group_assets(asset) {
+	let n = get_lord_assets(game.who, asset)
+	if (game.group)
+		for (let lord of game.group)
+			if (lord !== LEGATE)
+				n += get_lord_assets(lord, asset)
+	return n
+}
+
+function count_group_horses() {
+	let n = count_lord_horses(game.who)
+	if (game.group)
+		for (let lord of game.group)
+			if (lord !== LEGATE)
+				n += count_lord_horses(lord)
+	return n
+}
+
+function count_group_transport(way) {
+	let n = count_lord_transport(game.who, way)
+	if (game.group)
+		for (let lord of game.group)
+			if (lord !== LEGATE)
+				n += count_lord_transport(lord, way)
+	return n
 }
 
 // === SETUP ===
@@ -878,6 +966,7 @@ exports.setup = function (seed, scenario, options) {
 		},
 
 		command: NOBODY,
+		group: 0,
 		who: NOBODY,
 		where: NOWHERE,
 		what: NOTHING,
@@ -1205,6 +1294,7 @@ function resume_levy_arts_of_war_first() {
 		end_levy_arts_of_war_first()
 }
 
+// TODO: show and assign capabilities simultaneously
 states.levy_arts_of_war_first = {
 	prompt() {
 		let c = game.what[0]
@@ -1517,7 +1607,6 @@ states.muster_lord_transport = {
 			view.actions.cart = 1
 		if (can_add_transport(game.who, SLED))
 			view.actions.sled = 1
-		view.actions.done = 0
 	},
 	ship() {
 		push_undo()
@@ -1856,6 +1945,7 @@ function end_actions() {
 	set_active(P1)
 	game.command = NOBODY
 	game.who = NOBODY
+	game.group = 0
 	goto_feed()
 }
 
@@ -1898,7 +1988,7 @@ states.actions = {
 				view.actions.pass = 1
 			}
 		} else {
-			view.actions.done = 1
+			view.actions.end_actions = 1
 		}
 	},
 	march: do_action_march,
@@ -1911,7 +2001,7 @@ states.actions = {
 		log("Passed.")
 		use_all_actions() // TODO: maybe only one action?
 	},
-	done() {
+	end_actions() {
 		clear_undo()
 		end_actions()
 	},
@@ -1925,73 +2015,157 @@ function can_action_march() {
 
 function do_action_march() {
 	push_undo()
+	goto_march()
+}
+
+function goto_march() {
+	// Initialize group on first March!
+	if (!game.group) {
+		// 4.1.3 Lieutenants MUST take lower lord
+		let lower = get_lower_lord(game.who)
+		if (lower !== NOBODY)
+			game.group = [ lower ]
+		else
+			game.group = []
+	}
 	game.state = 'march'
-}
-
-// TODO: rename 'road' to something better
-function get_road(from, to) {
-	for (let road of data.locales[from].ways)
-		if (road[0] === to)
-			return road
-	return null
-}
-
-function has_two_ways(from, to) {
-	return get_road(from, to).length > 2
 }
 
 states.march = {
 	prompt() {
 		view.prompt = `March: Select destination.`
+		let here = get_lord_locale(game.who)
 
-		// TODO: Group March & lieutenants
-
-		let from = get_lord_locale(game.who)
-		for (let [to] of data.locales[from].ways)
+		for (let [to] of data.locales[here].ways)
 			gen_action_locale(to)
+
+		// 4.3.2 Marshals MAY take other lords
+		if (is_marshal(game.who)) {
+			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+				if (lord !== game.who && !is_lower_lord(lord))
+					if (get_lord_locale(lord) === here)
+						gen_action_lord(lord)
+		}
+
+		// 1.4.1 Teutonic lords MAY take the Legate
+		if (game.active === TEUTONS && is_located_with_legate(game.who)) {
+			view.actions.legate = 1
+		}
 	},
 	locale(to) {
 		push_undo()
 		let from = get_lord_locale(game.who)
-		let road = get_road(from, to)
-		if (road.length > 2) {
-			game.state = 'march_way'
+		let ways = list_ways(from, to)
+		if (ways.length > 2) {
 			game.where = to
+			game.state = 'march_way'
 		} else {
-			march_with_lord(game.who, road[1], to)
+			game.where = to
+			game.approach = ways[1]
+			march_with_group()
 		}
+	},
+	lord(lord) {
+		set_toggle(game.group, lord)
+		if (is_upper_lord(lord))
+			set_toggle(game.group, get_lower_lord(lord))
+	},
+	legate() {
+		set_toggle(game.group, LEGATE)
 	},
 }
 
 states.march_way = {
 	prompt() {
 		view.prompt = `March: Select way.`
-
 		let from = get_lord_locale(game.who)
 		let to = game.where
-
-		let road = get_road(from, to)
-		for (let i = 1; i < road.length; ++i)
-			gen_action_way(road[i])
+		let ways = list_ways(from, to)
+		for (let i = 1; i < ways.length; ++i)
+			gen_action_way(ways[i])
 	},
 	way(way) {
-		let from = get_lord_locale(game.who)
-		let to = game.where
-		game.where = NOWHERE
-		march_with_lord(game.who, way, to)
+		game.approach = way
+		march_with_group()
 	},
 }
 
-function march_with_lord(lord, way, to) {
+function march_with_group() {
+	let way = game.approach
+	let transport = count_group_transport(way)
+	let prov = count_group_assets(PROV)
+	let loot = count_group_assets(LOOT)
+
+	if (loot > 0 || prov > transport) {
+		game.state = 'march_laden'
+	} else {
+		march_with_group_2(false)
+	}
+}
+
+states.march_laden = {
+	prompt() {
+		let to = game.where
+		let way = game.approach
+		let transport = count_group_transport(way)
+		let prov = count_group_assets(PROV)
+		let loot = count_group_assets(LOOT)
+
+		view.prompt = `March with ${loot} loot, ${prov} prov, and ${transport} usable transport.`
+
+		if (prov <= transport * 2) {
+			if (loot > 0 || prov > transport) {
+				let avail = get_available_actions()
+				if (avail >= 2)
+					view.actions.laden = 1
+				view.actions.unladen = 0
+			} else {
+				view.actions.laden = 1
+				view.actions.unladen = 1
+			}
+		} else {
+			view.actions.laden = 0
+			view.actions.unladen = 0
+		}
+
+		if (loot > 0 || prov > transport) {
+			for_each_group_lord(lord => {
+				if (loot > 0) {
+					if (get_lord_assets(lord, LOOT) > 0)
+						gen_action_loot(lord)
+					if (prov > transport * 2)
+						if (get_lord_assets(lord, PROV) > 0)
+							gen_action_prov(lord)
+				} else {
+					if (prov > transport)
+						if (get_lord_assets(lord, PROV) > 0)
+							gen_action_prov(lord)
+				}
+			})
+		}
+	},
+	prov(lord) {
+		push_undo()
+		drop_prov(lord)
+	},
+	loot(lord) {
+		push_undo()
+		drop_loot(lord)
+	},
+	laden() {
+		march_with_group_2(true)
+	},
+	unladen() {
+		march_with_group_2(false)
+	},
+}
+
+function march_with_group_2(laden) {
 	let from = get_lord_locale(game.who)
-	let road = get_road(from, to)
+	let way = game.approach
+	let to = game.where
 
-	game.approach = way
-
-	// TODO: laden/unladen discard prov and loot
-	// game.state = 'march_laden'
-
-	if (road.length > 2 && data.ways[way].name)
+	if (data.ways[way].name)
 		log(`Marched via ${data.ways[way].name} to %${to}.`)
 	else
 		log(`Marched to %${to}.`)
@@ -2002,8 +2176,10 @@ function march_with_lord(lord, way, to) {
 	if (is_unbesieged_enemy_stronghold(to))
 		add_siege_marker(to)
 
-	set_lord_locale(game.who, to)
-	set_lord_moved(game.who, 1)
+	for_each_group_lord(lord => {
+		set_lord_locale(lord, to)
+		set_lord_moved(lord, 1)
+	})
 
 	if (is_enemy_stronghold(from))
 		remove_all_siege_markers(from)
@@ -2012,62 +2188,11 @@ function march_with_lord(lord, way, to) {
 	// TODO: stop and siege
 	// TODO: approach
 
-	game.count += 1
+	if (laden)
+		game.count += 2
+	else
+		game.count += 1
 	game.state = "actions"
-}
-
-states.march_laden = {
-	prompt() {
-		let from = get_lord_locale(game.who)
-		let prov = get_lord_assets(game.who, PROV)
-		let loot = get_lord_assets(game.who, LOOT)
-		let carts = get_lord_assets(game.who, CART)
-		let sleds = get_lord_assets(game.who, SLED)
-		let boats = get_lord_assets(game.who, BOAT)
-
-		// TODO: Group March & lieutenants
-
-		let laden = 0 // 0=unladen, 1=laden, 2=immobile
-
-		view.prompt = `March`
-
-		console.log(USABLE_TRANSPORT[current_season()])
-
-		if (laden > 0) {
-			if (loot > 0)
-				gen_action_loot(game.who)
-			if (prov > 0)
-				gen_action_prov(game.who)
-		}
-
-		if (laden === 0 || (laden === 1 && get_available_actions() >= 2)) {
-		}
-
-	},
-	prov(lord) {
-		push_undo()
-		drop_prov(lord)
-	},
-	loot(lord) {
-		push_undo()
-		drop_loot(lord)
-	},
-	locale(loc) {
-		push_undo()
-		log(`Sailed to %${loc}.`)
-
-		if (is_trade_route(loc))
-			conquer_trade_route(loc)
-
-		if (is_unbesieged_enemy_stronghold(loc))
-			add_siege_marker(loc)
-
-		set_lord_locale(game.who, loc)
-		set_lord_moved(game.who, 1)
-
-		use_all_actions()
-		game.state = "actions"
-	},
 }
 
 // === ACTION: SIEGE ===
@@ -2132,7 +2257,7 @@ function can_action_ravage() {
 	// TODO: cost 2 if enemy lord is adjacent in 2nd ed
 	// TODO: adjacent ability
 
-	if (can_ravage_locale(loc))
+	if (can_ravage_locale(where))
 		return true
 
 	return false
@@ -2232,9 +2357,41 @@ function conquer_trade_route(loc) {
 	}
 }
 
-function count_lord_ships(lord) {
-	// TODO: sail as group
-	return get_lord_assets(lord, SHIP)
+function has_enough_available_ships_for_horses() {
+	// TODO: Cogs
+
+	let here = get_lord_locale(game.who)
+
+	let horse_size = 1
+	if (game.active === RUSSIANS)
+		horse_size = 2
+
+	let ships = get_lord_assets(game.who, SHIP)
+	let horses = count_lord_horses(game.who) * horse_size
+
+	let lower = get_lower_lord(game.who)
+	if (lower !== NOBODY) {
+		ships += get_lord_assets(lower, SHIP)
+		horses += count_lord_horses(lower) * horse_size
+	}
+
+	if (ships >= horses)
+		return true
+
+	if (is_marshal(game.who)) {
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+			if (lord !== game.who && !is_lower_lord(lord) && get_lord_locale(lord) === here) {
+				let extra_ships = get_lord_assets(lord, SHIP)
+				let extra_horses = count_lord_horses(lord) * horse_size
+				if (extra_ships >= extra_horses)
+					ships += extra_ships - extra_horses
+			}
+		}
+		if (ships >= horses)
+			return true
+	}
+
+	return false
 }
 
 function can_action_sail() {
@@ -2252,20 +2409,9 @@ function can_action_sail() {
 	if (season !== SUMMER && season !== RASPUTITSA)
 		return false
 
-	let horses = count_lord_horses(game.who)
-	let ships = count_lord_ships(game.who)
-
-	// Teutons need 1 ship per horse unit
-	if (game.active === TEUTONS) {
-		if (ships < horses)
-			return false
-	}
-
-	// Russians need 2 ships per horse unit
-	if (game.active === RUSSIANS) {
-		if (ships < horses * 2)
-			return false
-	}
+	// Need enough ships for horses
+	if (!has_enough_available_ships_for_horses())
+		return true
 
 	// TODO: check valid destinations
 
@@ -2275,23 +2421,28 @@ function can_action_sail() {
 function do_action_sail() {
 	push_undo()
 	game.state = 'sail'
+
+	// TODO: enough ships for all of the lords
+	push_designate_group()
 }
 
 states.sail = {
 	prompt() {
 		let from = get_lord_locale(game.who)
-		let horses = count_lord_horses(game.who)
-		let ships = count_lord_ships(game.who)
-		let prov = get_lord_assets(game.who, PROV)
-		let loot = get_lord_assets(game.who, LOOT)
+		let horses = count_group_horses()
+		let ships = count_group_assets(SHIP)
+		let prov = count_group_assets(PROV)
+		let loot = count_group_assets(LOOT)
 
-		// TODO: sail as a group
+		let overflow = 0
+		if (game.active === TEUTONS) {
+			overflow = (horses + loot * 2 + prov) - horses
+		}
+		if (game.active === RUSSIANS) {
+			overflow = (horses * 2 + loot * 2 + prov) - horses
+		}
 
-		let can_sail = false
-		if (game.active === TEUTONS)
-			can_sail = ships >= (horses + loot * 2 + prov)
-		if (game.active === RUSSIANS)
-			can_sail = ships >= (horses * 2 + loot * 2 + prov)
+		let can_sail = overflow <= 0
 
 		if (can_sail) {
 			view.prompt = `Sail: Choose a destination Seaport.`
@@ -2303,11 +2454,22 @@ states.sail = {
 			}
 		} else {
 			view.prompt = `Sail: Discard Loot or Provender.`
+
 			// TODO: how strict is greed?
-			if (loot > 0)
-				gen_action_loot(game.who)
-			if (prov > 0)
-				gen_action_prov(game.who)
+			if (loot > 0 || prov > 0) {
+				for_each_group_lord(lord => {
+					if (loot > 0)
+						if (get_lord_assets(lord, LOOT))
+							gen_action_loot(game.who)
+					if (prov > 0)
+						if (get_lord_assets(lord, PROV))
+							gen_action_prov(game.who)
+				})
+			}
+
+			// TODO: disallow entering impossible state earlier
+			if (loot + prov === 0)
+				view.prompt = ` Not enough ships!`
 		}
 
 	},
@@ -2840,6 +3002,8 @@ exports.view = function (state, current) {
 	} else {
 		view.actions = {}
 		view.who = game.who
+		if (game.group && game.group.length > 0)
+			view.group = game.group
 		if (states[game.state])
 			states[game.state].prompt(current)
 		else
@@ -2999,6 +3163,13 @@ function object_copy(original) {
 }
 
 // Array remove and insert (faster than splice)
+
+function array_remove_item(array, item) {
+	let n = array.length
+	for (let i = 0; i < n; ++i)
+		if (array[i] === item)
+			return array_remove(array, i)
+}
 
 function array_remove(array, index) {
 	let n = array.length
