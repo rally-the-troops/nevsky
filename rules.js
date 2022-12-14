@@ -550,7 +550,7 @@ function is_card_in_use(c) {
 }
 
 function has_flag(bit) {
-	return game.flags & bit > 0
+	return game.flags & bit
 }
 
 function set_flag(bit) {
@@ -1762,7 +1762,7 @@ function lord_has_capability(lord, card_or_list) {
 				return true
 		return false
 	}
-	return lord_has_capability_card(lord, card)
+	return lord_has_capability_card(lord, card_or_list)
 }
 
 function can_add_lord_capability(lord) {
@@ -2129,15 +2129,12 @@ states.actions = {
 
 // === ACTION: MARCH ===
 
-function is_first_march() {
-	return has_flag(FLAG_TEUTONIC_CONVERTS)
-}
-
 function group_has_teutonic_converts() {
 	if (game.active === TEUTONS) {
-		if (group_has_capability(AOW_TEUTONIC_CONVERTS))
-			if (count_group_forces(LIGHT_HORSE) > 0)
-				return true
+		if (!has_flag(FLAG_TEUTONIC_CONVERTS))
+			if (group_has_capability(AOW_TEUTONIC_CONVERTS))
+				if (count_group_forces(LIGHT_HORSE) > 0)
+					return true
 	}
 	return false
 }
@@ -2229,11 +2226,13 @@ function march_with_group() {
 	let prov = count_group_assets(PROV)
 	let loot = count_group_assets(LOOT)
 
-	if (loot > 0 || prov > transport) {
+	if (group_has_teutonic_converts() && prov <= transport * 2)
+		return march_with_group_2(false)
+
+	if (prov > transport || loot > 0)
 		game.state = 'march_laden'
-	} else {
+	else
 		march_with_group_2(false)
-	}
 }
 
 states.march_laden = {
@@ -2299,8 +2298,6 @@ function march_with_group_2(laden) {
 	let way = game.approach
 	let to = game.where
 
-	set_flag(FLAG_TEUTONIC_CONVERTS)
-
 	if (data.ways[way].name)
 		log(`Marched via ${data.ways[way].name} to %${to}.`)
 	else
@@ -2327,11 +2324,13 @@ function march_with_group_2(laden) {
 	// TODO: stop and siege
 	// TODO: approach
 
-	if (laden)
-		game.count += 2
-	else
-		game.count += 1
+	let action_cost = laden ? 2 : 1
+	if (group_has_teutonic_converts())
+		action_cost = 0
+	set_flag(FLAG_TEUTONIC_CONVERTS)
+
 	game.state = "actions"
+	game.count += action_cost
 }
 
 // === ACTION: SIEGE ===
