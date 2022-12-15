@@ -1243,9 +1243,12 @@ function on_update() {
 
 	action_button("use_legate", "Legate")
 
+	action_button("end_avoid_battle", "End avoid battle")
 	action_button("withdraw", "Withdraw")
-	action_button("battle", "Battle")
+	action_button("end_withdraw", "End withdraw")
+
 	action_button("surrender", "Surrender")
+	action_button("siegeworks", "Siegeworks")
 
 	action_button("sail", "Sail")
 	action_button("march", "March")
