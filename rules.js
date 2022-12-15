@@ -637,7 +637,7 @@ function is_vassal_available(vassal) {
 		return has_global_capability(AOW_TEUTONIC_CRUSADE)
 	if (cap === "Steppe Warriors")
 		return has_global_capability(AOW_RUSSIAN_STEPPE_WARRIORS)
-	return false
+	return true
 }
 
 function is_vassal_unavailable(vassal) {
@@ -683,7 +683,7 @@ function for_each_seat(lord, fn) {
 		if (has_global_capability(AOW_TEUTONIC_ORDENSBURGEN)) {
 			for (let commandery of COMMANDERIES)
 				if (!set_has(list, commandery))
-					fn(seat)
+					fn(commandery)
 		}
 	}
 
@@ -804,12 +804,12 @@ function remove_all_siege_markers(loc) {
 function conquer_trade_route(loc) {
 	if (game.active === RUSSIANS) {
 		if (has_conquered_marker(loc)) {
-			log(`Conquered %${loc}`)
+			log(`Conquered %${loc}.`)
 			remove_conquered_marker(loc)
 		}
 	} else {
 		if (!has_conquered_marker(loc)) {
-			log(`Conquered %${loc}`)
+			log(`Conquered %${loc}.`)
 			add_conquered_marker(loc)
 		}
 	}
@@ -1587,7 +1587,7 @@ states.levy_arts_of_war = {
 	},
 	discard() {
 		let c = game.what.shift()
-		log(`Discarded E${c}`)
+		log(`Discarded E${c}.`)
 		resume_levy_arts_of_war()
 	},
 }
@@ -1918,7 +1918,7 @@ states.muster_capability_discard = {
 	},
 	card(c) {
 		push_undo()
-		logi(`Discarded C${c}`)
+		logi(`Discarded C${c}.`)
 		discard_lord_capability(game.who, c)
 		add_lord_capability(game.who, game.what)
 		game.what = NOTHING
@@ -2324,7 +2324,7 @@ function march_action_locale(to) {
 	} else {
 		game.where = to
 		game.approach = ways[1]
-		march_with_group()
+		march_with_group_1()
 	}
 }
 
@@ -2350,11 +2350,11 @@ states.march_way = {
 	},
 	way(way) {
 		game.approach = way
-		march_with_group()
+		march_with_group_1()
 	},
 }
 
-function march_with_group() {
+function march_with_group_1() {
 	let way = game.approach
 	let transport = count_group_transport(way)
 	let prov = count_group_assets(PROV)
@@ -2393,7 +2393,7 @@ states.march_laden = {
 				gen_action_locale(to)
 			}
 		} else {
-			view.prompt += " Carrying too much."
+			view.prompt += " Too much provender."
 		}
 
 		if (loot > 0 || prov > transport) {
@@ -2421,9 +2421,11 @@ states.march_laden = {
 		drop_loot(lord)
 	},
 	laden_march(to) {
+		game.state = "actions"
 		march_with_group_2(true)
 	},
 	locale(to) {
+		game.state = "actions"
 		march_with_group_2(false)
 	},
 }
@@ -2433,16 +2435,17 @@ function march_with_group_2(laden) {
 	let way = game.approach
 	let to = game.where
 
+	let action_cost = laden ? 2 : 1
+	if (group_has_teutonic_converts())
+		action_cost = 0
+	set_flag(FLAG_TEUTONIC_CONVERTS)
+
+	game.count += action_cost
+
 	if (data.ways[way].name)
 		log(`Marched via ${data.ways[way].name} to %${to}.`)
 	else
 		log(`Marched to %${to}.`)
-
-	if (is_trade_route(to))
-		conquer_trade_route(to)
-
-	if (is_unbesieged_enemy_stronghold(to))
-		add_siege_marker(to)
 
 	for_each_group_lord(lord => {
 		set_lord_locale(lord, to)
@@ -2452,20 +2455,25 @@ function march_with_group_2(laden) {
 		game.call_to_arms.legate = to
 	}
 
-	if (is_enemy_stronghold(from))
-		remove_all_siege_markers(from)
+	console.log("MARCH", is_enemy_stronghold(from), is_unbesieged_enemy_stronghold(to))
 
-	// TODO: lift siege
+	if (is_enemy_stronghold(from)) {
+		remove_all_siege_markers(from)
+		// TODO: lift siege
+	}
+
+	if (is_unbesieged_enemy_stronghold(to)) {
+		add_siege_marker(to)
+		log(`Encamped.`)
+		game.count += get_available_actions() // ENCAMP
+	}
+
+	if (is_trade_route(to)) {
+		conquer_trade_route(to)
+	}
+
 	// TODO: stop and siege
 	// TODO: approach
-
-	let action_cost = laden ? 2 : 1
-	if (group_has_teutonic_converts())
-		action_cost = 0
-	set_flag(FLAG_TEUTONIC_CONVERTS)
-
-	game.state = "actions"
-	game.count += action_cost
 }
 
 // === ACTION: SIEGE ===
@@ -2611,7 +2619,7 @@ states.ravage = {
 }
 
 function ravage_location(here, there) {
-	log(`Ravaged at %${there}`)
+	log(`Ravaged at %${there}.`)
 
 	add_ravaged_marker(there)
 	add_lord_assets(game.who, PROV, 1)
@@ -2667,12 +2675,12 @@ states.veliky_knyaz = states.muster_lord_transport
 // === ACTION: SAIL ===
 
 function drop_prov(lord) {
-	log("Discarded Provender")
+	log("Discarded Provender.")
 	add_lord_assets(lord, PROV, -1)
 }
 
 function drop_loot(lord) {
-	log("Discarded Loot")
+	log("Discarded Loot.")
 	add_lord_assets(lord, LOOT, -1)
 }
 
@@ -2864,7 +2872,7 @@ states.sail = {
 	},
 	locale(to) {
 		push_undo()
-		log(`Sailed to %${to}`)
+		log(`Sailed to %${to}.`)
 
 		if (is_trade_route(to))
 			conquer_trade_route(to)
