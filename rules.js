@@ -2190,7 +2190,7 @@ function goto_actions() {
 	set_flag(FLAG_FIRST_MARCH)
 
 	// 4.1.3 Lieutenants MUST take lower lord
-	let lower = get_lower_lord(game.who)
+	let lower = get_lower_lord(game.command)
 	if (lower !== NOBODY)
 		game.group = [ game.command, lower ]
 	else
@@ -2198,7 +2198,7 @@ function goto_actions() {
 
 	if (game.active === TEUTONS) {
 		if (has_global_capability(AOW_TEUTONIC_ORDENSBURGEN)) {
-			if (is_commandery(get_lord_locale(game.who)))
+			if (is_commandery(get_lord_locale(game.command)))
 				set_flag(FLAG_TEUTONIC_ORDENSBURGEN)
 		}
 	}
@@ -2240,14 +2240,14 @@ function end_actions() {
 
 function this_lord_has_russian_druzhina() {
 	if (game.active === RUSSIANS)
-		if (lord_has_capability(game.who, AOW_RUSSIAN_DRUZHINA))
-			return count_lord_forces(game.who, KNIGHTS) > 0
+		if (lord_has_capability(game.command, AOW_RUSSIAN_DRUZHINA))
+			return count_lord_forces(game.command, KNIGHTS) > 0
 	return false
 }
 
 function this_lord_has_house_of_suzdal() {
 	if (game.active === RUSSIANS)
-		if (lord_has_capability(game.who, AOW_RUSSIAN_DRUZHINA))
+		if (lord_has_capability(game.command, AOW_RUSSIAN_DRUZHINA))
 			return is_lord_on_map(LORD_ALEKSANDR) || is_lord_on_map(LORD_ANDREY)
 	return false
 }
@@ -2260,7 +2260,7 @@ function get_available_actions() {
 			++n
 		if (has_flag(FLAG_TEUTONIC_ORDENSBURGEN))
 			++n
-		if (game.who === LORD_HEINRICH || game.who === LORD_KNUD_ABEL)
+		if (game.command === LORD_HEINRICH || game.command === LORD_KNUD_ABEL)
 			if (has_global_capability(AOW_TEUTONIC_TREATY_OF_STENSBY))
 				++n
 	}
@@ -2279,21 +2279,21 @@ states.actions = {
 	prompt() {
 		let avail = get_available_actions()
 
-		view.prompt = `${lord_name[game.who]} has ${avail}x actions.`
+		view.prompt = `${lord_name[game.command]} has ${avail}x actions.`
 
 		if (avail > 0)
 			view.actions.pass = 1
 		else
 			view.actions.end_actions = 1
 
-		if (is_lord_besieged(game.who)) {
+		if (is_lord_besieged(game.command)) {
 			if (can_action_sally(avail))
 				view.actions.sally = 1
 		}
 
 		else {
 			if (game.active === TEUTONS) {
-				if (has_flag(FLAG_FIRST_ACTION) && !has_flag(FLAG_USED_LEGATE) && is_located_with_legate(game.who))
+				if (has_flag(FLAG_FIRST_ACTION) && !has_flag(FLAG_USED_LEGATE) && is_located_with_legate(game.command))
 					view.actions.use_legate = 1
 			}
 
@@ -2371,7 +2371,7 @@ function group_has_teutonic_converts() {
 
 function march_prompt(avail) {
 	if (avail > 0 || group_has_teutonic_converts()) {
-		let here = get_lord_locale(game.who)
+		let here = get_lord_locale(game.command)
 
 		for (let [ to ] of data.locales[here].ways)
 			gen_action_locale(to)
@@ -2379,15 +2379,15 @@ function march_prompt(avail) {
 		view.group = game.group
 
 		// 4.3.2 Marshals MAY take other lords
-		if (is_marshal(game.who)) {
+		if (is_marshal(game.command)) {
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-				if (lord !== game.who && !is_lower_lord(lord))
+				if (lord !== game.command && !is_lower_lord(lord))
 					if (get_lord_locale(lord) === here)
 						gen_action_lord(lord)
 		}
 
 		// 1.4.1 Teutonic lords MAY take the Legate
-		if (game.active === TEUTONS && is_located_with_legate(game.who)) {
+		if (game.active === TEUTONS && is_located_with_legate(game.command)) {
 			view.actions.legate = 1
 		}
 	}
@@ -2395,7 +2395,7 @@ function march_prompt(avail) {
 
 function march_action_locale(to) {
 	push_undo()
-	let from = get_lord_locale(game.who)
+	let from = get_lord_locale(game.command)
 	let ways = list_ways(from, to)
 	if (ways.length > 2) {
 		game.where = to
@@ -2421,7 +2421,7 @@ states.march_way = {
 	prompt() {
 		view.prompt = `March: Select way.`
 		view.group = game.group
-		let from = get_lord_locale(game.who)
+		let from = get_lord_locale(game.command)
 		let to = game.where
 		let ways = list_ways(from, to)
 		for (let i = 1; i < ways.length; ++i)
@@ -2508,7 +2508,7 @@ states.march_laden = {
 }
 
 function march_with_group_2(laden) {
-	let from = get_lord_locale(game.who)
+	let from = get_lord_locale(game.command)
 	let way = game.approach
 	let to = game.where
 
@@ -2570,6 +2570,7 @@ function march_with_group_3() {
 		conquer_trade_route(to)
 	}
 
+	game.where = NOWHERE
 	game.state = "actions"
 }
 
@@ -2778,24 +2779,29 @@ function count_besieging_lords(loc) {
 }
 
 function can_action_siege(avail) {
+	let here = get_lord_locale(game.command)
 	if (!is_first_action())
 		return false
-	if (is_stronghold(game.where)) {
-		if (count_besieged_lords(game.where) === 0)
+	console.log("SIEGE?", here, data.locales[here].name, is_stronghold(here))
+	if (is_stronghold(here)) {
+		if (count_besieged_lords(here) === 0)
 			return true
-		if (count_besieging_lords(game.where) >= stronghold_strength(game.where))
+		if (count_besieging_lords(here) >= stronghold_strength(here))
 			return true
+		console.log("no effect")
 		// no effect if no surrender, no siegeworks, and no enemy lords to starve
 	}
+	console.log("not stronghold?")
 	return false
 }
 
 function do_action_siege() {
 	push_undo()
-	if (count_besieged_lords(game.where) > 0)
+	let here = get_lord_locale(game.command)
+	if (count_besieged_lords(here) > 0)
 		game.state = "surrender"
 	else 
-		siege_1()
+		siegeworks_1()
 }
 
 states.surrender = {
@@ -2816,8 +2822,9 @@ states.surrender = {
 }
 
 function siegeworks_1() {
-	if (count_besieging_lords(game.where) >= stronghold_strength(game.where)) {
-		if (count_siege_markers(game.where) < 4) {
+	let here = get_lord_locale(game.command)
+	if (count_besieging_lords(here) >= stronghold_strength(here)) {
+		if (count_siege_markers(here) < 4) {
 			game.state = "siegeworks"
 		}
 	}
@@ -2827,19 +2834,22 @@ function siegeworks_1() {
 states.siegeworks = {
 	prompt() {
 		view.prompt = "Siege: Add one Siege marker."
-		gen_action_locale(game.where)
+		let here = get_lord_locale(game.command)
+		gen_action_locale(here)
 	},
-	locale(loc) {
+	locale(here) {
 		log("Added Siege marker.")
-		add_siege_marker(game.where)
+		add_siege_marker(here)
 		siegeworks_2()
 	},
 }
 
 function siegeworks_2() {
+	let here = get_lord_locale(game.command)
+
 	// All Lords of both sides moved/fought
 	for (let lord = first_lord; lord <= last_lord; ++lord)
-		if (get_lord_locale(lord) === game.where)
+		if (get_lord_locale(lord) === here)
 			set_lord_moved(lord, 1)
 
 	spend_all_actions()
@@ -2885,7 +2895,7 @@ function can_action_supply(avail) {
 function can_action_forage(avail) {
 	if (avail < 1)
 		return false
-	let here = get_lord_locale(game.who)
+	let here = get_lord_locale(game.command)
 	if (has_ravaged_marker(here))
 		return false
 	if (current_season() === SUMMER)
@@ -2897,9 +2907,9 @@ function can_action_forage(avail) {
 
 function do_action_forage() {
 	push_undo()
-	let here = get_lord_locale(game.who)
+	let here = get_lord_locale(game.command)
 	log(`Foraged at %${here}`)
-	add_lord_assets(game.who, PROV, 1)
+	add_lord_assets(game.command, PROV, 1)
 	spend_action(1)
 }
 
@@ -2912,15 +2922,15 @@ function has_not_used_teutonic_raiders() {
 function this_lord_has_teutonic_raiders() {
 	if (game.active === TEUTONS)
 		if (has_not_used_teutonic_raiders())
-			if (lord_has_capability(game.who, AOW_TEUTONIC_RAIDERS))
-				return count_lord_horses(game.who) > 0
+			if (lord_has_capability(game.command, AOW_TEUTONIC_RAIDERS))
+				return count_lord_horses(game.command) > 0
 	return false
 }
 
 function this_lord_has_russian_raiders() {
 	if (game.active === RUSSIANS)
-		if (lord_has_capability(game.who, AOW_RUSSIAN_RAIDERS))
-			return get_lord_forces(game.who, LIGHT_HORSE) + get_lord_forces(game.who, ASIATIC_HORSE) > 0
+		if (lord_has_capability(game.command, AOW_RUSSIAN_RAIDERS))
+			return get_lord_forces(game.command, LIGHT_HORSE) + get_lord_forces(game.command, ASIATIC_HORSE) > 0
 	return false
 }
 
@@ -2938,7 +2948,7 @@ function can_action_ravage(avail) {
 	if (avail < 1)
 		return false
 
-	let here = get_lord_locale(game.who)
+	let here = get_lord_locale(game.command)
 
 	if (can_ravage_locale(here))
 		return true
@@ -2963,7 +2973,7 @@ function do_action_ravage() {
 	if (this_lord_has_teutonic_raiders() || this_lord_has_russian_raiders()) {
 		game.state = "ravage"
 	} else {
-		let here = get_lord_locale(game.who)
+		let here = get_lord_locale(game.command)
 		ravage_location(here, here)
 	}
 }
@@ -2972,7 +2982,7 @@ states.ravage = {
 	prompt() {
 		view.prompt = `Ravage: Choose enemy territory to ravage!`
 
-		let here = get_lord_locale(game.who)
+		let here = get_lord_locale(game.command)
 
 		if (can_ravage_locale(here))
 			gen_action_locale(here)
@@ -2990,7 +3000,7 @@ states.ravage = {
 		}
 	},
 	locale(there) {
-		let here = get_lord_locale(game.who)
+		let here = get_lord_locale(game.command)
 		ravage_location(here, there)
 		game.state = "actions"
 	},
@@ -3000,7 +3010,7 @@ function ravage_location(here, there) {
 	log(`Ravaged at %${there}.`)
 
 	add_ravaged_marker(there)
-	add_lord_assets(game.who, PROV, 1)
+	add_lord_assets(game.command, PROV, 1)
 
 	if (here !== there && game.active === TEUTONS)
 		set_flag(FLAG_TEUTONIC_RAIDERS)
@@ -3008,7 +3018,7 @@ function ravage_location(here, there) {
 	if (!is_region(there)) {
 		// R12 Raiders - take no loot from adjacent
 		if (here === there || game.active !== RUSSIANS)
-			add_lord_assets(game.who, LOOT, 1)
+			add_lord_assets(game.command, LOOT, 1)
 	}
 
 	spend_action(1)
@@ -3022,24 +3032,24 @@ function can_action_tax(avail) {
 		return false
 
 	// Must have space left to hold Coin
-	if (get_lord_assets(game.who, COIN) >= 8)
+	if (get_lord_assets(game.command, COIN) >= 8)
 		return false
 
 	// Must be at own seat
-	return is_lord_at_seat(game.who);
+	return is_lord_at_seat(game.command);
 }
 
 function do_action_tax()  {
 	push_undo()
 
-	let here = get_lord_locale(game.who)
+	let here = get_lord_locale(game.command)
 	log(`Taxed %${here}.`)
 
-	add_lord_assets(game.who, COIN, 1)
+	add_lord_assets(game.command, COIN, 1)
 
 	spend_all_actions()
 
-	if (lord_has_capability(game.who, AOW_RUSSIAN_VELIKY_KNYAZ)) {
+	if (lord_has_capability(game.command, AOW_RUSSIAN_VELIKY_KNYAZ)) {
 		push_state("veliky_knyaz")
 		// TODO: restore mustered forces
 		game.count = 2
@@ -3096,24 +3106,24 @@ function count_lord_boats(lord) {
 }
 
 function has_enough_available_ships_for_horses() {
-	let here = get_lord_locale(game.who)
+	let here = get_lord_locale(game.command)
 
 	let horse_size = 1
 	if (game.active === RUSSIANS)
 		horse_size = 2
 
-	let ships = count_lord_ships(game.who)
-	let horses = count_lord_horses(game.who) * horse_size
+	let ships = count_lord_ships(game.command)
+	let horses = count_lord_horses(game.command) * horse_size
 
-	let lower = get_lower_lord(game.who)
+	let lower = get_lower_lord(game.command)
 	if (lower !== NOBODY) {
 		ships += count_lord_ships(lower)
 		horses += count_lord_horses(lower) * horse_size
 	}
 
-	if (is_marshal(game.who)) {
+	if (is_marshal(game.command)) {
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
-			if (lord !== game.who && !is_lower_lord(lord) && get_lord_locale(lord) === here) {
+			if (lord !== game.command && !is_lower_lord(lord) && get_lord_locale(lord) === here) {
 				let extra_ships = count_lord_ships(lord)
 				let extra_horses = count_lord_horses(lord) * horse_size
 				if (extra_ships >= extra_horses)
@@ -3133,7 +3143,7 @@ function can_action_sail(avail) {
 		return false
 
 	// at a seaport
-	let here = get_lord_locale(game.who)
+	let here = get_lord_locale(game.command)
 	if (!is_seaport(here))
 		return false
 
@@ -3160,7 +3170,7 @@ states.sail = {
 	prompt() {
 		view.group = game.group
 
-		let here = get_lord_locale(game.who)
+		let here = get_lord_locale(game.command)
 		let ships = count_group_ships()
 		let horses = count_group_horses()
 		let prov = count_group_assets(PROV)
@@ -3206,9 +3216,9 @@ states.sail = {
 		}
 
 		// 4.3.2 Marshals MAY take other lords
-		if (is_marshal(game.who)) {
+		if (is_marshal(game.command)) {
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-				if (lord !== game.who && !is_lower_lord(lord))
+				if (lord !== game.command && !is_lower_lord(lord))
 					if (get_lord_locale(lord) === here)
 						// TODO: toggle instead of undo, but then no discarding?
 						if (!set_has(game.group, lord))
@@ -3216,7 +3226,7 @@ states.sail = {
 		}
 
 		// 1.4.1 Teutonic lords MAY take the Legate
-		if (game.active === TEUTONS && is_located_with_legate(game.who)) {
+		if (game.active === TEUTONS && is_located_with_legate(game.command)) {
 			view.actions.legate = 1
 		}
 
