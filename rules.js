@@ -98,43 +98,43 @@ const first_p2_card = 21
 const last_p2_card = 38
 const last_p2_card_no_event = 41
 
-const AOW_T1 = find_card("T1")
-const AOW_T2 = find_card("T2")
-const AOW_T3 = find_card("T3")
-const AOW_T4 = find_card("T4")
-const AOW_T5 = find_card("T5")
-const AOW_T6 = find_card("T6")
-const AOW_T7 = find_card("T7")
-const AOW_T8 = find_card("T8")
-const AOW_T9 = find_card("T9")
-const AOW_T10 = find_card("T10")
-const AOW_T11 = find_card("T11")
-const AOW_T12 = find_card("T12")
-const AOW_T13 = find_card("T13")
-const AOW_T14 = find_card("T14")
-const AOW_T15 = find_card("T15")
-const AOW_T16 = find_card("T16")
-const AOW_T17 = find_card("T17")
-const AOW_T18 = find_card("T18")
+const T1 = find_card("T1")
+const T2 = find_card("T2")
+const T3 = find_card("T3")
+const T4 = find_card("T4")
+const T5 = find_card("T5")
+const T6 = find_card("T6")
+const T7 = find_card("T7")
+const T8 = find_card("T8")
+const T9 = find_card("T9")
+const T10 = find_card("T10")
+const T11 = find_card("T11")
+const T12 = find_card("T12")
+const T13 = find_card("T13")
+const T14 = find_card("T14")
+const T15 = find_card("T15")
+const T16 = find_card("T16")
+const T17 = find_card("T17")
+const T18 = find_card("T18")
 
-const AOW_R1 = find_card("R1")
-const AOW_R2 = find_card("R2")
-const AOW_R3 = find_card("R3")
-const AOW_R4 = find_card("R4")
-const AOW_R5 = find_card("R5")
-const AOW_R6 = find_card("R6")
-const AOW_R7 = find_card("R7")
-const AOW_R8 = find_card("R8")
-const AOW_R9 = find_card("R9")
-const AOW_R10 = find_card("R10")
-const AOW_R11 = find_card("R11")
-const AOW_R12 = find_card("R12")
-const AOW_R13 = find_card("R13")
-const AOW_R14 = find_card("R14")
-const AOW_R15 = find_card("R15")
-const AOW_R16 = find_card("R16")
-const AOW_R17 = find_card("R17")
-const AOW_R18 = find_card("R18")
+const R1 = find_card("R1")
+const R2 = find_card("R2")
+const R3 = find_card("R3")
+const R4 = find_card("R4")
+const R5 = find_card("R5")
+const R6 = find_card("R6")
+const R7 = find_card("R7")
+const R8 = find_card("R8")
+const R9 = find_card("R9")
+const R10 = find_card("R10")
+const R11 = find_card("R11")
+const R12 = find_card("R12")
+const R13 = find_card("R13")
+const R14 = find_card("R14")
+const R15 = find_card("R15")
+const R16 = find_card("R16")
+const R17 = find_card("R17")
+const R18 = find_card("R18")
 
 const LORD_ANDREAS = find_lord("Andreas")
 const LORD_HEINRICH = find_lord("Heinrich")
@@ -191,16 +191,35 @@ const FLAG_TEUTONIC_HILLFORTS = 1 << 5
 const FLAG_RUSSIAN_LODYA_BOATS = 1 << 6
 const FLAG_RUSSIAN_LODYA_SHIPS = 1 << 7
 
-const AOW_TEUTONIC_RAIDERS = AOW_T2
-const AOW_TEUTONIC_COGS = AOW_T18
-const AOW_TEUTONIC_CONVERTS = AOW_T3
-const AOW_TEUTONIC_ORDENSBURGEN = AOW_T12
-const AOW_TEUTONIC_BALISTARII = [ AOW_T4, AOW_T5, AOW_T6 ]
+const AOW_TEUTONIC_TREATY_OF_STENSBY = T1
+const AOW_TEUTONIC_RAIDERS = T2
+const AOW_TEUTONIC_CONVERTS = T3
+const AOW_TEUTONIC_BALISTARII = [ T4, T5, T6 ]
+const AOW_TEUTONIC_WARRIOR_MONKS = [ T7, T15 ]
+const AOW_TEUTONIC_HILLFORTS = T8
+const AOW_TEUTONIC_HALBBRUDER = [ T9, T10 ]
+const AOW_TEUTONIC_CRUSADE = T11
+const AOW_TEUTONIC_ORDENSBURGEN = T12
+const AOW_TEUTONIC_WILLIAM_OF_MODENA = T13
+const AOW_TEUTONIC_TREBUCHETS = T14
+const AOW_TEUTONIC_RANSOM = T16
+const AOW_TEUTONIC_STONEMASONS = T17
+const AOW_TEUTONIC_COGS = T18
 
-const AOW_RUSSIAN_RAIDERS = [ AOW_R12, AOW_R14 ]
-const AOW_RUSSIAN_LUCHNIKI = [ AOW_R1, AOW_R2 ]
-const AOW_RUSSIAN_DRUZHINA = [ AOW_R5, AOW_R6 ]
-const AOW_RUSSIAN_HOUSE_OF_SUZDAL = AOW_R11
+const AOW_RUSSIAN_LUCHNIKI = [ R1, R2 ]
+const AOW_RUSSIAN_STRELTSY = [ R3, R13 ]
+const AOW_RUSSIAN_SMERDI = R4
+const AOW_RUSSIAN_DRUZHINA = [ R5, R6 ]
+const AOW_RUSSIAN_RANSOM = R7
+const AOW_RUSSIAN_BLACK_SEA_TRADE = R8
+const AOW_RUSSIAN_BALTIC_SEA_TRADE = R9
+const AOW_RUSSIAN_STEPPE_WARRIORS = R10
+const AOW_RUSSIAN_HOUSE_OF_SUZDAL = R11
+const AOW_RUSSIAN_RAIDERS = [ R12, R14 ]
+const AOW_RUSSIAN_ARCHBISHOPRIC = R15
+const AOW_RUSSIAN_LODYA = R16
+const AOW_RUSSIAN_VELIKY_KNYAZ = R17
+const AOW_RUSSIAN_STONE_KREMLIN = R18
 
 // TODO: advanced service
 const VASSAL_UNAVAILABLE = 0
@@ -487,7 +506,7 @@ function roll_die() {
 
 function has_global_capability(cap) {
 	for (let c of game.capabilities)
-		if (data.cards[c].capability === cap)
+		if (c === cap)
 			return true
 	return false
 }
@@ -612,11 +631,11 @@ function is_lord_ready(lord) {
 
 function is_vassal_available(vassal) {
 	let cap = data.vassals[vassal].capability
-	if (!cap)
-		return 1
-	if (has_global_capability(cap))
-		return 1
-	return 0
+	if (cap === "Crusade")
+		return has_global_capability(AOW_TEUTONIC_CRUSADE)
+	if (cap === "Steppe Warriors")
+		return has_global_capability(AOW_RUSSIAN_STEPPE_WARRIORS)
+	return false
 }
 
 function is_vassal_unavailable(vassal) {
@@ -659,7 +678,7 @@ function for_each_seat(lord, fn) {
 		fn(seat)
 
 	if (is_teutonic_lord(lord)) {
-		if (has_global_capability("Ordensburgen")) {
+		if (has_global_capability(AOW_TEUTONIC_ORDENSBURGEN)) {
 			for (let commandery of COMMANDERIES)
 				if (!set_has(list, commandery))
 					fn(seat)
@@ -667,7 +686,7 @@ function for_each_seat(lord, fn) {
 	}
 
 	if (is_russian_lord(lord)) {
-		if (has_global_capability("Archbishopric"))
+		if (has_global_capability(AOW_RUSSIAN_ARCHBISHOPRIC))
 			if (!set_has(list, LOC_NOVGOROD))
 				fn(LOC_NOVGOROD)
 	}
@@ -891,14 +910,14 @@ function count_lord_transport(lord, way) {
 		case "waterway":
 			switch (season) {
 				case SUMMER:
-					n += get_lord_assets(lord, BOAT)
+					n += count_lord_boats(lord)
 					break
 				case EARLY_WINTER:
 				case LATE_WINTER:
 					n += get_lord_assets(lord, SLED)
 					break
 				case RASPUTITSA:
-					n += get_lord_assets(lord, BOAT)
+					n += count_lord_boats(lord)
 					break
 			}
 			break
@@ -1343,22 +1362,22 @@ function setup_pleskau_quickstart() {
 	add_lord_assets(LORD_KNUD_ABEL, BOAT, 1)
 
 	muster_vassal(LORD_HERMANN, data.lords[LORD_HERMANN].vassals[0])
-	set_lord_capability(LORD_HERMANN, 0, AOW_T4)
-	set_lord_capability(LORD_HERMANN, 1, AOW_T14)
+	set_lord_capability(LORD_HERMANN, 0, T4)
+	set_lord_capability(LORD_HERMANN, 1, T14)
 
-	set_lord_capability(LORD_YAROSLAV, 0, AOW_T3)
+	set_lord_capability(LORD_YAROSLAV, 0, T3)
 
-	set_add(game.capabilities, AOW_T13)
+	set_add(game.capabilities, T13)
 	game.call_to_arms.legate = LOC_DORPAT
 
-	set_add(game.capabilities, AOW_R8)
+	set_add(game.capabilities, R8)
 	muster_lord(LORD_DOMASH, LOC_NOVGOROD)
 	add_lord_assets(LORD_DOMASH, BOAT, 2)
 	add_lord_assets(LORD_DOMASH, CART, 2)
 
 	muster_vassal(LORD_GAVRILO, data.lords[LORD_GAVRILO].vassals[0])
-	set_lord_capability(LORD_GAVRILO, 0, AOW_R2)
-	set_lord_capability(LORD_GAVRILO, 1, AOW_R6)
+	set_lord_capability(LORD_GAVRILO, 0, R2)
+	set_lord_capability(LORD_GAVRILO, 1, R6)
 
 	game.call_to_arms.veche_coin += 1
 
@@ -1760,7 +1779,10 @@ function resume_muster_lord_transport() {
 
 states.muster_lord_transport = {
 	prompt() {
-		view.prompt = `Muster: Select Transport for ${lord_name[game.who]}.`
+		if (game.state === "veliky_knyaz")
+			view.prompt = `Veliky Knyaz: Select Transport for ${lord_name[game.who]}.`
+		else
+			view.prompt = `Muster: Select Transport for ${lord_name[game.who]}.`
 		view.prompt += ` ${game.count} left.`
 		if (data.lords[game.who].ships) {
 			if (can_add_transport(game.who, SHIP))
@@ -2114,7 +2136,7 @@ function goto_actions() {
 	game.count = 0
 
 	if (game.active === TEUTONS) {
-		if (has_global_capability("Ordensburgen")) {
+		if (has_global_capability(AOW_TEUTONIC_ORDENSBURGEN)) {
 			if (is_commandery(get_lord_locale(game.who)))
 				set_flag(FLAG_TEUTONIC_ORDENSBURGEN)
 		}
@@ -2160,7 +2182,7 @@ function get_available_actions() {
 		if (has_flag(FLAG_TEUTONIC_ORDENSBURGEN))
 			++n
 		if (game.who === LORD_HEINRICH || game.who === LORD_KNUD_ABEL)
-			if (has_global_capability("Treaty of Stensby"))
+			if (has_global_capability(AOW_TEUTONIC_TREATY_OF_STENSBY))
 				++n
 	}
 
@@ -2607,18 +2629,25 @@ function can_action_tax() {
 	return is_lord_at_seat(game.who);
 }
 
-function do_action_tax() {
+function do_action_tax()  {
 	push_undo()
-	tax_with_lord(game.who)
-}
 
-function tax_with_lord(lord) {
 	let here = get_lord_locale(lord)
 	log(`Taxed %${here}.`)
+
 	add_lord_assets(lord, COIN, 1)
+
 	use_all_actions()
 	game.state = "actions"
+
+	if (lord_has_capability(lord, AOW_RUSSIAN_VELIKY_KNYAZ)) {
+		push_state("veliky_knyaz")
+		// TODO: restore mustered forces
+		game.count = 2
+	}
 }
+
+states.veliky_knyaz = states.muster_lord_transport
 
 // === ACTION: SAIL ===
 
@@ -2633,15 +2662,41 @@ function drop_loot(lord) {
 }
 
 function count_lord_ships(lord) {
-	let n = get_lord_assets(lord, SHIP)
-	if (lord_has_capability(AOW_TEUTONIC_COGS))
-		return n * 2
-	return n
+	let ships = get_lord_assets(lord, SHIP)
+
+	if (lord_has_capability(AOW_TEUTONIC_COGS)) {
+		ships *= 2
+	}
+
+	if (lord_has_capability(AOW_RUSSIAN_LODYA)) {
+		// TODO: one option or the other (only matters for supply)
+		let boats = get_lord_assets(lord, BOAT)
+		if (boats > 2)
+			boats = 2
+		ships += boats
+	}
+
+	return ships
+}
+
+function count_lord_boats(lord) {
+	let boats = get_lord_boats(lord, BOAT)
+
+	if (lord_has_capability(AOW_RUSSIAN_LODYA)) {
+		// TODO: one option or the other (only matters for supply)
+		let ships = get_lord_assets(lord, SHIP)
+		if (ships > 2)
+			ships = 2
+		if (boats * 2 > boats + ships)
+			boats = boats * 2
+		else
+			boats = boats + ships
+	}
+
+	return boats
 }
 
 function has_enough_available_ships_for_horses() {
-	// TODO: Cogs
-
 	let here = get_lord_locale(game.who)
 
 	let horse_size = 1
