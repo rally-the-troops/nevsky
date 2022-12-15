@@ -151,6 +151,8 @@ const LORD_KARELIANS = find_lord("Karelians")
 const LORD_VLADISLAV = find_lord("Vladislav")
 
 const LEGATE = 100
+const LEGATE_INDISPOSED = -2
+const LEGATE_ARRIVED = -1
 
 const LOC_REVAL = find_locale("Reval")
 const LOC_WESENBERG = find_locale("Wesenberg")
@@ -979,6 +981,8 @@ function is_located_with_legate(lord) {
 	return get_lord_locale(lord) === game.call_to_arms.legate
 }
 
+// TODO: include active lord in group and select legate by other means to simplify group_ functions?
+
 function for_each_group_lord(fn) {
 	fn(game.who)
 	if (game.group)
@@ -1142,7 +1146,7 @@ exports.setup = function (seed, scenario, options) {
 		},
 
 		call_to_arms: {
-			legate: NOWHERE,
+			legate: LEGATE_INDISPOSED,
 			veche_vp: 0,
 			veche_coin: 0,
 		},
@@ -2135,6 +2139,13 @@ function goto_actions() {
 	game.who = game.command
 	game.count = 0
 
+	// 4.1.3 Lieutenants MUST take lower lord
+	let lower = get_lower_lord(game.who)
+	if (lower !== NOBODY)
+		game.group = [ lower ]
+	else
+		game.group = []
+
 	if (game.active === TEUTONS) {
 		if (has_global_capability(AOW_TEUTONIC_ORDENSBURGEN)) {
 			if (is_commandery(get_lord_locale(game.who)))
@@ -2206,44 +2217,46 @@ states.actions = {
 
 		view.prompt = `${lord_name[game.who]} has ${avail}x actions.`
 
-		if (game.active === TEUTONS) {
-			if (game.count === 0 && is_located_with_legate())
-				view.actions.legate = 1
+		if (avail > 0)
+			view.actions.pass = 1
+		else
+			view.actions.end_actions = 1
+
+		if (is_lord_besieged(game.who)) {
+			view.actions.sally = 1
 		}
 
-		if (avail > 0) {
-			if (is_lord_besieged(game.who)) {
-				if (can_action_sally())
-					view.actions.sally = 1
-				view.actions.pass = 1
-			} else {
-				if (can_action_march())
-					view.actions.march = 1
-				if (can_action_siege())
-					view.actions.siege = 1
-				if (can_action_storm())
-					view.actions.storm = 1
-				if (can_action_supply())
-					view.actions.supply = 1
-				if (can_action_forage())
-					view.actions.forage = 1
-				if (can_action_ravage())
-					view.actions.ravage = 1
-				if (can_action_tax())
-					view.actions.tax = 1
-				if (can_action_sail())
-					view.actions.sail = 1
-				view.actions.pass = 1
+		else {
+			if (game.active === TEUTONS) {
+				if (game.count === 0 && is_located_with_legate() && !has_flag(FLAG_LEGATE))
+					view.actions.use_legate = 1
 			}
-		} else {
-			view.actions.end_actions = 1
+
+			march_prompt(avail)
+
+			if (can_action_siege(avail))
+				view.actions.siege = 1
+			if (can_action_storm(avail))
+				view.actions.storm = 1
+			if (can_action_supply(avail))
+				view.actions.supply = 1
+			if (can_action_forage(avail))
+				view.actions.forage = 1
+			if (can_action_ravage(avail))
+				view.actions.ravage = 1
+			if (can_action_tax(avail))
+				view.actions.tax = 1
+			if (can_action_sail(avail))
+				view.actions.sail = 1
 		}
 	},
-	march: do_action_march,
-	forage: do_action_forage,
-	ravage: do_action_ravage,
-	sail: do_action_sail,
-	tax: do_action_tax,
+
+	use_legate() {
+		push_undo()
+		log(`Used Legate for +1 Command.`)
+		set_flag(FLAG_LEGATE)
+		game.call_to_arms.legate = LEGATE_ARRIVED
+	},
 	pass() {
 		push_undo()
 		log("Passed.")
@@ -2253,6 +2266,15 @@ states.actions = {
 		clear_undo()
 		end_actions()
 	},
+
+	forage: do_action_forage,
+	ravage: do_action_ravage,
+	sail: do_action_sail,
+	tax: do_action_tax,
+
+	locale: march_action_locale,
+	lord: march_action_lord,
+	legate: march_action_legate,
 }
 
 // === ACTION: MARCH ===
@@ -2267,34 +2289,14 @@ function group_has_teutonic_converts() {
 	return false
 }
 
-function can_action_march() {
-	return true
-}
-
-function do_action_march() {
-	push_undo()
-	game.state = 'march'
-
-	// Initialize group on first March!
-	if (!game.group) {
-		// 4.1.3 Lieutenants MUST take lower lord
-		let lower = get_lower_lord(game.who)
-		if (lower !== NOBODY)
-			game.group = [ lower ]
-		else
-			game.group = []
-	}
-}
-
-states.march = {
-	prompt() {
-		view.prompt = `March: Select destination.`
-		view.group = game.group
-
+function march_prompt(avail) {
+	if (avail > 0 || group_has_teutonic_converts()) {
 		let here = get_lord_locale(game.who)
 
-		for (let [to] of data.locales[here].ways)
+		for (let [ to ] of data.locales[here].ways)
 			gen_action_locale(to)
+
+		view.group = game.group
 
 		// 4.3.2 Marshals MAY take other lords
 		if (is_marshal(game.who)) {
@@ -2308,28 +2310,31 @@ states.march = {
 		if (game.active === TEUTONS && is_located_with_legate(game.who)) {
 			view.actions.legate = 1
 		}
-	},
-	locale(to) {
-		push_undo()
-		let from = get_lord_locale(game.who)
-		let ways = list_ways(from, to)
-		if (ways.length > 2) {
-			game.where = to
-			game.state = 'march_way'
-		} else {
-			game.where = to
-			game.approach = ways[1]
-			march_with_group()
-		}
-	},
-	lord(lord) {
-		set_toggle(game.group, lord)
-		if (is_upper_lord(lord))
-			set_toggle(game.group, get_lower_lord(lord))
-	},
-	legate() {
-		set_toggle(game.group, LEGATE)
-	},
+	}
+}
+
+function march_action_locale(to) {
+	push_undo()
+	let from = get_lord_locale(game.who)
+	let ways = list_ways(from, to)
+	if (ways.length > 2) {
+		game.where = to
+		game.state = "march_way"
+	} else {
+		game.where = to
+		game.approach = ways[1]
+		march_with_group()
+	}
+}
+
+function march_action_lord(lord) {
+	set_toggle(game.group, lord)
+	if (is_upper_lord(lord))
+		set_toggle(game.group, get_lower_lord(lord))
+}
+
+function march_action_legate() {
+	set_toggle(game.group, LEGATE)
 }
 
 states.march_way = {
@@ -2463,45 +2468,50 @@ function march_with_group_2(laden) {
 
 // === ACTION: SIEGE ===
 
-function can_action_siege() {
+function can_action_siege(avail) {
+	if (game.count > 0)
+		return false
 	return false
 }
 
 // === ACTION: STORM ===
 
-function can_action_storm() {
+function can_action_storm(avail) {
+	if (avail < 1)
+		return false
 	return false
 }
 
 // === ACTION: SALLY ===
 
-function can_action_sally() {
-	return is_lord_besieged(game.who)
-}
-
 // === ACTION: SUPPLY ===
 
-function can_action_supply() {
+function can_action_supply(avail) {
+	if (avail < 1)
+		return false
+
 	return false
 }
 
 // === ACTION: FORAGE ===
 
-function can_action_forage() {
-	let where = get_lord_locale(game.who)
-	if (has_ravaged_marker(where))
+function can_action_forage(avail) {
+	if (avail < 1)
+		return false
+	let here = get_lord_locale(game.who)
+	if (has_ravaged_marker(here))
 		return false
 	if (current_season() === SUMMER)
 		return true
-	if (is_friendly_stronghold(where))
+	if (is_friendly_stronghold(here))
 		return true
 	return false
 }
 
 function do_action_forage() {
 	push_undo()
-	let where = get_lord_locale(game.who)
-	log(`Foraged at %${where}`)
+	let here = get_lord_locale(game.who)
+	log(`Foraged at %${here}`)
 	add_lord_assets(game.who, PROV, 1)
 	game.count += 1
 }
@@ -2536,10 +2546,12 @@ function can_ravage_locale(loc) {
 	)
 }
 
-function can_action_ravage() {
-	let here = get_lord_locale(game.who)
-
+function can_action_ravage(avail) {
 	// TODO: cost 2 if enemy lord is adjacent (2nd ed)
+	if (avail < 1)
+		return false
+
+	let here = get_lord_locale(game.who)
 
 	if (can_ravage_locale(here))
 		return true
@@ -2572,6 +2584,7 @@ function do_action_ravage() {
 states.ravage = {
 	prompt() {
 		view.prompt = `Ravage: Choose enemy territory to ravage!`
+
 		let here = get_lord_locale(game.who)
 
 		if (can_ravage_locale(here))
@@ -2616,7 +2629,7 @@ function ravage_location(here, there) {
 
 // === ACTION: TAX ===
 
-function can_action_tax() {
+function can_action_tax(avail) {
 	// Must use whole action
 	if (game.count > 0)
 		return false
@@ -2632,15 +2645,15 @@ function can_action_tax() {
 function do_action_tax()  {
 	push_undo()
 
-	let here = get_lord_locale(lord)
+	let here = get_lord_locale(game.who)
 	log(`Taxed %${here}.`)
 
-	add_lord_assets(lord, COIN, 1)
+	add_lord_assets(game.who, COIN, 1)
 
 	use_all_actions()
 	game.state = "actions"
 
-	if (lord_has_capability(lord, AOW_RUSSIAN_VELIKY_KNYAZ)) {
+	if (lord_has_capability(game.who, AOW_RUSSIAN_VELIKY_KNYAZ)) {
 		push_state("veliky_knyaz")
 		// TODO: restore mustered forces
 		game.count = 2
@@ -2680,9 +2693,9 @@ function count_lord_ships(lord) {
 }
 
 function count_lord_boats(lord) {
-	let boats = get_lord_boats(lord, BOAT)
+	let boats = get_lord_assets(lord, BOAT)
 
-	if (lord_has_capability(AOW_RUSSIAN_LODYA)) {
+	if (lord_has_capability(lord, AOW_RUSSIAN_LODYA)) {
 		// TODO: one option or the other (only matters for supply)
 		let ships = get_lord_assets(lord, SHIP)
 		if (ships > 2)
@@ -2728,14 +2741,14 @@ function has_enough_available_ships_for_horses() {
 	return ships >= horses
 }
 
-function can_action_sail() {
+function can_action_sail(avail) {
 	// Must use whole action
 	if (game.count > 0)
 		return false
 
 	// at a seaport
-	let where = get_lord_locale(game.who)
-	if (!is_seaport(where))
+	let here = get_lord_locale(game.who)
+	if (!is_seaport(here))
 		return false
 
 	// during Rasputitsa or Summer

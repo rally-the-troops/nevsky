@@ -23,7 +23,10 @@ const VASSAL_MUSTERED = 2
 
 const NOWHERE = -1
 const CALENDAR = 100
+
 const LEGATE = 100
+const LEGATE_INDISPOSED = -2
+const LEGATE_ARRIVED = -1
 
 const round = Math.round
 const floor = Math.floor
@@ -965,13 +968,13 @@ function update_lord(ix) {
 }
 
 function update_legate() {
-	if (view.call_to_arms.legate < 0) {
+	if (view.call_to_arms.legate === LEGATE_INDISPOSED) {
 		ui.legate.classList.add("hide")
 	} else {
 		ui.legate.classList.remove("hide")
 		ui.legate.classList.toggle("action", is_legate_action())
 		ui.legate.classList.toggle("selected", is_legate_selected())
-		if (view.call_to_arms.legate === 100) {
+		if (view.call_to_arms.legate === LEGATE_ARRIVED) {
 			ui.legate.style.top = "1580px"
 			ui.legate.style.left = "170px"
 		} else {
@@ -1229,6 +1232,8 @@ function on_update() {
 
 	action_button("laden", "Laden")
 	action_button("unladen", "Unladen")
+
+	action_button("use_legate", "Legate")
 
 	action_button("sail", "Sail")
 	action_button("march", "March")
