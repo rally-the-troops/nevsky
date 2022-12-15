@@ -1189,15 +1189,17 @@ exports.setup = function (seed, scenario, options) {
 			veche_coin: 0,
 		},
 
+		flags: 0,
 		command: NOBODY,
 		group: 0,
 		who: NOBODY,
 		where: NOWHERE,
 		what: NOTHING,
+		count: 0,
+
 		approach: 0,
 		avoid: 0,
-		count: 0,
-		flags: 0,
+		spoils: 0,
 	}
 
 	update_aliases()
@@ -1798,8 +1800,8 @@ states.muster_lord_at_seat = {
 	prompt() {
 		view.prompt = `Muster: Select seat for ${lord_name[game.who]}.`
 		for_each_seat(game.who, seat => {
-			if (is_friendly_locale(loc))
-				gen_action_locale(loc)
+			if (is_friendly_locale(seat))
+				gen_action_locale(seat)
 		})
 	},
 	locale(loc) {
@@ -2247,7 +2249,7 @@ function this_lord_has_russian_druzhina() {
 
 function this_lord_has_house_of_suzdal() {
 	if (game.active === RUSSIANS)
-		if (lord_has_capability(game.command, AOW_RUSSIAN_DRUZHINA))
+		if (lord_has_capability(game.command, AOW_RUSSIAN_HOUSE_OF_SUZDAL))
 			return is_lord_on_map(LORD_ALEKSANDR) || is_lord_on_map(LORD_ANDREY)
 	return false
 }
@@ -2576,6 +2578,18 @@ function march_with_group_3() {
 
 // === ACTION: MARCH - APPROACH - AVOID BATTLE / WITHDRAW ===
 
+function spoil_prov(lord) {
+	log("Discarded Provender.")
+	add_lord_assets(lord, PROV, -1)
+	game.spoils = pack4_set(game.spoils, PROV, pack4_get(game.spoils) + 1)
+}
+
+function spoil_loot(lord) {
+	log("Discarded Loot.")
+	add_lord_assets(lord, LOOT, -1)
+	game.spoils = pack4_set(game.spoils, LOOT, pack4_get(game.spoils) + 1)
+}
+
 function goto_approach () {
 	let to = game.where
 	set_active_enemy()
@@ -2583,6 +2597,7 @@ function goto_approach () {
 	game.who = NOBODY
 	game.state = "approach"
 	game.group = []
+	game.spoils = 0
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 		if (get_lord_locale(lord) === to)
 			game.group.push(lord)
@@ -2613,6 +2628,16 @@ function resume_approach() {
 		end_approach()
 }
 
+function can_avoid_battle(to, way) {
+	if (way === game.approach)
+		return false
+	if (has_unbesieged_enemy_lord(to))
+		return false
+	if (is_unbesieged_enemy_stronghold(to))
+		return false
+	return true
+}
+
 states.approach = {
 	prompt() {
 		view.prompt = `Approach: Avoid Battle, Withdraw, or Battle.`
@@ -2633,7 +2658,7 @@ states.approach = {
 			}
 
 			for (let [to, way] of data.locales[here].ways) {
-				if (way !== game.approach)
+				if (can_avoid_battle(to, way))
 					gen_action_locale(to)
 			}
 		}
@@ -2725,10 +2750,10 @@ states.avoid_battle_laden = {
 		}
 	},
 	prov(lord) {
-		drop_prov(lord)
+		spoil_prov(lord)
 	},
 	loot(lord) {
-		drop_loot(lord)
+		spoil_loot(lord)
 	},
 	locale(to) {
 		avoid_battle_2(false)
@@ -2761,7 +2786,14 @@ function end_approach() {
 	game.who = game.command
 	game.group = game.stack
 	game.stack = []
-	march_with_group_3()
+	goto_divide_spoils()
+}
+
+function goto_divide_spoils() {
+	if (game.spoils > 0)
+		game.state = "divide_spoils"
+	else
+		march_with_group_3()
 }
 
 // === ACTION: SIEGE ===
@@ -2782,23 +2814,20 @@ function can_action_siege(avail) {
 	let here = get_lord_locale(game.command)
 	if (!is_first_action())
 		return false
-	console.log("SIEGE?", here, data.locales[here].name, is_stronghold(here))
-	if (is_stronghold(here)) {
+	if (is_enemy_stronghold(here)) {
 		if (count_besieged_lords(here) === 0)
 			return true
 		if (count_besieging_lords(here) >= stronghold_strength(here))
 			return true
-		console.log("no effect")
 		// no effect if no surrender, no siegeworks, and no enemy lords to starve
 	}
-	console.log("not stronghold?")
 	return false
 }
 
 function do_action_siege() {
 	push_undo()
 	let here = get_lord_locale(game.command)
-	if (count_besieged_lords(here) > 0)
+	if (count_besieged_lords(here) === 0)
 		game.state = "surrender"
 	else 
 		siegeworks_1()
@@ -2853,6 +2882,8 @@ function siegeworks_2() {
 			set_lord_moved(lord, 1)
 
 	spend_all_actions()
+
+	game.state = "actions"
 }
 
 // === ACTION: STORM ===
@@ -3002,7 +3033,6 @@ states.ravage = {
 	locale(there) {
 		let here = get_lord_locale(game.command)
 		ravage_location(here, there)
-		game.state = "actions"
 	},
 }
 
@@ -3022,6 +3052,8 @@ function ravage_location(here, there) {
 	}
 
 	spend_action(1)
+
+	game.state = "actions"
 }
 
 // === ACTION: TAX ===
@@ -3253,6 +3285,8 @@ states.sail = {
 		push_undo()
 		log(`Sailed to %${to}.`)
 
+		let from = get_lord_locale(game.command)
+
 		for_each_group_lord(lord => {
 			set_lord_locale(lord, to)
 			set_lord_moved(lord, 1)
@@ -3263,7 +3297,7 @@ states.sail = {
 		if (is_enemy_stronghold(from))
 			lift_siege(from)
 
-		remove_legate_if_alone_with_russian_lord(here)
+		remove_legate_if_alone_with_russian_lord(from)
 
 		if (is_unbesieged_enemy_stronghold(to))
 			add_siege_marker(to)
@@ -3552,6 +3586,8 @@ function goto_disband() {
 }
 
 function disband_lord(lord) {
+	let here = get_lord_locale(lord)
+
 	if (get_lord_service(lord) < current_turn()) {
 		log(`Disbanded L${lord} beyond service limit`)
 		set_lord_locale(lord, NOWHERE)
@@ -3577,7 +3613,8 @@ function disband_lord(lord) {
 	for (let v of data.lords[lord].vassals)
 		game.lords.vassals[v] = VASSAL_UNAVAILABLE
 
-	// TODO: check lifted siege
+	if (is_besieged_enemy_stronghold(here) && !has_friendly_lord(here))
+		lift_siege(here)
 }
 
 states.disband = {
