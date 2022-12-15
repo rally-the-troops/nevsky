@@ -24,7 +24,7 @@ const VASSAL_MUSTERED = 2
 const NOWHERE = -1
 const CALENDAR = 100
 
-const LEGATE = 100
+const LEGATE = 20
 const LEGATE_INDISPOSED = -2
 const LEGATE_ARRIVED = -1
 

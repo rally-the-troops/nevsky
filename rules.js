@@ -150,7 +150,7 @@ const LORD_GAVRILO = find_lord("Gavrilo")
 const LORD_KARELIANS = find_lord("Karelians")
 const LORD_VLADISLAV = find_lord("Vladislav")
 
-const LEGATE = 100
+const LEGATE = 20
 const LEGATE_INDISPOSED = -2
 const LEGATE_ARRIVED = -1
 
@@ -184,14 +184,17 @@ const LOC_TESOVO = find_locale("Tesovo")
 const LOC_SABLIA = find_locale("Sablia")
 
 // Capability usage tracking flags
-const FLAG_LEGATE = 1 << 0
-const FLAG_TEUTONIC_RAIDERS = 1 << 1
-const FLAG_TEUTONIC_CONVERTS = 1 << 2
-const FLAG_TEUTONIC_ORDENSBURGEN = 1 << 3
-const FLAG_TEUTONIC_WARRIOR_MONKS = 1 << 4
-const FLAG_TEUTONIC_HILLFORTS = 1 << 5
-const FLAG_RUSSIAN_LODYA_BOATS = 1 << 6
-const FLAG_RUSSIAN_LODYA_SHIPS = 1 << 7
+const FLAG_FIRST_ACTION = 1 << 0
+const FLAG_FIRST_MARCH = 1 << 1
+const FLAG_USED_LEGATE = 1 << 2
+
+const FLAG_TEUTONIC_RAIDERS = 1 << 3
+const FLAG_TEUTONIC_ORDENSBURGEN = 1 << 4
+
+const FLAG_TEUTONIC_WARRIOR_MONKS = 1 << 5
+const FLAG_TEUTONIC_HILLFORTS = 1 << 6
+const FLAG_RUSSIAN_LODYA_BOATS = 1 << 7
+const FLAG_RUSSIAN_LODYA_SHIPS = 1 << 8
 
 const AOW_TEUTONIC_TREATY_OF_STENSBY = T1
 const AOW_TEUTONIC_RAIDERS = T2
@@ -995,7 +998,7 @@ function for_each_group_lord(fn) {
 }
 
 function group_has_capability(c) {
-	for (lord of game.group)
+	for (let lord of game.group)
 		if (lord !== LEGATE)
 			if (lord_has_capability(lord, c))
 				return true
@@ -2128,12 +2131,23 @@ function goto_end_campaign() {
 
 // === CAMPAIGN: ACTIONS ===
 
+function is_first_action() {
+	return has_flag(FLAG_FIRST_ACTION)
+}
+
+function is_first_march() {
+	return has_flag(FLAG_FIRST_MARCH)
+}
+
 function goto_actions() {
 	log_h2(`L${game.command}`)
 
 	game.state = "actions"
 	game.who = game.command
 	game.count = 0
+
+	set_flag(FLAG_FIRST_ACTION)
+	set_flag(FLAG_FIRST_MARCH)
 
 	// 4.1.3 Lieutenants MUST take lower lord
 	let lower = get_lower_lord(game.who)
@@ -2150,6 +2164,23 @@ function goto_actions() {
 	}
 }
 
+function spend_action(cost) {
+	clear_flag(FLAG_FIRST_ACTION)
+	game.count += cost
+}
+
+function spend_march_action(cost) {
+	clear_flag(FLAG_FIRST_ACTION)
+	clear_flag(FLAG_FIRST_MARCH)
+	game.count += cost
+}
+
+function spend_all_actions() {
+	clear_flag(FLAG_FIRST_ACTION)
+	clear_flag(FLAG_FIRST_MARCH)
+	game.count += get_available_actions()
+}
+
 function end_actions() {
 	log_br()
 
@@ -2158,9 +2189,10 @@ function end_actions() {
 	game.who = NOBODY
 	game.group = 0
 
-	clear_flag(FLAG_LEGATE)
+	clear_flag(FLAG_FIRST_ACTION)
+	clear_flag(FLAG_FIRST_MARCH)
+	clear_flag(FLAG_USED_LEGATE)
 	clear_flag(FLAG_TEUTONIC_RAIDERS)
-	clear_flag(FLAG_TEUTONIC_CONVERTS)
 	clear_flag(FLAG_TEUTONIC_ORDENSBURGEN)
 
 	goto_feed()
@@ -2184,7 +2216,7 @@ function get_available_actions() {
 	let n = data.lords[game.command].command
 
 	if (game.active === TEUTONS) {
-		if (has_flag(FLAG_LEGATE))
+		if (has_flag(FLAG_USED_LEGATE))
 			++n
 		if (has_flag(FLAG_TEUTONIC_ORDENSBURGEN))
 			++n
@@ -2201,10 +2233,6 @@ function get_available_actions() {
 	}
 
 	return n - game.count
-}
-
-function use_all_actions() {
-	game.count += get_available_actions()
 }
 
 states.actions = {
@@ -2224,7 +2252,7 @@ states.actions = {
 
 		else {
 			if (game.active === TEUTONS) {
-				if (game.count === 0 && is_located_with_legate(game.who) && !has_flag(FLAG_LEGATE))
+				if (has_flag(FLAG_FIRST_ACTION) && !has_flag(FLAG_USED_LEGATE) && is_located_with_legate(game.who))
 					view.actions.use_legate = 1
 			}
 
@@ -2250,14 +2278,14 @@ states.actions = {
 	use_legate() {
 		push_undo()
 		log(`Used Legate for +1 Command.`)
-		set_flag(FLAG_LEGATE)
+		set_flag(FLAG_USED_LEGATE)
 		set_delete(game.group, LEGATE)
 		game.call_to_arms.legate = LEGATE_ARRIVED
 	},
 	pass() {
 		push_undo()
 		log("Passed.")
-		use_all_actions() // TODO: maybe only one action?
+		spend_all_actions() // TODO: maybe only one action?
 	},
 	end_actions() {
 		clear_undo()
@@ -2276,9 +2304,19 @@ states.actions = {
 
 // === ACTION: MARCH ===
 
+function lift_siege(from) {
+	if (has_siege_marker(from)) {
+		log(`Lifted siege at %${from}.`)
+		remove_all_siege_markers(from)
+		for (let lord = first_enemy_lord; lord <= last_enemy_lord; ++lord)
+			if (get_lord_locale(lord) === from && is_lord_besieged(lord))
+				set_lord_besieged(lord, 0)
+	}
+}
+
 function group_has_teutonic_converts() {
 	if (game.active === TEUTONS) {
-		if (!has_flag(FLAG_TEUTONIC_CONVERTS))
+		if (is_first_march())
 			if (group_has_capability(AOW_TEUTONIC_CONVERTS))
 				if (count_group_forces(LIGHT_HORSE) > 0)
 					return true
@@ -2409,19 +2447,15 @@ states.march_laden = {
 		}
 	},
 	prov(lord) {
-		push_undo()
 		drop_prov(lord)
 	},
 	loot(lord) {
-		push_undo()
 		drop_loot(lord)
 	},
 	laden_march(to) {
-		game.state = "actions"
 		march_with_group_2(true)
 	},
 	locale(to) {
-		game.state = "actions"
 		march_with_group_2(false)
 	},
 }
@@ -2431,12 +2465,12 @@ function march_with_group_2(laden) {
 	let way = game.approach
 	let to = game.where
 
-	let action_cost = laden ? 2 : 1
 	if (group_has_teutonic_converts())
-		action_cost = 0
-	set_flag(FLAG_TEUTONIC_CONVERTS)
-
-	game.count += action_cost
+		spend_march_action(0)
+	else if (laden)
+		spend_march_action(2)
+	else
+		spend_march_action(1)
 
 	if (data.ways[way].name)
 		log(`Marched via ${data.ways[way].name} to %${to}.`)
@@ -2452,8 +2486,7 @@ function march_with_group_2(laden) {
 	}
 
 	if (is_enemy_stronghold(from)) {
-		remove_all_siege_markers(from)
-		// TODO: lift siege
+		lift_siege(from)
 	}
 
 	if (has_unbesieged_enemy_lord(to)) {
@@ -2462,6 +2495,7 @@ function march_with_group_2(laden) {
 		game.group = 0
 		game.state = "approach"
 	} else {
+		game.state = "actions"
 		march_with_group_3()
 	}
 }
@@ -2472,7 +2506,7 @@ function march_with_group_3() {
 	if (is_unbesieged_enemy_stronghold(to)) {
 		add_siege_marker(to)
 		log(`Encamped.`)
-		game.count += get_available_actions() // ENCAMP
+		spend_all_actions() // ENCAMP
 	}
 
 	if (is_trade_route(to)) {
@@ -2500,7 +2534,7 @@ function end_approach() {
 // === ACTION: SIEGE ===
 
 function can_action_siege(avail) {
-	if (game.count > 0)
+	if (!is_first_action())
 		return false
 	return false
 }
@@ -2544,7 +2578,7 @@ function do_action_forage() {
 	let here = get_lord_locale(game.who)
 	log(`Foraged at %${here}`)
 	add_lord_assets(game.who, PROV, 1)
-	game.count += 1
+	spend_action(1)
 }
 
 // === ACTION: RAVAGE ===
@@ -2636,6 +2670,7 @@ states.ravage = {
 	locale(there) {
 		let here = get_lord_locale(game.who)
 		ravage_location(here, there)
+		game.state = "actions"
 	},
 }
 
@@ -2654,15 +2689,14 @@ function ravage_location(here, there) {
 			add_lord_assets(game.who, LOOT, 1)
 	}
 
-	game.count += 1
-	game.state = "actions"
+	spend_action(1)
 }
 
 // === ACTION: TAX ===
 
 function can_action_tax(avail) {
 	// Must use whole action
-	if (game.count > 0)
+	if (!is_first_action())
 		return false
 
 	// Must have space left to hold Coin
@@ -2681,8 +2715,7 @@ function do_action_tax()  {
 
 	add_lord_assets(game.who, COIN, 1)
 
-	use_all_actions()
-	game.state = "actions"
+	spend_all_actions()
 
 	if (lord_has_capability(game.who, AOW_RUSSIAN_VELIKY_KNYAZ)) {
 		push_state("veliky_knyaz")
@@ -2774,7 +2807,7 @@ function has_enough_available_ships_for_horses() {
 
 function can_action_sail(avail) {
 	// Must use whole action
-	if (game.count > 0)
+	if (!is_first_action())
 		return false
 
 	// at a seaport
@@ -2902,7 +2935,8 @@ states.sail = {
 			game.call_to_arms.legate = to
 		}
 
-		use_all_actions()
+		spend_all_actions()
+
 		game.state = "actions"
 	},
 }
