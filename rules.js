@@ -2228,7 +2228,7 @@ states.actions = {
 
 		else {
 			if (game.active === TEUTONS) {
-				if (game.count === 0 && is_located_with_legate() && !has_flag(FLAG_LEGATE))
+				if (game.count === 0 && is_located_with_legate(game.who) && !has_flag(FLAG_LEGATE))
 					view.actions.use_legate = 1
 			}
 
@@ -2255,6 +2255,7 @@ states.actions = {
 		push_undo()
 		log(`Used Legate for +1 Command.`)
 		set_flag(FLAG_LEGATE)
+		set_delete(game.group, LEGATE)
 		game.call_to_arms.legate = LEGATE_ARRIVED
 	},
 	pass() {
@@ -2376,22 +2377,23 @@ states.march_laden = {
 		let prov = count_group_assets(PROV)
 		let loot = count_group_assets(LOOT)
 
-		view.prompt = `March with ${loot} loot, ${prov} prov, and ${transport} usable transport.`
+		view.prompt = `March with ${loot} loot, ${prov} provender, and ${transport} transport.`
 		view.group = game.group
 
 		if (prov <= transport * 2) {
 			if (loot > 0 || prov > transport) {
 				let avail = get_available_actions()
-				if (avail >= 2)
-					view.actions.laden = 1
-				view.actions.unladen = 0
+				if (avail >= 2) {
+					view.prompt += " Laden!"
+					gen_action_laden_march(to)
+				} else {
+					view.prompt += " Laden with 1 action left."
+				}
 			} else {
-				view.actions.laden = 0
-				view.actions.unladen = 1
+				gen_action_locale(to)
 			}
 		} else {
-			view.actions.laden = 0
-			view.actions.unladen = 0
+			view.prompt += " Carrying too much."
 		}
 
 		if (loot > 0 || prov > transport) {
@@ -2418,10 +2420,10 @@ states.march_laden = {
 		push_undo()
 		drop_loot(lord)
 	},
-	laden() {
+	laden_march(to) {
 		march_with_group_2(true)
 	},
-	unladen() {
+	locale(to) {
 		march_with_group_2(false)
 	},
 }
@@ -2677,11 +2679,11 @@ function drop_loot(lord) {
 function count_lord_ships(lord) {
 	let ships = get_lord_assets(lord, SHIP)
 
-	if (lord_has_capability(AOW_TEUTONIC_COGS)) {
+	if (lord_has_capability(lord, AOW_TEUTONIC_COGS)) {
 		ships *= 2
 	}
 
-	if (lord_has_capability(AOW_RUSSIAN_LODYA)) {
+	if (lord_has_capability(lord, AOW_RUSSIAN_LODYA)) {
 		// TODO: one option or the other (only matters for supply)
 		let boats = get_lord_assets(lord, BOAT)
 		if (boats > 2)
@@ -3321,6 +3323,10 @@ function gen_action_way(way) {
 
 function gen_action_locale(locale) {
 	gen_action("locale", locale)
+}
+
+function gen_action_laden_march(locale) {
+	gen_action("laden_march", locale)
 }
 
 function gen_action_lord(lord) {

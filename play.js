@@ -178,6 +178,10 @@ function is_locale_action(locale) {
 	return !!(view.actions && view.actions.locale && set_has(view.actions.locale, locale))
 }
 
+function is_laden_march_action(locale) {
+	return !!(view.actions && view.actions.laden_march && set_has(view.actions.laden_march, locale))
+}
+
 function is_way_action(way) {
 	return !!(view.actions && view.actions.way && set_has(view.actions.way, way))
 }
@@ -475,6 +479,7 @@ function on_click_locale(evt) {
 	if (evt.button === 0) {
 		let id = evt.target.my_id
 		send_action('locale', id)
+		send_action('laden_march', id)
 	}
 }
 
@@ -1005,9 +1010,12 @@ function update_veche() {
 }
 
 function update_locale(loc) {
-	ui.locale[loc].classList.toggle("action", is_locale_action(loc))
-	if (ui.locale_extra[loc])
-		ui.locale_extra[loc].classList.toggle("action", is_locale_action(loc))
+	ui.locale[loc].classList.toggle("action", is_locale_action(loc) || is_laden_march_action(loc))
+	ui.locale[loc].classList.toggle("laden", is_laden_march_action(loc))
+	if (ui.locale_extra[loc]) {
+		ui.locale_extra[loc].classList.toggle("action", is_locale_action(loc) || is_laden_march_action(loc))
+		ui.locale_extra[loc].classList.toggle("laden", is_laden_march_action(loc))
+	}
 
 	ui.locale_markers[loc].replaceChildren()
 
@@ -1229,9 +1237,6 @@ function on_update() {
 
 	update_plan()
 	update_cards()
-
-	action_button("laden", "Laden")
-	action_button("unladen", "Unladen")
 
 	action_button("use_legate", "Legate")
 
