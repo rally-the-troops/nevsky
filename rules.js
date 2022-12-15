@@ -733,6 +733,13 @@ function has_enemy_lord(loc) {
 	return false
 }
 
+function has_unbesieged_enemy_lord(loc) {
+	for (let lord = first_enemy_lord; lord <= last_enemy_lord; ++lord)
+		if (get_lord_locale(lord) === loc && is_lord_unbesieged(lord))
+			return true
+	return false
+}
+
 function is_friendly_territory(loc) {
 	if (game.active === P1)
 		return loc >= first_p1_locale && loc <= last_p1_locale
@@ -981,19 +988,13 @@ function is_located_with_legate(lord) {
 	return get_lord_locale(lord) === game.call_to_arms.legate
 }
 
-// TODO: include active lord in group and select legate by other means to simplify group_ functions?
-
 function for_each_group_lord(fn) {
-	fn(game.who)
-	if (game.group)
-		for (let lord of game.group)
-			if (lord !== LEGATE)
-				fn(lord)
+	for (let lord of game.group)
+		if (lord !== LEGATE)
+			fn(lord)
 }
 
 function group_has_capability(c) {
-	if (lord_has_capability(game.who, c))
-		return true
 	for (lord of game.group)
 		if (lord !== LEGATE)
 			if (lord_has_capability(lord, c))
@@ -1002,47 +1003,42 @@ function group_has_capability(c) {
 }
 
 function count_group_ships() {
-	let n = count_lord_ships(game.who)
-	if (game.group)
-		for (let lord of game.group)
-			if (lord !== LEGATE)
-				n += count_lord_ships(lord)
+	let n = 0
+	for (let lord of game.group)
+		if (lord !== LEGATE)
+			n += count_lord_ships(lord)
 	return n
 }
 
 function count_group_assets(asset) {
-	let n = get_lord_assets(game.who, asset)
-	if (game.group)
-		for (let lord of game.group)
-			if (lord !== LEGATE)
-				n += get_lord_assets(lord, asset)
+	let n = 0
+	for (let lord of game.group)
+		if (lord !== LEGATE)
+			n += get_lord_assets(lord, asset)
 	return n
 }
 
 function count_group_forces(type) {
-	let n = count_lord_forces(game.who, type)
-	if (game.group)
-		for (let lord of game.group)
-			if (lord !== LEGATE)
-				n += count_lord_forces(lord, type)
+	let n = 0
+	for (let lord of game.group)
+		if (lord !== LEGATE)
+			n += count_lord_forces(lord, type)
 	return n
 }
 
 function count_group_horses() {
-	let n = count_lord_horses(game.who)
-	if (game.group)
-		for (let lord of game.group)
-			if (lord !== LEGATE)
-				n += count_lord_horses(lord)
+	let n = 0
+	for (let lord of game.group)
+		if (lord !== LEGATE)
+			n += count_lord_horses(lord)
 	return n
 }
 
 function count_group_transport(way) {
-	let n = count_lord_transport(game.who, way)
-	if (game.group)
-		for (let lord of game.group)
-			if (lord !== LEGATE)
-				n += count_lord_transport(lord, way)
+	let n = 0
+	for (let lord of game.group)
+		if (lord !== LEGATE)
+			n += count_lord_transport(lord, way)
 	return n
 }
 
@@ -2142,9 +2138,9 @@ function goto_actions() {
 	// 4.1.3 Lieutenants MUST take lower lord
 	let lower = get_lower_lord(game.who)
 	if (lower !== NOBODY)
-		game.group = [ lower ]
+		game.group = [ game.command, lower ]
 	else
-		game.group = []
+		game.group = [ game.command ]
 
 	if (game.active === TEUTONS) {
 		if (has_global_capability(AOW_TEUTONIC_ORDENSBURGEN)) {
@@ -2455,12 +2451,23 @@ function march_with_group_2(laden) {
 		game.call_to_arms.legate = to
 	}
 
-	console.log("MARCH", is_enemy_stronghold(from), is_unbesieged_enemy_stronghold(to))
-
 	if (is_enemy_stronghold(from)) {
 		remove_all_siege_markers(from)
 		// TODO: lift siege
 	}
+
+	if (has_unbesieged_enemy_lord(to)) {
+		set_active_enemy()
+		game.save_group = game.group
+		game.group = 0
+		game.state = "approach"
+	} else {
+		march_with_group_3()
+	}
+}
+
+function march_with_group_3() {
+	let to = game.where
 
 	if (is_unbesieged_enemy_stronghold(to)) {
 		add_siege_marker(to)
@@ -2471,9 +2478,23 @@ function march_with_group_2(laden) {
 	if (is_trade_route(to)) {
 		conquer_trade_route(to)
 	}
+}
 
-	// TODO: stop and siege
-	// TODO: approach
+// === ACTION: MARCH - APPROACH - AVOID BATTLE / WITHDRAW ===
+
+states.approach = {
+	prompt() {
+		view.prompt = `Approach: Avoid Battle, Withdraw, or Battle.`
+	},
+	battle() {
+	},
+}
+
+function end_approach() {
+	game.who = game.command
+	game.group = game.save_group
+	game.save_group = 0
+	march_with_group_3()
 }
 
 // === ACTION: SIEGE ===
@@ -2778,13 +2799,6 @@ function can_action_sail(avail) {
 function do_action_sail() {
 	push_undo()
 	game.state = 'sail'
-
-	// 4.1.3 Lieutenants MUST take lower lord
-	let lower = get_lower_lord(game.who)
-	if (lower !== NOBODY)
-		game.group = [ lower ]
-	else
-		game.group = []
 }
 
 states.sail = {
