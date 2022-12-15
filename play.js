@@ -6,6 +6,9 @@
 
 // TODO: held events, this_turn events
 
+// inactive command cylinder color - other color outline
+// moved/fought lord coloring - blue outline?
+
 function find_lord(name) {
 	return data.lords.findIndex((x) => x.name === name)
 }
@@ -1239,6 +1242,10 @@ function on_update() {
 	update_cards()
 
 	action_button("use_legate", "Legate")
+
+	action_button("withdraw", "Withdraw")
+	action_button("battle", "Battle")
+	action_button("surrender", "Surrender")
 
 	action_button("sail", "Sail")
 	action_button("march", "March")

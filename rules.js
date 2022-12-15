@@ -83,7 +83,8 @@ const vassal_name = data.vassals.map((vassal) => vassal.name)
 
 const lord_count = data.lords.length
 const vassal_count = data.vassals.length
-const last_vassal = vassal_count - 1
+
+const first_lord = 0
 const last_lord = lord_count - 1
 
 const first_p1_locale = 0
@@ -743,6 +744,13 @@ function has_unbesieged_enemy_lord(loc) {
 	return false
 }
 
+function has_unbesieged_friendly_lord(loc) {
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (get_lord_locale(lord) === loc && is_lord_unbesieged(lord))
+			return true
+	return false
+}
+
 function is_friendly_territory(loc) {
 	if (game.active === P1)
 		return loc >= first_p1_locale && loc <= last_p1_locale
@@ -837,11 +845,18 @@ function has_friendly_castle(loc) {
 	return set_has(game.locales.castles2, loc)
 }
 
+function has_castle(loc) {
+	return (
+		set_has(game.locales.castles1, loc) ||
+		set_has(game.locales.castles2, loc)
+	)
+}
+
 function has_conquered_stronghold(loc) {
 	return is_stronghold(loc) && has_conquered_marker(loc)
 }
 
-function is_friendly_stronghold(loc) {
+function is_friendly_stronghold_locale(loc) {
 	// TODO: use full "is friendly locale" check here, or just color of stronghold?
 	if (is_stronghold(loc) || has_friendly_castle(loc))
 		return is_friendly_locale(loc)
@@ -860,8 +875,32 @@ function is_enemy_stronghold(loc) {
 	return false
 }
 
+function is_friendly_stronghold(loc) {
+	if (is_stronghold(loc)) {
+		if (is_friendly_territory(loc) && !has_conquered_marker(loc))
+			return true
+		if (is_enemy_territory(loc) && has_conquered_marker(loc))
+			return true
+	}
+	if (has_friendly_castle(loc))
+		return true
+	return false
+}
+
 function is_unbesieged_enemy_stronghold(loc) {
 	return is_enemy_stronghold(loc) && !has_siege_marker(loc)
+}
+
+function is_unbesieged_friendly_stronghold(loc) {
+	return is_friendly_stronghold(loc) && !has_siege_marker(loc)
+}
+
+function is_besieged_enemy_stronghold(loc) {
+	return is_enemy_stronghold(loc) && has_siege_marker(loc)
+}
+
+function is_besieged_friendly_stronghold(loc) {
+	return is_friendly_stronghold(loc) && has_siege_marker(loc)
 }
 
 function is_friendly_locale(loc) {
@@ -1156,6 +1195,7 @@ exports.setup = function (seed, scenario, options) {
 		where: NOWHERE,
 		what: NOTHING,
 		approach: 0,
+		avoid: 0,
 		count: 0,
 		flags: 0,
 	}
@@ -2247,7 +2287,8 @@ states.actions = {
 			view.actions.end_actions = 1
 
 		if (is_lord_besieged(game.who)) {
-			view.actions.sally = 1
+			if (can_action_sally(avail))
+				view.actions.sally = 1
 		}
 
 		else {
@@ -2297,6 +2338,10 @@ states.actions = {
 	sail: do_action_sail,
 	tax: do_action_tax,
 
+	siege: do_action_siege,
+	storm: do_action_storm,
+	sally: do_action_sally,
+
 	locale: march_action_locale,
 	lord: march_action_lord,
 	legate: march_action_legate,
@@ -2308,7 +2353,7 @@ function lift_siege(from) {
 	if (has_siege_marker(from)) {
 		log(`Lifted siege at %${from}.`)
 		remove_all_siege_markers(from)
-		for (let lord = first_enemy_lord; lord <= last_enemy_lord; ++lord)
+		for (let lord = first_lord; lord <= last_lord; ++lord)
 			if (get_lord_locale(lord) === from && is_lord_besieged(lord))
 				set_lord_besieged(lord, 0)
 	}
@@ -2419,11 +2464,13 @@ states.march_laden = {
 				let avail = get_available_actions()
 				if (avail >= 2) {
 					view.prompt += " Laden!"
+					// TODO: button as well?
 					gen_action_laden_march(to)
 				} else {
 					view.prompt += " Laden with 1 action left."
 				}
 			} else {
+				// TODO: button as well?
 				gen_action_locale(to)
 			}
 		} else {
@@ -2481,27 +2528,37 @@ function march_with_group_2(laden) {
 		set_lord_locale(lord, to)
 		set_lord_moved(lord, 1)
 	})
-	if (set_has(game.group, LEGATE)) {
+	if (set_has(game.group, LEGATE))
 		game.call_to_arms.legate = to
-	}
 
-	if (is_enemy_stronghold(from)) {
+	if (is_besieged_enemy_stronghold(from) && !has_friendly_lord(from))
 		lift_siege(from)
-	}
 
 	if (has_unbesieged_enemy_lord(to)) {
-		set_active_enemy()
-		game.save_group = game.group
-		game.group = 0
-		game.state = "approach"
+		goto_approach()
 	} else {
-		game.state = "actions"
 		march_with_group_3()
+	}
+}
+
+function remove_legate_if_alone_with_russian_lord(here) {
+	if (game.active === RUSSIANS) {
+		if (game.call_to_arms.legate === here) {
+			log("Legate removed.")
+			game.call_to_arms.legate = LEGATE_INDISPOSED
+			set_delete(game.capabilities, AOW_TEUTONIC_WILLIAM_OF_MODENA)
+		}
 	}
 }
 
 function march_with_group_3() {
 	let to = game.where
+
+	remove_legate_if_alone_with_russian_lord(to)
+
+	if (is_besieged_friendly_stronghold(to)) {
+		lift_siege(to)
+	}
 
 	if (is_unbesieged_enemy_stronghold(to)) {
 		add_siege_marker(to)
@@ -2512,31 +2569,280 @@ function march_with_group_3() {
 	if (is_trade_route(to)) {
 		conquer_trade_route(to)
 	}
+
+	game.state = "actions"
 }
 
 // === ACTION: MARCH - APPROACH - AVOID BATTLE / WITHDRAW ===
 
+function goto_approach () {
+	let to = game.where
+	set_active_enemy()
+	game.stack = game.group
+	game.who = NOBODY
+	game.state = "approach"
+	game.group = []
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (get_lord_locale(lord) === to)
+			game.group.push(lord)
+}
+
+function count_besieged_lords(loc) {
+	let n = 0
+	for (let lord = first_lord; lord <= last_lord; ++lord)
+		if (get_lord_locale(lord) === loc && is_lord_besieged(lord))
+			++n
+	return n
+}
+
+function stronghold_strength(loc) {
+	if (has_castle(loc))
+		return 2
+	return data.locales[loc].stronghold
+}
+
+function stronghold_capacity(loc) {
+	return stronghold_strength(loc) - count_besieged_lords(loc)
+}
+
+function resume_approach() {
+	if (has_unbesieged_friendly_lord(game.where))
+		game.state = "approach"
+	else
+		end_approach()
+}
+
 states.approach = {
 	prompt() {
 		view.prompt = `Approach: Avoid Battle, Withdraw, or Battle.`
+		view.group = game.group
+
+		let here = get_lord_locale(game.command)
+
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+			if (get_lord_locale(lord) === here)
+				gen_action_lord(lord)
+
+		if (game.group.length > 0) {
+			if (is_unbesieged_friendly_stronghold(here)) {
+				if (game.group.length <= stronghold_capacity(here))
+					view.actions.withdraw = 1
+				else
+					view.actions.withdraw = 0
+			}
+
+			for (let [to, way] of data.locales[here].ways) {
+				if (way !== game.approach)
+					gen_action_locale(to)
+			}
+		}
+
+		view.actions.battle = 1
+	},
+	lord(lord) {
+		set_toggle(game.group, lord)
+	},
+	locale(to) {
+		push_undo()
+		let from = get_lord_locale(game.command)
+		let ways = list_ways(from, to)
+		if (ways.length > 2) {
+			game.where = to
+			game.state = "avoid_battle_way"
+		} else {
+			game.where = to
+			game.avoid = ways[1]
+			avoid_battle_1()
+		}
+	},
+	withdraw() {
+		push_undo()
+		for (let lord of game.group) {
+			log(`Withdrew with L${lord}`)
+			set_lord_besieged(lord, 1)
+		}
+		resume_approach()
 	},
 	battle() {
+		game.group = []
+		log("TODO: Battles")
 	},
 }
 
+states.avoid_battle_way = {
+	prompt() {
+		view.prompt = `Avoid Battle: Select way.`
+		view.group = game.group
+		let from = get_lord_locale(game.command)
+		let to = game.where
+		let ways = list_ways(from, to)
+		for (let i = 1; i < ways.length; ++i)
+			gen_action_way(ways[i])
+	},
+	way(way) {
+		game.avoid = way
+		avoid_battle_1()
+	},
+}
+
+function avoid_battle_1() {
+	let way = game.avoid
+	let transport = count_group_transport(way)
+	let prov = count_group_assets(PROV)
+	let loot = count_group_assets(LOOT)
+	if (prov > transport || loot > 0)
+		game.state = 'avoid_battle_laden'
+	else
+		avoid_battle_2()
+}
+
+states.avoid_battle_laden = {
+	prompt() {
+		let to = game.where
+		let way = game.avoid
+		let transport = count_group_transport(way)
+		let prov = count_group_assets(PROV)
+		let loot = count_group_assets(LOOT)
+
+		view.prompt = `Avoid Battle with ${prov} provender and ${transport} transport.`
+		view.group = game.group
+
+		if (loot > 0) {
+			view.prompt += " Discard Loot."
+			for_each_group_lord(lord => {
+				if (get_lord_assets(lord, LOOT) > 0)
+					gen_action_loot(lord)
+			})
+		} else if (prov > transport) {
+			view.prompt += " Discard Provender."
+			for_each_group_lord(lord => {
+				if (get_lord_assets(lord, PROV) > 0)
+					gen_action_prov(lord)
+			})
+		} else {
+			gen_action_locale(to)
+		}
+	},
+	prov(lord) {
+		drop_prov(lord)
+	},
+	loot(lord) {
+		drop_loot(lord)
+	},
+	locale(to) {
+		avoid_battle_2(false)
+	},
+}
+
+function avoid_battle_2() {
+	let from = get_lord_locale(game.command)
+	let way = game.avoid
+	let to = game.where
+
+	if (data.ways[way].name)
+		log(`Avoided Battle via ${data.ways[way].name} to %${to}.`)
+	else
+		log(`Avoided Battle to %${to}.`)
+
+	for_each_group_lord(lord => {
+		set_lord_locale(lord, to)
+		set_lord_moved(lord, 1)
+	})
+
+	game.where = get_lord_locale(game.command)
+	game.avoid = 0
+	resume_approach()
+}
+
 function end_approach() {
+	set_active_enemy()
+	game.where = get_lord_locale(game.command)
 	game.who = game.command
-	game.group = game.save_group
-	game.save_group = 0
+	game.group = game.stack
+	game.stack = []
 	march_with_group_3()
 }
 
 // === ACTION: SIEGE ===
 
+function count_friendly_lords_at(loc) {
+	let n = 0
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (get_lord_locale(lord) === loc)
+			++n
+	return n
+}
+
+function count_besieging_lords(loc) {
+	return count_friendly_lords_at(loc)
+}
+
 function can_action_siege(avail) {
 	if (!is_first_action())
 		return false
+	if (is_stronghold(game.where)) {
+		if (count_besieged_lords(game.where) === 0)
+			return true
+		if (count_besieging_lords(game.where) >= stronghold_strength(game.where))
+			return true
+		// no effect if no surrender, no siegeworks, and no enemy lords to starve
+	}
 	return false
+}
+
+function do_action_siege() {
+	push_undo()
+	if (count_besieged_lords(game.where) > 0)
+		game.state = "surrender"
+	else 
+		siege_1()
+}
+
+states.surrender = {
+	prompt() {
+		view.prompt = "Siege: You may roll for Surrender."
+		view.actions.surrender = 1
+		view.actions.pass = 1
+	},
+	surrender() {
+		clear_undo()
+		log("TODO: Surrender roll!")
+		siegeworks_1()
+	},
+	pass() {
+		log("Declined Surrender.")
+		siegeworks_1()
+	},
+}
+
+function siegeworks_1() {
+	if (count_besieging_lords(game.where) >= stronghold_strength(game.where)) {
+		if (count_siege_markers(game.where) < 4) {
+			game.state = "siegeworks"
+		}
+	}
+	siegeworks_2()
+}
+
+states.siegeworks = {
+	prompt() {
+		view.prompt = "Siege: Add one Siege marker."
+		gen_action_locale(game.where)
+	},
+	locale(loc) {
+		log("Added Siege marker.")
+		add_siege_marker(game.where)
+		siegeworks_2()
+	},
+}
+
+function siegeworks_2() {
+	// All Lords of both sides moved/fought
+	for (let lord = first_lord; lord <= last_lord; ++lord)
+		if (get_lord_locale(lord) === game.where)
+			set_lord_moved(lord, 1)
+
+	spend_all_actions()
 }
 
 // === ACTION: STORM ===
@@ -2547,7 +2853,23 @@ function can_action_storm(avail) {
 	return false
 }
 
+function do_action_storm() {
+	log("TODO: Storm")
+	spend_action(1)
+}
+
 // === ACTION: SALLY ===
+
+function can_action_sally(avail) {
+	if (avail < 1)
+		return false
+	return true
+}
+
+function do_action_sally() {
+	log("TODO: Sally")
+	spend_action(1)
+}
 
 // === ACTION: SUPPLY ===
 
@@ -2568,7 +2890,7 @@ function can_action_forage(avail) {
 		return false
 	if (current_season() === SUMMER)
 		return true
-	if (is_friendly_stronghold(here))
+	if (is_friendly_stronghold_locale(here)) // TODO: simpler check?
 		return true
 	return false
 }
@@ -2921,19 +3243,23 @@ states.sail = {
 		push_undo()
 		log(`Sailed to %${to}.`)
 
-		if (is_trade_route(to))
-			conquer_trade_route(to)
-
-		if (is_unbesieged_enemy_stronghold(to))
-			add_siege_marker(to)
-
 		for_each_group_lord(lord => {
 			set_lord_locale(lord, to)
 			set_lord_moved(lord, 1)
 		})
-		if (set_has(game.group, LEGATE)) {
+		if (set_has(game.group, LEGATE))
 			game.call_to_arms.legate = to
-		}
+
+		if (is_enemy_stronghold(from))
+			lift_siege(from)
+
+		remove_legate_if_alone_with_russian_lord(here)
+
+		if (is_unbesieged_enemy_stronghold(to))
+			add_siege_marker(to)
+
+		if (is_trade_route(to))
+			conquer_trade_route(to)
 
 		spend_all_actions()
 
@@ -3251,11 +3577,15 @@ states.disband = {
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 			if (is_lord_on_map(lord) && get_lord_service(lord) <= current_turn()) {
 				gen_action_lord(lord)
+				gen_action_service(lord)
 				done = false
 			}
 		}
 		if (done)
 			view.actions.end_disband = 1
+	},
+	service(lord) {
+		disband_lord(lord)
 	},
 	lord(lord) {
 		disband_lord(lord)
