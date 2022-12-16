@@ -2265,6 +2265,21 @@ states.actions = {
 
 		view.prompt = `${lord_name[game.command]} has ${avail}x actions.`
 
+		view.group = game.group
+
+		// 4.3.2 Marshals MAY take other lords
+		if (is_marshal(game.command)) {
+			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+				if (lord !== game.command && !is_lower_lord(lord))
+					if (get_lord_locale(lord) === here)
+						gen_action_lord(lord)
+		}
+
+		// 1.4.1 Teutonic lords MAY take the Legate
+		if (game.active === TEUTONS && is_located_with_legate(game.command)) {
+			view.actions.legate = 1
+		}
+
 		if (avail > 0)
 			view.actions.pass = 1
 		else
@@ -2372,24 +2387,8 @@ function group_has_teutonic_converts() {
 function march_prompt(avail) {
 	if (avail > 0 || group_has_teutonic_converts()) {
 		let here = get_lord_locale(game.command)
-
-		for (let [ to ] of data.locales[here].ways)
+		for (let to of data.locales[here].adjacent)
 			gen_action_locale(to)
-
-		view.group = game.group
-
-		// 4.3.2 Marshals MAY take other lords
-		if (is_marshal(game.command)) {
-			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-				if (lord !== game.command && !is_lower_lord(lord))
-					if (get_lord_locale(lord) === here)
-						gen_action_lord(lord)
-		}
-
-		// 1.4.1 Teutonic lords MAY take the Legate
-		if (game.active === TEUTONS && is_located_with_legate(game.command)) {
-			view.actions.legate = 1
-		}
 	}
 }
 
@@ -2483,12 +2482,8 @@ states.march_laden = {
 			})
 		}
 	},
-	prov(lord) {
-		drop_prov(lord)
-	},
-	loot(lord) {
-		drop_loot(lord)
-	},
+	prov: drop_prov,
+	loot: drop_loot,
 	march: march_with_group_2,
 	locale: march_with_group_2,
 	laden_march: march_with_group_2,
@@ -3203,6 +3198,17 @@ function count_lord_ships(lord) {
 	return ships
 }
 
+function count_shared_cogs() {
+	let n = 0
+	if (game.active === TEUTONS) {
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+			if (lord_has_capability(lord, AOW_TEUTONIC_COGS))
+				if (!set_has(game.group, lord)) // not already counted for
+					n += get_lord_assets(lord, SHIP) * 2
+	}
+	return n
+}
+
 function count_lord_boats(lord) {
 	let boats = get_lord_assets(lord, BOAT)
 
@@ -3221,35 +3227,14 @@ function count_lord_boats(lord) {
 }
 
 function has_enough_available_ships_for_horses() {
-	let here = get_lord_locale(game.command)
+	let ships = count_group_ships() + count_shared_cogs()
+	let horses = count_group_horses()
 
-	let horse_size = 1
+	let needed_ships = horses
 	if (game.active === RUSSIANS)
-		horse_size = 2
+		needed_ships = horses * 2
 
-	let ships = count_lord_ships(game.command)
-	let horses = count_lord_horses(game.command) * horse_size
-
-	let lower = get_lower_lord(game.command)
-	if (lower !== NOBODY) {
-		ships += count_lord_ships(lower)
-		horses += count_lord_horses(lower) * horse_size
-	}
-
-	if (is_marshal(game.command)) {
-		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
-			if (lord !== game.command && !is_lower_lord(lord) && get_lord_locale(lord) === here) {
-				let extra_ships = count_lord_ships(lord)
-				let extra_horses = count_lord_horses(lord) * horse_size
-				if (extra_ships >= extra_horses)
-					ships += extra_ships - extra_horses
-			}
-		}
-	}
-
-	// TODO: share Cogs anywhere
-
-	return ships >= horses
+	return needed_ships <= ships
 }
 
 function can_action_sail(avail) {
@@ -3272,7 +3257,6 @@ function can_action_sail(avail) {
 		return false
 
 	// TODO: and a valid destination
-
 	return true
 }
 
@@ -3286,35 +3270,19 @@ states.sail = {
 		view.group = game.group
 
 		let here = get_lord_locale(game.command)
-		let ships = count_group_ships()
+		let ships = count_group_ships() + count_shared_cogs()
 		let horses = count_group_horses()
 		let prov = count_group_assets(PROV)
 		let loot = count_group_assets(LOOT)
 
-		// TODO: share Cogs anywhere
-
 		let overflow = 0
-		let min_overflow = 0
-		if (game.active === TEUTONS) {
+		if (game.active === TEUTONS)
 			overflow = (horses + loot * 2 + prov) - ships
-			min_overflow = horses - ships
-		}
-		if (game.active === RUSSIANS) {
+		if (game.active === RUSSIANS)
 			overflow = (horses * 2 + loot * 2 + prov) - ships
-			min_overflow = horses * 2 - ships
-		}
 
-		if (overflow <= 0) {
-			view.prompt = `Sail: Choose a destination Seaport.`
-			for (let to of data.seaports) {
-				if (to === here)
-					continue
-				if (!has_enemy_lord(to))
-					gen_action_locale(to)
-			}
-		} else if (min_overflow <= 0) {
-			view.prompt = `Sail: Discard Loot or Provender.`
-
+		if (overflow > 0) {
+			view.prompt = `Sailing with ${ships} ships and ${horses} horses. Discard loot or provender.`
 			// TODO: how strict is greed?
 			if (loot > 0 || prov > 0) {
 				for_each_group_lord(lord => {
@@ -3327,43 +3295,17 @@ states.sail = {
 				})
 			}
 		} else {
-			view.prompt = `Sail: Too few ships to carry all the horses!`
+			view.prompt = `Sail: Choose a destination Seaport.`
+			for (let to of data.seaports) {
+				if (to === here)
+					continue
+				if (!has_enemy_lord(to))
+					gen_action_locale(to)
+			}
 		}
-
-		// 4.3.2 Marshals MAY take other lords
-		if (is_marshal(game.command)) {
-			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-				if (lord !== game.command && !is_lower_lord(lord))
-					if (get_lord_locale(lord) === here)
-						// TODO: toggle instead of undo, but then no discarding?
-						if (!set_has(game.group, lord))
-							gen_action_lord(lord)
-		}
-
-		// 1.4.1 Teutonic lords MAY take the Legate
-		if (game.active === TEUTONS && is_located_with_legate(game.command)) {
-			view.actions.legate = 1
-		}
-
 	},
-	lord(lord) {
-		// TODO: toggle instead of undo, unless we discarded loot/prov
-		push_undo()
-		set_toggle(game.group, lord)
-		if (is_upper_lord(lord))
-			set_toggle(game.group, get_lower_lord(lord))
-	},
-	legate() {
-		set_toggle(game.group, LEGATE)
-	},
-	prov(lord) {
-		push_undo()
-		drop_prov(lord)
-	},
-	loot(lord) {
-		push_undo()
-		drop_loot(lord)
-	},
+	prov: drop_prov,
+	loot: drop_loot,
 	locale(to) {
 		push_undo()
 		log(`Sailed to %${to}.`)
