@@ -1,7 +1,6 @@
 "use strict"
 
-// TODO: game.who = array for feeding
-// TODO: highlight shield on mat instead of mat
+// TODO: delay pay step if there is no feed or disband to be done
 
 const data = require("./data.js")
 
@@ -151,7 +150,6 @@ const LORD_GAVRILO = find_lord("Gavrilo")
 const LORD_KARELIANS = find_lord("Karelians")
 const LORD_VLADISLAV = find_lord("Vladislav")
 
-const LEGATE = 20
 const LEGATE_INDISPOSED = -2
 const LEGATE_ARRIVED = -1
 
@@ -184,18 +182,11 @@ const LOC_ZHELTSY = find_locale("Zheltsy")
 const LOC_TESOVO = find_locale("Tesovo")
 const LOC_SABLIA = find_locale("Sablia")
 
-// Capability usage tracking flags
+// Misc tracking flags
 const FLAG_FIRST_ACTION = 1 << 0
 const FLAG_FIRST_MARCH = 1 << 1
-const FLAG_USED_LEGATE = 1 << 2
-
-const FLAG_TEUTONIC_RAIDERS = 1 << 3
-const FLAG_TEUTONIC_ORDENSBURGEN = 1 << 4
-
-const FLAG_TEUTONIC_WARRIOR_MONKS = 1 << 5
-const FLAG_TEUTONIC_HILLFORTS = 1 << 6
-const FLAG_RUSSIAN_LODYA_BOATS = 1 << 7
-const FLAG_RUSSIAN_LODYA_SHIPS = 1 << 8
+const FLAG_TEUTONIC_RAIDERS = 1 << 2
+const FLAG_TEUTONIC_ORDENSBURGEN = 1 << 3
 
 const AOW_TEUTONIC_TREATY_OF_STENSBY = T1
 const AOW_TEUTONIC_RAIDERS = T2
@@ -1032,55 +1023,48 @@ function is_located_with_legate(lord) {
 
 function for_each_group_lord(fn) {
 	for (let lord of game.group)
-		if (lord !== LEGATE)
-			fn(lord)
+		fn(lord)
 }
 
 function group_has_capability(c) {
 	for (let lord of game.group)
-		if (lord !== LEGATE)
-			if (lord_has_capability(lord, c))
-				return true
+		if (lord_has_capability(lord, c))
+			return true
 	return false
 }
 
 function count_group_ships() {
 	let n = 0
 	for (let lord of game.group)
-		if (lord !== LEGATE)
-			n += count_lord_ships(lord)
+		n += count_lord_ships(lord)
 	return n
 }
 
 function count_group_assets(asset) {
 	let n = 0
 	for (let lord of game.group)
-		if (lord !== LEGATE)
-			n += get_lord_assets(lord, asset)
+		n += get_lord_assets(lord, asset)
 	return n
 }
 
 function count_group_forces(type) {
 	let n = 0
 	for (let lord of game.group)
-		if (lord !== LEGATE)
-			n += count_lord_forces(lord, type)
+		n += count_lord_forces(lord, type)
 	return n
 }
 
 function count_group_horses() {
 	let n = 0
 	for (let lord of game.group)
-		if (lord !== LEGATE)
-			n += count_lord_horses(lord)
+		n += count_lord_horses(lord)
 	return n
 }
 
 function count_group_transport(way) {
 	let n = 0
 	for (let lord of game.group)
-		if (lord !== LEGATE)
-			n += count_lord_transport(lord, way)
+		n += count_lord_transport(lord, way)
 	return n
 }
 
@@ -2232,7 +2216,6 @@ function end_actions() {
 
 	clear_flag(FLAG_FIRST_ACTION)
 	clear_flag(FLAG_FIRST_MARCH)
-	clear_flag(FLAG_USED_LEGATE)
 	clear_flag(FLAG_TEUTONIC_RAIDERS)
 	clear_flag(FLAG_TEUTONIC_ORDENSBURGEN)
 
@@ -2257,7 +2240,7 @@ function get_available_actions() {
 	let n = data.lords[game.command].command
 
 	if (game.active === TEUTONS) {
-		if (has_flag(FLAG_USED_LEGATE))
+		if (game.call_to_arms.legate_used)
 			++n
 		if (has_flag(FLAG_TEUTONIC_ORDENSBURGEN))
 			++n
@@ -2294,7 +2277,7 @@ states.actions = {
 
 		else {
 			if (game.active === TEUTONS) {
-				if (has_flag(FLAG_FIRST_ACTION) && !has_flag(FLAG_USED_LEGATE) && is_located_with_legate(game.command))
+				if (is_first_action() && !game.call_to_arms.legate_used && is_located_with_legate(game.command))
 					view.actions.use_legate = 1
 			}
 
@@ -2320,9 +2303,9 @@ states.actions = {
 	use_legate() {
 		push_undo()
 		log(`Used Legate for +1 Command.`)
-		set_flag(FLAG_USED_LEGATE)
-		set_delete(game.group, LEGATE)
 		game.call_to_arms.legate = LEGATE_ARRIVED
+		game.call_to_arms.legate_selected = 0
+		game.call_to_arms.legate_used = 1
 	},
 	pass() {
 		push_undo()
@@ -2343,12 +2326,28 @@ states.actions = {
 	storm: do_action_storm,
 	sally: do_action_sally,
 
+	lord(lord) {
+		set_toggle(game.group, lord)
+		if (is_upper_lord(lord))
+			set_toggle(game.group, get_lower_lord(lord))
+	},
+
+	legate() {
+		toggle_legate_selected()
+	},
+
+	// March!
 	locale: march_action_locale,
-	lord: march_action_lord,
-	legate: march_action_legate,
 }
 
 // === ACTION: MARCH ===
+
+function toggle_legate_selected() {
+	if (game.call_to_arms.legate_selected)
+		game.call_to_arms.legate_selected = 0
+	else
+		game.call_to_arms.legate_selected = 1
+}
 
 function lift_siege(from) {
 	if (has_siege_marker(from)) {
@@ -2406,16 +2405,6 @@ function march_action_locale(to) {
 		game.approach = ways[1]
 		march_with_group_1()
 	}
-}
-
-function march_action_lord(lord) {
-	set_toggle(game.group, lord)
-	if (is_upper_lord(lord))
-		set_toggle(game.group, get_lower_lord(lord))
-}
-
-function march_action_legate() {
-	set_toggle(game.group, LEGATE)
 }
 
 states.march_way = {
@@ -2530,7 +2519,7 @@ function march_with_group_2() {
 		set_lord_locale(lord, to)
 		set_lord_moved(lord, 1)
 	})
-	if (set_has(game.group, LEGATE))
+	if (game.call_to_arms.legate_selected)
 		game.call_to_arms.legate = to
 
 	if (is_besieged_enemy_stronghold(from) && !has_friendly_lord(from))
@@ -3385,7 +3374,7 @@ states.sail = {
 			set_lord_locale(lord, to)
 			set_lord_moved(lord, 1)
 		})
-		if (set_has(game.group, LEGATE))
+		if (game.call_to_arms.legate_selected)
 			game.call_to_arms.legate = to
 
 		if (is_enemy_stronghold(from))

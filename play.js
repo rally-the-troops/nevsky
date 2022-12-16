@@ -27,7 +27,6 @@ const VASSAL_MUSTERED = 2
 const NOWHERE = -1
 const CALENDAR = 100
 
-const LEGATE = 20
 const LEGATE_INDISPOSED = -2
 const LEGATE_ARRIVED = -1
 
@@ -198,7 +197,7 @@ function is_legate_action() {
 }
 
 function is_legate_selected() {
-	return view.who === LEGATE || !!(view.group && set_has(view.group, LEGATE))
+	return !!view.call_to_arms.legate_selected
 }
 
 const force_type_count = 7
@@ -1243,6 +1242,7 @@ function on_update() {
 
 	action_button("use_legate", "Legate")
 
+	action_button("end_spoils", "End spoils")
 	action_button("end_avoid_battle", "End avoid battle")
 	action_button("withdraw", "Withdraw")
 	action_button("end_withdraw", "End withdraw")
