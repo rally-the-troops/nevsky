@@ -2,7 +2,9 @@
 
 // TODO: delay pay step if there is no feed or disband to be done
 
-// TODO: Supply (+ lodya)
+// TODO: Lodya capability during supply!
+// TODO: 2nd edition supply rule - no reuse of transports
+// TODO: 2nd edition ravage cost
 
 // CAPABILITIES
 // TODO: Ransom (T)
@@ -404,15 +406,15 @@ function enemy_player() {
 	return null
 }
 
-function get_global_assets(type) {
+function get_spoils(type) {
 	return pack4_get(game.assets, type)
 }
 
-function set_global_assets(type, n) {
+function set_spoils(type, n) {
 	game.assets = pack4_set(game.assets, type, n)
 }
 
-function add_global_assets(type, n) {
+function add_spoils(type, n) {
 	game.assets = pack4_set(game.assets, type, pack4_get(game.assets) + n)
 }
 
@@ -806,7 +808,7 @@ function is_lord_at_friendly_locale(lord) {
 	return is_friendly_locale(loc)
 }
 
-function for_each_seat(lord, fn) {
+function for_each_seat(lord, fn, repeat = false) {
 	let list = data.lords[lord].seats
 
 	for (let seat of list)
@@ -815,32 +817,35 @@ function for_each_seat(lord, fn) {
 	if (is_teutonic_lord(lord)) {
 		if (has_global_capability(AOW_TEUTONIC_ORDENSBURGEN)) {
 			for (let commandery of COMMANDERIES)
-				if (!set_has(list, commandery))
+				if (repeat || !set_has(list, commandery))
 					fn(commandery)
 		}
 	}
 
 	if (is_russian_lord(lord)) {
 		if (has_global_capability(AOW_RUSSIAN_ARCHBISHOPRIC))
-			if (!set_has(list, LOC_NOVGOROD))
+			if (repeat || !set_has(list, LOC_NOVGOROD))
 				fn(LOC_NOVGOROD)
 	}
 
 	if (lord === LORD_YAROSLAV) {
 		if (has_conquered_marker(LOC_PSKOV))
-			if (!set_has(list, LOC_PSKOV))
+			if (repeat || !set_has(list, LOC_PSKOV))
 				fn(LOC_PSKOV)
 	}
 }
 
-function is_lord_at_seat(lord) {
-	let here = get_lord_locale(lord)
+function is_lord_seat(lord, here) {
 	let result = false
 	for_each_seat(lord, seat => {
 		if (seat === here)
 			result = true
 	})
 	return result
+}
+
+function is_lord_at_seat(lord) {
+	return is_lord_seat(lord, get_lord_locale(lord))
 }
 
 function has_free_seat(lord) {
@@ -1290,7 +1295,8 @@ exports.setup = function (seed, scenario, options) {
 
 		approach: 0,
 		avoid: 0,
-		assets: 0,
+		spoils: 0,
+		supply: 0,
 	}
 
 	update_aliases()
@@ -2275,8 +2281,6 @@ function is_first_march() {
 function goto_actions() {
 	log_h2(`L${game.command}`)
 
-	game.state = "actions"
-	game.who = game.command
 	game.count = 0
 	game.extra = 0
 
@@ -2307,6 +2311,15 @@ function goto_actions() {
 		if (this_lord_has_house_of_suzdal())
 			++game.extra
 	}
+
+	resume_actions()
+	update_supply()
+}
+
+function resume_actions() {
+	game.state = "actions"
+	game.who = game.command
+	game.where = NOWHERE
 }
 
 function spend_action(cost) {
@@ -2660,8 +2673,8 @@ function march_with_group_3() {
 		conquer_trade_route(to)
 	}
 
-	game.where = NOWHERE
-	game.state = "actions"
+	resume_actions()
+	update_supply()
 }
 
 // === ACTION: MARCH - AVOID BATTLE ===
@@ -2687,13 +2700,13 @@ function stronghold_capacity(loc) {
 function spoil_prov(lord) {
 	log("Discarded Provender.")
 	add_lord_assets(lord, PROV, -1)
-	add_global_assets(PROV, 1)
+	add_spoils(PROV, 1)
 }
 
 function spoil_loot(lord) {
 	log("Discarded Loot.")
 	add_lord_assets(lord, LOOT, -1)
-	add_global_assets(LOOT, 1)
+	add_spoils(LOOT, 1)
 }
 
 function can_avoid_battle(to, way) {
@@ -3061,8 +3074,7 @@ function end_siege() {
 			set_lord_moved(lord, 1)
 
 	spend_all_actions()
-
-	game.state = "actions"
+	resume_actions()
 }
 
 // === ACTION: STORM ===
@@ -3089,90 +3101,21 @@ function can_action_sally(avail) {
 function goto_sally() {
 	log("TODO: Sally")
 	spend_action(1)
+	resume_actions()
 }
 
 // === ACTION: SUPPLY ===
 
-function can_supply_from_sea() {
-	let season = current_season()
-	if (season === SUMMER || season === RASPUTITSA) {
-		let here = get_lord_locale(game.command)
-		let ships = count_shared_ships() + count_shared_cogs_not_in_locale(here)
-		return ships > 0
-	}
-}
-
-function list_supply_sources() {
-	let sources = []
-
-	for_each_seat(game.command, seat => {
-		set_add(sources, seat)
-	})
-
-	if (can_supply_from_sea()) {
-		if (game.active === TEUTONS)
-			for (let port of data.seaports)
-				set_add(sources, port)
-		if (game.active === RUSSIANS)
-			set_add(sources, LOC_NOVGOROD)
-	}
-
-	return sources
-}
-
-function search_supply_rec(result, seen, sources, here, boats, carts, sleds) {
-	console.log("search", "".padStart(16-(boats+carts+sleds), "-"), here)
-
-	set_add(seen, here)
-
-	if (set_has(sources, here))
-		set_add(result, here)
-
-	if (boats > 0)
-		for (let next of data.locales[here].adjacent_by_waterway)
-			search_supply_rec(result, seen, sources, next, boats - 1, carts, sleds)
-	if (carts > 0)
-		for (let next of data.locales[here].adjacent_by_trackway)
-			search_supply_rec(result, seen, sources, next, boats, carts - 1, sleds)
-	if (sleds > 0)
-		for (let next of data.locales[here].adjacent)
-			search_supply_rec(result, seen, sources, next, boats, carts, sleds - 1)
-
-	set_delete(seen, here)
-}
-
-function search_supply() {
-	let sources = list_supply_sources()
-	let start = get_lord_locale(game.command)
-
-	let result = []
-
-	let boats = get_global_assets(BOAT)
-	let carts = get_global_assets(CART)
-	let sleds = get_global_assets(SLED)
-
-	console.log("SUPPLY", sources, boats, carts, sleds)
-
-	search_supply_rec(result, [], sources, start, boats, carts, sleds)
-
-	console.log(" => ", result)
-}
-
-function can_action_supply(avail) {
-	if (avail < 1)
-		return false
-	return true
-}
-
-function goto_supply() {
-	push_undo()
-	game.state = "supply"
-
+function update_supply() {
 	// TODO: Lodya - select boat OR ship (we count both here...)
 
 	let season = current_season()
 	let here = get_lord_locale(game.command)
-	let boats = 0, carts = 0, sleds = 0, ships = 0
+	let boats = 0
+	let carts = 0
+	let sleds = 0
+	let ships = 0
+
 	if (season === SUMMER) {
 		carts = get_shared_assets(here, CART)
 	}
@@ -3184,18 +3127,172 @@ function goto_supply() {
 		sleds = get_shared_assets(here, SLED)
 	}
 
-	set_global_assets(BOAT, boats)
-	set_global_assets(CART, carts)
-	set_global_assets(SLED, sleds)
-	set_global_assets(SHIP, ships)
+	if (ships > 2)
+		ships = 2
+
+	let sources = list_supply_sources(ships)
+	let reachable = filter_reachable_supply_sources(sources, boats, carts, sleds)
+	let supply_seats = filter_usable_supply_seats(reachable)
+	let supply_seaports = filter_usable_supply_seaports(reachable, ships)
+
+	game.supply = { supply_seats, supply_seaports, seats: 2, boats, carts, sleds, ships }
 }
 
-states.supply = {
-	prompt() {
-		view.prompt = "Supply: Select supply sources."
+function list_supply_sources(ships) {
+	let sources = []
 
-		search_supply()
+	for_each_seat(game.command, seat => { set_add(sources, seat) }, false)
+
+	if (ships > 0) {
+		if (game.active === TEUTONS)
+			for (let port of data.seaports)
+				set_add(sources, port)
+		if (game.active === RUSSIANS)
+			set_add(sources, LOC_NOVGOROD)
+	}
+
+	return sources
+}
+
+function filter_reachable_supply_sources(sources, boats, carts, sleds) {
+	let result = []
+	search_supply_reachable(result, [], sources, get_lord_locale(game.command), boats, carts, sleds)
+	return result
+}
+
+function search_supply_reachable(result, seen, sources, here, boats, carts, sleds) {
+	if (set_has(seen, here))
+		return
+
+	if (has_unbesieged_enemy_lord(here))
+		return
+	if (is_unbesieged_enemy_stronghold(here))
+		return
+	if (is_friendly_territory(here) && has_conquered_marker(here))
+		if (!has_siege_marker(here))
+			return
+
+	set_add(seen, here)
+
+	if (set_has(sources, here))
+		set_add(result, here)
+
+	if (boats > 0)
+		for (let next of data.locales[here].adjacent_by_waterway)
+			search_supply_reachable(result, seen, sources, next, boats - 1, carts, sleds)
+	if (carts > 0)
+		for (let next of data.locales[here].adjacent_by_trackway)
+			search_supply_reachable(result, seen, sources, next, boats, carts - 1, sleds)
+	if (sleds > 0)
+		for (let next of data.locales[here].adjacent)
+			search_supply_reachable(result, seen, sources, next, boats, carts, sleds - 1)
+
+	set_delete(seen, here)
+}
+
+function filter_usable_supply_seats(reachable) {
+	let sources = []
+	for_each_seat(
+		game.command,
+		(seat) => {
+			if (set_has(reachable, seat))
+				sources.push(seat)
+		},
+		true
+	)
+	return sources
+}
+
+function filter_usable_supply_seaports(reachable, ships) {
+	if (ships > 0) {
+		let sources = []
+		if (game.active === TEUTONS) {
+			for (let port of data.seaports) {
+				if (set_has(reachable, port)) {
+					set_add(sources, port)
+				}
+			}
+		}
+		if (game.active === RUSSIANS) {
+			if (set_has(reachable, LOC_NOVGOROD)) {
+				set_add(sources, LOC_NOVGOROD)
+			}
+		}
+		return sources
+	}
+	return null
+}
+
+function can_action_supply(avail) {
+	if (avail < 1)
+		return false
+	return can_supply()
+}
+
+function can_supply() {
+	if (game.supply.seats > 0 && game.supply.supply_seats.length > 0)
+		return true
+	if (game.supply.ships > 0 && game.supply.supply_seaports.length > 0)
+		return true
+	return false
+}
+
+function goto_supply() {
+	push_undo()
+	game.state = "supply_source"
+}
+
+states.supply_source = {
+	prompt() {
+		if (!can_supply()) {
+			view.prompt = "Supply: No valid supply sources."
+			return
+		}
+
+		view.prompt = "Supply: Select supply source and route -"
+
+		if (game.supply.boats > 0)
+			view.prompt += ` ${game.supply.boats} boat`
+		if (game.supply.carts > 0)
+			view.prompt += ` ${game.supply.carts} cart`
+		if (game.supply.sleds > 0)
+			view.prompt += ` ${game.supply.sleds} sled`
+		if (game.supply.ships > 0)
+			view.prompt += ` ${game.supply.ships} ship`
+
+		if (game.supply.seats > 0)
+			for (let source of game.supply.supply_seats)
+				gen_action_locale(source)
+		if (game.supply.ships > 0)
+			for (let source of game.supply.supply_seaports)
+				gen_action_locale(source)
+		view.actions.end_supply = 1
 	},
+	locale(source) {
+		// TODO: 2nd ed - no reusing of transports!
+
+		if (game.supply.supply_seats.includes(source)) {
+			log(`Supplied from seat at %${source}.`)
+			array_remove_item(game.supply.supply_seats, source)
+			game.supply.seats--
+		} else {
+			log(`Supplied from seaport at %${source}.`)
+			game.supply.ships--
+		}
+
+		add_lord_assets(game.command, PROV, 1)
+
+		if (!can_supply())
+			end_supply()
+	},
+	end_supply: end_supply,
+}
+
+function end_supply() {
+	game.supply = 0
+	spend_action(1)
+	resume_actions()
+	update_supply()
 }
 
 // === ACTION: FORAGE ===
@@ -3219,6 +3316,7 @@ function goto_forage() {
 	log(`Foraged at %${here}`)
 	add_lord_assets(game.command, PROV, 1)
 	spend_action(1)
+	resume_actions()
 }
 
 // === ACTION: RAVAGE ===
@@ -3329,8 +3427,7 @@ function ravage_location(here, there) {
 	}
 
 	spend_action(1)
-
-	game.state = "actions"
+	resume_actions()
 }
 
 // === ACTION: TAX ===
@@ -3364,6 +3461,7 @@ function goto_tax()  {
 	add_lord_assets(game.command, COIN, 1)
 
 	spend_all_actions()
+	resume_actions()
 
 	if (lord_has_capability(game.command, AOW_RUSSIAN_VELIKY_KNYAZ)) {
 		logi("Veliky Knyaz")
@@ -3445,7 +3543,8 @@ states.sail = {
 
 		if (overflow > 0) {
 			view.prompt = `Sailing with ${ships} ships and ${horses} horses. Discard loot or provender.`
-			// TODO: how strict is greed?
+			// TODO: stricter greed!
+			// TODO: if 1 ship, 1 loot, 1 prov - cannot discard prov then loot!
 			if (loot > 0 || prov > 0) {
 				for (let lord of game.group) {
 					if (loot > 0)
@@ -3493,8 +3592,8 @@ states.sail = {
 			conquer_trade_route(to)
 
 		spend_all_actions()
-
-		game.state = "actions"
+		resume_actions()
+		update_supply()
 	},
 }
 

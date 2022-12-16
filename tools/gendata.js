@@ -405,7 +405,7 @@ let lords = [
 		name: "Knud & Abel",
 		full_name: "Knud & Abel",
 		title: "Princes of Denmark",
-		seats: seats("Reval, Wesenburg"),
+		seats: seats("Reval, Wesenberg"),
 		marshal: 0,
 		fealty: 2,
 		service: 3,

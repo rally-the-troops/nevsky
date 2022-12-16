@@ -1242,16 +1242,14 @@ function on_update() {
 
 	action_button("use_legate", "Legate")
 
-	action_button("end_spoils", "End spoils")
-	action_button("end_avoid_battle", "End avoid battle")
 	action_button("withdraw", "Withdraw")
 	action_button("end_withdraw", "End withdraw")
 
 	action_button("surrender", "Surrender")
 	action_button("siegeworks", "Siegeworks")
 
-	action_button("sail", "Sail")
 	action_button("march", "March")
+	action_button("sail", "Sail")
 	action_button("siege", "Siege")
 	action_button("storm", "Storm")
 	action_button("sally", "Sally")
@@ -1259,7 +1257,6 @@ function on_update() {
 	action_button("forage", "Forage")
 	action_button("ravage", "Ravage")
 	action_button("tax", "Tax")
-	action_button("pass", "Pass")
 
 	action_button("ship", "Ship")
 	action_button("boat", "Boat")
@@ -1268,22 +1265,25 @@ function on_update() {
 
 	action_button("capability", "Capability")
 
-	action_button("discard", "Discard")
-	action_button("play", "Play")
-	action_button("hold", "Hold")
 	action_button("deploy", "Deploy")
+	action_button("discard", "Discard")
+	action_button("hold", "Hold")
+	action_button("play", "Play")
 
-	action_button("done", "Done")
-	action_button("unfed", "Unfed")
-	action_button("end_plan", "End plan")
-	action_button("end_feed", "End feed")
-	action_button("end_pay", "End pay")
-	action_button("end_disband", "End disband")
 	action_button("end_actions", "End actions")
+	action_button("end_avoid_battle", "End avoid battle")
+	action_button("end_disband", "End disband")
+	action_button("end_feed", "End feed")
 	action_button("end_levy", "End levy")
 	action_button("end_muster", "End muster")
+	action_button("end_pay", "End pay")
+	action_button("end_plan", "End plan")
 	action_button("end_setup", "End setup")
+	action_button("end_spoils", "End spoils")
+	action_button("end_supply", "End supply")
 
+	action_button("pass", "Pass")
+	action_button("done", "Done")
 	action_button("undo", "Undo")
 }
 
