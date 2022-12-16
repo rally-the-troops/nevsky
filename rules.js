@@ -1,6 +1,22 @@
 "use strict"
 
 // TODO: delay pay step if there is no feed or disband to be done
+// TODO: supply (+ lodya)
+
+// CAPABILITIES
+// TODO: Ransom (T)
+// TODO: Ransom (R)
+// TODO: Crusade
+// TODO: Steppe Warriors
+// TODO: William of Modena
+// TODO: Black Sea Trade
+// TODO: Baltic Sea Trade
+// TODO: Hillforts
+// TODO: Stonemasons
+// TODO: Stone Kremlin
+// TODO: Smerdi
+
+// TODO: BATTLE + STORM + SALLY
 
 const data = require("./data.js")
 
@@ -186,7 +202,6 @@ const LOC_SABLIA = find_locale("Sablia")
 const FLAG_FIRST_ACTION = 1 << 0
 const FLAG_FIRST_MARCH = 1 << 1
 const FLAG_TEUTONIC_RAIDERS = 1 << 2
-const FLAG_TEUTONIC_ORDENSBURGEN = 1 << 3
 
 const AOW_TEUTONIC_TREATY_OF_STENSBY = T1
 const AOW_TEUTONIC_RAIDERS = T2
@@ -1074,6 +1089,26 @@ function setup_lord_on_calendar(lord, turn) {
 	set_lord_locale(lord, CALENDAR + turn)
 }
 
+function muster_lord_forces(lord) {
+	set_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
+	set_lord_forces(lord, SERGEANTS, info.forces.sergeants | 0)
+	set_lord_forces(lord, LIGHT_HORSE, info.forces.light_horse | 0)
+	set_lord_forces(lord, ASIATIC_HORSE, info.forces.asiatic_horse | 0)
+	set_lord_forces(lord, MEN_AT_ARMS, info.forces.men_at_arms | 0)
+	set_lord_forces(lord, MILITIA, info.forces.militia | 0)
+	set_lord_forces(lord, SERFS, info.forces.serfs | 0)
+}
+
+function muster_vassal_forces(lord, vassal) {
+	add_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
+	add_lord_forces(lord, SERGEANTS, info.forces.sergeants | 0)
+	add_lord_forces(lord, LIGHT_HORSE, info.forces.light_horse | 0)
+	add_lord_forces(lord, ASIATIC_HORSE, info.forces.asiatic_horse | 0)
+	add_lord_forces(lord, MEN_AT_ARMS, info.forces.men_at_arms | 0)
+	add_lord_forces(lord, MILITIA, info.forces.militia | 0)
+	add_lord_forces(lord, SERFS, info.forces.serfs | 0)
+}
+
 function muster_lord(lord, locale, service) {
 	let info = data.lords[lord]
 
@@ -1092,13 +1127,7 @@ function muster_lord(lord, locale, service) {
 	set_lord_assets(lord, BOAT, info.assets.boat | 0)
 	set_lord_assets(lord, SHIP, info.assets.ship | 0)
 
-	set_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
-	set_lord_forces(lord, SERGEANTS, info.forces.sergeants | 0)
-	set_lord_forces(lord, LIGHT_HORSE, info.forces.light_horse | 0)
-	set_lord_forces(lord, ASIATIC_HORSE, info.forces.asiatic_horse | 0)
-	set_lord_forces(lord, MEN_AT_ARMS, info.forces.men_at_arms | 0)
-	set_lord_forces(lord, MILITIA, info.forces.militia | 0)
-	set_lord_forces(lord, SERFS, info.forces.serfs | 0)
+	muster_lord_forces(lord)
 
 	for (let v of info.vassals) {
 		if (is_vassal_available(v))
@@ -1110,16 +1139,8 @@ function muster_lord(lord, locale, service) {
 
 function muster_vassal(lord, vassal) {
 	let info = data.vassals[vassal]
-
 	game.lords.vassals[vassal] = VASSAL_MUSTERED
-
-	add_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
-	add_lord_forces(lord, SERGEANTS, info.forces.sergeants | 0)
-	add_lord_forces(lord, LIGHT_HORSE, info.forces.light_horse | 0)
-	add_lord_forces(lord, ASIATIC_HORSE, info.forces.asiatic_horse | 0)
-	add_lord_forces(lord, MEN_AT_ARMS, info.forces.men_at_arms | 0)
-	add_lord_forces(lord, MILITIA, info.forces.militia | 0)
-	add_lord_forces(lord, SERFS, info.forces.serfs | 0)
+	muster_vassal_forces(lord, vassal)
 }
 
 exports.setup = function (seed, scenario, options) {
@@ -1169,11 +1190,13 @@ exports.setup = function (seed, scenario, options) {
 
 		call_to_arms: {
 			legate: LEGATE_INDISPOSED,
+			legate_selected: 0,
 			veche_vp: 0,
 			veche_coin: 0,
 		},
 
 		flags: 0,
+		extra: 0, // extra commands from capabilities
 		command: NOBODY,
 		group: 0,
 		who: NOBODY,
@@ -2171,6 +2194,7 @@ function goto_actions() {
 	game.state = "actions"
 	game.who = game.command
 	game.count = 0
+	game.extra = 0
 
 	set_flag(FLAG_FIRST_ACTION)
 	set_flag(FLAG_FIRST_MARCH)
@@ -2182,10 +2206,22 @@ function goto_actions() {
 		set_add(game.group, lower)
 
 	if (game.active === TEUTONS) {
-		if (has_global_capability(AOW_TEUTONIC_ORDENSBURGEN)) {
+		if (has_global_capability(AOW_TEUTONIC_ORDENSBURGEN))
 			if (is_commandery(get_lord_locale(game.command)))
-				set_flag(FLAG_TEUTONIC_ORDENSBURGEN)
-		}
+				++game.extra
+		if (game.command === LORD_HEINRICH || game.command === LORD_KNUD_ABEL)
+			if (has_global_capability(AOW_TEUTONIC_TREATY_OF_STENSBY))
+				++game.extra
+	}
+
+	if (game.active === RUSSIANS) {
+		if (has_global_capability(AOW_RUSSIAN_ARCHBISHOPRIC))
+			if (get_lord_locale(game.command) === LOC_NOVGOROD)
+				++game.extra
+		if (this_lord_has_russian_druzhina())
+			++game.extra
+		if (this_lord_has_house_of_suzdal())
+			++game.extra
 	}
 }
 
@@ -2213,11 +2249,11 @@ function end_actions() {
 	game.command = NOBODY
 	game.who = NOBODY
 	game.group = 0
+	game.call_to_arms.legate_selected = 0
 
 	clear_flag(FLAG_FIRST_ACTION)
 	clear_flag(FLAG_FIRST_MARCH)
 	clear_flag(FLAG_TEUTONIC_RAIDERS)
-	clear_flag(FLAG_TEUTONIC_ORDENSBURGEN)
 
 	goto_feed()
 }
@@ -2237,26 +2273,7 @@ function this_lord_has_house_of_suzdal() {
 }
 
 function get_available_actions() {
-	let n = data.lords[game.command].command
-
-	if (game.active === TEUTONS) {
-		if (game.call_to_arms.legate_used)
-			++n
-		if (has_flag(FLAG_TEUTONIC_ORDENSBURGEN))
-			++n
-		if (game.command === LORD_HEINRICH || game.command === LORD_KNUD_ABEL)
-			if (has_global_capability(AOW_TEUTONIC_TREATY_OF_STENSBY))
-				++n
-	}
-
-	if (game.active === RUSSIANS) {
-		if (this_lord_has_russian_druzhina())
-			++n
-		if (this_lord_has_house_of_suzdal())
-			++n
-	}
-
-	return n - game.count
+	return data.lords[game.command].command + game.extra - game.count
 }
 
 states.actions = {
@@ -2266,6 +2283,8 @@ states.actions = {
 		view.prompt = `${lord_name[game.command]} has ${avail}x actions.`
 
 		view.group = game.group
+
+		let here = get_lord_locale(game.command)
 
 		// 4.3.2 Marshals MAY take other lords
 		if (is_marshal(game.command)) {
@@ -2292,11 +2311,11 @@ states.actions = {
 
 		else {
 			if (game.active === TEUTONS) {
-				if (is_first_action() && !game.call_to_arms.legate_used && is_located_with_legate(game.command))
+				if (is_first_action() && is_located_with_legate(game.command))
 					view.actions.use_legate = 1
 			}
 
-			march_prompt(avail)
+			prompt_march(avail)
 
 			if (can_action_siege(avail))
 				view.actions.siege = 1
@@ -2320,7 +2339,7 @@ states.actions = {
 		log(`Used Legate for +1 Command.`)
 		game.call_to_arms.legate = LEGATE_ARRIVED
 		game.call_to_arms.legate_selected = 0
-		game.call_to_arms.legate_used = 1
+		++game.extra
 	},
 	pass() {
 		push_undo()
@@ -2332,14 +2351,14 @@ states.actions = {
 		end_actions()
 	},
 
-	forage: do_action_forage,
-	ravage: do_action_ravage,
-	sail: do_action_sail,
-	tax: do_action_tax,
+	forage: goto_forage,
+	ravage: goto_ravage,
+	sail: goto_sail,
+	tax: goto_tax,
 
-	siege: do_action_siege,
-	storm: do_action_storm,
-	sally: do_action_sally,
+	siege: goto_siege,
+	storm: goto_storm,
+	sally: goto_sally,
 
 	lord(lord) {
 		set_toggle(game.group, lord)
@@ -2352,7 +2371,7 @@ states.actions = {
 	},
 
 	// March!
-	locale: march_action_locale,
+	locale: goto_march,
 }
 
 // === ACTION: MARCH ===
@@ -2384,7 +2403,7 @@ function group_has_teutonic_converts() {
 	return false
 }
 
-function march_prompt(avail) {
+function prompt_march(avail) {
 	if (avail > 0 || group_has_teutonic_converts()) {
 		let here = get_lord_locale(game.command)
 		for (let to of data.locales[here].adjacent)
@@ -2392,7 +2411,7 @@ function march_prompt(avail) {
 	}
 }
 
-function march_action_locale(to) {
+function goto_march(to) {
 	push_undo()
 	let from = get_lord_locale(game.command)
 	let ways = list_ways(from, to)
@@ -2831,32 +2850,29 @@ states.withdraw = {
 }
 
 function end_withdraw() {
-	log("TODO: Battles")
-	end_approach()
-}
-
-function end_approach() {
 	clear_undo()
 	set_active_enemy()
 	game.where = get_lord_locale(game.command)
 	game.who = game.command
 	game.group = game.stack
 	game.stack = []
-	goto_divide_spoils()
+	goto_divide_spoils_after_avoid_battle()
 }
 
-function goto_divide_spoils() {
+// === ACTION: MARCH - DIVIDE SPOILS AFTER AVOID BATTLE ===
+
+function goto_divide_spoils_after_avoid_battle() {
 	if (game.spoils > 0)
-		game.state = "divide_spoils"
+		game.state = "divide_spoils_after_avoid_battle"
 	else
 		march_with_group_3()
 }
 
-states.divide_spoils = {
+states.divide_spoils_after_avoid_battle = {
 	prompt() {
-		view.actions.pass = 1
+		view.actions.end_spoils = 1
 	},
-	pass() {
+	end_spoils() {
 		game.spoils = 0
 		march_with_group_3()
 	},
@@ -2893,7 +2909,7 @@ function can_action_siege(avail) {
 	return false
 }
 
-function do_action_siege() {
+function goto_siege() {
 	push_undo()
 	let here = get_lord_locale(game.command)
 	log(`Sieged at %${here}.`)
@@ -2972,7 +2988,7 @@ function can_action_storm(avail) {
 	return false
 }
 
-function do_action_storm() {
+function goto_storm() {
 	log("TODO: Storm")
 	spend_action(1)
 }
@@ -2985,7 +3001,7 @@ function can_action_sally(avail) {
 	return true
 }
 
-function do_action_sally() {
+function goto_sally() {
 	log("TODO: Sally")
 	spend_action(1)
 }
@@ -3014,7 +3030,7 @@ function can_action_forage(avail) {
 	return false
 }
 
-function do_action_forage() {
+function goto_forage() {
 	push_undo()
 	let here = get_lord_locale(game.command)
 	log(`Foraged at %${here}`)
@@ -3077,7 +3093,7 @@ function can_action_ravage(avail) {
 	return false
 }
 
-function do_action_ravage() {
+function goto_ravage() {
 	push_undo()
 	if (this_lord_has_teutonic_raiders() || this_lord_has_russian_raiders()) {
 		game.state = "ravage"
@@ -3136,6 +3152,13 @@ function ravage_location(here, there) {
 
 // === ACTION: TAX ===
 
+function restore_mustered_forces(lord) {
+	muster_lord_forces(lord)
+	for (let v of data.lords[lord].vassals)
+		if (is_vassal_mustered(v))
+			muster_vassal_forces(lord, v)
+}
+
 function can_action_tax(avail) {
 	// Must use whole action
 	if (!is_first_action())
@@ -3149,7 +3172,7 @@ function can_action_tax(avail) {
 	return is_lord_at_seat(game.command);
 }
 
-function do_action_tax()  {
+function goto_tax()  {
 	push_undo()
 
 	let here = get_lord_locale(game.command)
@@ -3160,8 +3183,10 @@ function do_action_tax()  {
 	spend_all_actions()
 
 	if (lord_has_capability(game.command, AOW_RUSSIAN_VELIKY_KNYAZ)) {
+		logi("Veliky Knyaz")
+		logii("Restored mustered forces.")
+		restore_mustered_forces(game.command)
 		push_state("veliky_knyaz")
-		// TODO: restore mustered forces
 		game.count = 2
 	}
 }
@@ -3260,7 +3285,7 @@ function can_action_sail(avail) {
 	return true
 }
 
-function do_action_sail() {
+function goto_sail() {
 	push_undo()
 	game.state = 'sail'
 }
