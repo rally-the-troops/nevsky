@@ -1,7 +1,8 @@
 "use strict"
 
 // TODO: delay pay step if there is no feed or disband to be done
-// TODO: supply (+ lodya)
+
+// TODO: Supply (+ lodya)
 
 // CAPABILITIES
 // TODO: Ransom (T)
@@ -403,6 +404,18 @@ function enemy_player() {
 	return null
 }
 
+function get_global_assets(type) {
+	return pack4_get(game.assets, type)
+}
+
+function set_global_assets(type, n) {
+	game.assets = pack4_set(game.assets, type, n)
+}
+
+function add_global_assets(type, n) {
+	game.assets = pack4_set(game.assets, type, pack4_get(game.assets) + n)
+}
+
 function get_lord_locale(lord) {
 	return game.lords.locale[lord]
 }
@@ -550,6 +563,116 @@ function count_lord_horses(lord) {
 		get_lord_forces(lord, LIGHT_HORSE) +
 		get_lord_forces(lord, ASIATIC_HORSE)
 	)
+}
+
+function count_lord_boats(lord) {
+	let boats = get_lord_assets(lord, BOAT)
+
+	if (lord_has_capability(lord, AOW_RUSSIAN_LODYA)) {
+		// TODO: one option or the other (only matters for supply)
+		let ships = get_lord_assets(lord, SHIP)
+		if (ships > 2)
+			ships = 2
+		if (boats * 2 > boats + ships)
+			boats = boats * 2
+		else
+			boats = boats + ships
+	}
+
+	return boats
+}
+
+function count_shared_boats() {
+	let here = get_lord_locale(game.command)
+	let n = 0
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (get_lord_locale(lord) === here)
+			n += count_lord_boats(lord)
+	return n
+}
+
+function count_lord_ships(lord) {
+	let ships = get_lord_assets(lord, SHIP)
+
+	if (lord_has_capability(lord, AOW_TEUTONIC_COGS)) {
+		ships *= 2
+	}
+
+	if (lord_has_capability(lord, AOW_RUSSIAN_LODYA)) {
+		// TODO: one option or the other (only matters for supply)
+		let boats = get_lord_assets(lord, BOAT)
+		if (boats > 2)
+			boats = 2
+		ships += boats
+	}
+
+	return ships
+}
+
+function count_shared_ships() {
+	let here = get_lord_locale(game.command)
+	let n = 0
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (get_lord_locale(lord) === here)
+			n += count_lord_ships(lord)
+	return n
+}
+
+function count_shared_cogs_not_in_group() {
+	let n = 0
+	if (game.active === TEUTONS) {
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+			if (lord_has_capability(lord, AOW_TEUTONIC_COGS))
+				if (!set_has(game.group, lord)) // not already counted for
+					n += get_lord_assets(lord, SHIP) * 2
+	}
+	return n
+}
+
+function count_shared_cogs_not_in_locale(here) {
+	let n = 0
+	if (game.active === TEUTONS) {
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+			if (lord_has_capability(lord, AOW_TEUTONIC_COGS))
+				if (get_lord_locale(lord) !== here)
+					n += get_lord_assets(lord, SHIP) * 2
+	}
+	return n
+}
+
+function count_group_ships() {
+	let n = 0
+	for (let lord of game.group)
+		n += count_lord_ships(lord)
+	return n
+}
+
+function count_group_assets(asset) {
+	let n = 0
+	for (let lord of game.group)
+		n += get_lord_assets(lord, asset)
+	return n
+}
+
+function count_group_forces(type) {
+	let n = 0
+	for (let lord of game.group)
+		n += count_lord_forces(lord, type)
+	return n
+}
+
+function count_group_horses() {
+	let n = 0
+	for (let lord of game.group)
+		n += count_lord_horses(lord)
+	return n
+}
+
+function count_group_transport(type) {
+	let n = 0
+	for (let lord of game.group)
+		n += count_lord_transport(lord, type)
+	return n
 }
 
 function max_plan_length() {
@@ -946,8 +1069,8 @@ function can_add_transport(who, what) {
 	return get_lord_assets(who, what) < 8
 }
 
-function count_lord_transport(lord, way) {
-	let type = data.ways[way].type
+
+function count_lord_transport(lord, type) {
 	let season = current_season()
 	let n = 0
 	switch (type) {
@@ -1036,51 +1159,11 @@ function is_located_with_legate(lord) {
 	return get_lord_locale(lord) === game.call_to_arms.legate
 }
 
-function for_each_group_lord(fn) {
-	for (let lord of game.group)
-		fn(lord)
-}
-
 function group_has_capability(c) {
 	for (let lord of game.group)
 		if (lord_has_capability(lord, c))
 			return true
 	return false
-}
-
-function count_group_ships() {
-	let n = 0
-	for (let lord of game.group)
-		n += count_lord_ships(lord)
-	return n
-}
-
-function count_group_assets(asset) {
-	let n = 0
-	for (let lord of game.group)
-		n += get_lord_assets(lord, asset)
-	return n
-}
-
-function count_group_forces(type) {
-	let n = 0
-	for (let lord of game.group)
-		n += count_lord_forces(lord, type)
-	return n
-}
-
-function count_group_horses() {
-	let n = 0
-	for (let lord of game.group)
-		n += count_lord_horses(lord)
-	return n
-}
-
-function count_group_transport(way) {
-	let n = 0
-	for (let lord of game.group)
-		n += count_lord_transport(lord, way)
-	return n
 }
 
 // === SETUP ===
@@ -1090,6 +1173,7 @@ function setup_lord_on_calendar(lord, turn) {
 }
 
 function muster_lord_forces(lord) {
+	let info = data.lords[lord]
 	set_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
 	set_lord_forces(lord, SERGEANTS, info.forces.sergeants | 0)
 	set_lord_forces(lord, LIGHT_HORSE, info.forces.light_horse | 0)
@@ -1100,6 +1184,7 @@ function muster_lord_forces(lord) {
 }
 
 function muster_vassal_forces(lord, vassal) {
+	let info = data.vassals[vassal]
 	add_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
 	add_lord_forces(lord, SERGEANTS, info.forces.sergeants | 0)
 	add_lord_forces(lord, LIGHT_HORSE, info.forces.light_horse | 0)
@@ -1138,7 +1223,6 @@ function muster_lord(lord, locale, service) {
 }
 
 function muster_vassal(lord, vassal) {
-	let info = data.vassals[vassal]
 	game.lords.vassals[vassal] = VASSAL_MUSTERED
 	muster_vassal_forces(lord, vassal)
 }
@@ -1206,7 +1290,7 @@ exports.setup = function (seed, scenario, options) {
 
 		approach: 0,
 		avoid: 0,
-		spoils: 0,
+		assets: 0,
 	}
 
 	update_aliases()
@@ -2341,11 +2425,13 @@ states.actions = {
 		game.call_to_arms.legate_selected = 0
 		++game.extra
 	},
+
 	pass() {
 		push_undo()
 		log("Passed.")
 		spend_all_actions() // TODO: maybe only one action?
 	},
+
 	end_actions() {
 		clear_undo()
 		end_actions()
@@ -2353,25 +2439,24 @@ states.actions = {
 
 	forage: goto_forage,
 	ravage: goto_ravage,
-	sail: goto_sail,
+	supply: goto_supply,
 	tax: goto_tax,
-
 	siege: goto_siege,
 	storm: goto_storm,
 	sally: goto_sally,
+	sail: goto_sail,
+
+	locale: goto_march,
+
+	legate() {
+		toggle_legate_selected()
+	},
 
 	lord(lord) {
 		set_toggle(game.group, lord)
 		if (is_upper_lord(lord))
 			set_toggle(game.group, get_lower_lord(lord))
 	},
-
-	legate() {
-		toggle_legate_selected()
-	},
-
-	// March!
-	locale: goto_march,
 }
 
 // === ACTION: MARCH ===
@@ -2443,7 +2528,7 @@ states.march_way = {
 
 function march_with_group_1() {
 	let way = game.approach
-	let transport = count_group_transport(way)
+	let transport = count_group_transport(data.ways[way].type)
 	let prov = count_group_assets(PROV)
 	let loot = count_group_assets(LOOT)
 
@@ -2460,7 +2545,7 @@ states.march_laden = {
 	prompt() {
 		let to = game.where
 		let way = game.approach
-		let transport = count_group_transport(way)
+		let transport = count_group_transport(data.ways[way].type)
 		let prov = count_group_assets(PROV)
 		let loot = count_group_assets(LOOT)
 
@@ -2486,7 +2571,7 @@ states.march_laden = {
 		}
 
 		if (loot > 0 || prov > transport) {
-			for_each_group_lord(lord => {
+			for (let lord of game.group) {
 				if (loot > 0) {
 					if (get_lord_assets(lord, LOOT) > 0)
 						gen_action_loot(lord)
@@ -2498,7 +2583,7 @@ states.march_laden = {
 						if (get_lord_assets(lord, PROV) > 0)
 							gen_action_prov(lord)
 				}
-			})
+			}
 		}
 	},
 	prov: drop_prov,
@@ -2512,7 +2597,7 @@ function march_with_group_2() {
 	let from = get_lord_locale(game.command)
 	let way = game.approach
 	let to = game.where
-	let transport = count_group_transport(way)
+	let transport = count_group_transport(data.ways[way].type)
 	let prov = count_group_assets(PROV)
 	let loot = count_group_assets(LOOT)
 	let laden = loot > 0 || prov > transport
@@ -2529,10 +2614,10 @@ function march_with_group_2() {
 	else
 		log(`Marched to %${to}.`)
 
-	for_each_group_lord(lord => {
+	for (let lord of game.group) {
 		set_lord_locale(lord, to)
 		set_lord_moved(lord, 1)
-	})
+	}
 	if (game.call_to_arms.legate_selected)
 		game.call_to_arms.legate = to
 
@@ -2602,13 +2687,13 @@ function stronghold_capacity(loc) {
 function spoil_prov(lord) {
 	log("Discarded Provender.")
 	add_lord_assets(lord, PROV, -1)
-	game.spoils = pack4_set(game.spoils, PROV, pack4_get(game.spoils) + 1)
+	add_global_assets(PROV, 1)
 }
 
 function spoil_loot(lord) {
 	log("Discarded Loot.")
 	add_lord_assets(lord, LOOT, -1)
-	game.spoils = pack4_set(game.spoils, LOOT, pack4_get(game.spoils) + 1)
+	add_global_assets(LOOT, 1)
 }
 
 function can_avoid_battle(to, way) {
@@ -2634,7 +2719,7 @@ function goto_avoid_battle() {
 	game.stack = game.group
 	game.who = NOBODY
 	game.state = "avoid_battle"
-	game.spoils = 0
+	game.assets = 0
 	resume_avoid_battle()
 }
 
@@ -2711,7 +2796,7 @@ states.avoid_battle_way = {
 
 function avoid_battle_1() {
 	let way = game.avoid
-	let transport = count_group_transport(way)
+	let transport = count_group_transport(data.ways[way].type)
 	let prov = count_group_assets(PROV)
 	let loot = count_group_assets(LOOT)
 	if (prov > transport || loot > 0)
@@ -2724,7 +2809,7 @@ states.avoid_battle_laden = {
 	prompt() {
 		let to = game.where
 		let way = game.avoid
-		let transport = count_group_transport(way)
+		let transport = count_group_transport(data.ways[way].type)
 		let prov = count_group_assets(PROV)
 		let loot = count_group_assets(LOOT)
 
@@ -2733,16 +2818,16 @@ states.avoid_battle_laden = {
 
 		if (loot > 0) {
 			view.prompt += " Discard Loot."
-			for_each_group_lord(lord => {
+			for (let lord of game.group) {
 				if (get_lord_assets(lord, LOOT) > 0)
 					gen_action_loot(lord)
-			})
+			}
 		} else if (prov > transport) {
 			view.prompt += " Discard Provender."
-			for_each_group_lord(lord => {
+			for (let lord of game.group) {
 				if (get_lord_assets(lord, PROV) > 0)
 					gen_action_prov(lord)
-			})
+			}
 		} else {
 			gen_action_locale(to)
 		}
@@ -2768,10 +2853,10 @@ function avoid_battle_2() {
 	else
 		log(`Avoided Battle to %${to}.`)
 
-	for_each_group_lord(lord => {
+	for (let lord of game.group) {
 		set_lord_locale(lord, to)
 		set_lord_moved(lord, 1)
-	})
+	}
 
 	game.where = get_lord_locale(game.command)
 	game.avoid = 0
@@ -2862,7 +2947,7 @@ function end_withdraw() {
 // === ACTION: MARCH - DIVIDE SPOILS AFTER AVOID BATTLE ===
 
 function goto_divide_spoils_after_avoid_battle() {
-	if (game.spoils > 0)
+	if (game.assets > 0)
 		game.state = "divide_spoils_after_avoid_battle"
 	else
 		march_with_group_3()
@@ -2873,7 +2958,7 @@ states.divide_spoils_after_avoid_battle = {
 		view.actions.end_spoils = 1
 	},
 	end_spoils() {
-		game.spoils = 0
+		game.assets = 0
 		march_with_group_3()
 	},
 }
@@ -3008,11 +3093,109 @@ function goto_sally() {
 
 // === ACTION: SUPPLY ===
 
+function can_supply_from_sea() {
+	let season = current_season()
+	if (season === SUMMER || season === RASPUTITSA) {
+		let here = get_lord_locale(game.command)
+		let ships = count_shared_ships() + count_shared_cogs_not_in_locale(here)
+		return ships > 0
+	}
+}
+
+function list_supply_sources() {
+	let sources = []
+
+	for_each_seat(game.command, seat => {
+		set_add(sources, seat)
+	})
+
+	if (can_supply_from_sea()) {
+		if (game.active === TEUTONS)
+			for (let port of data.seaports)
+				set_add(sources, port)
+		if (game.active === RUSSIANS)
+			set_add(sources, LOC_NOVGOROD)
+	}
+
+	return sources
+}
+
+function search_supply_rec(result, seen, sources, here, boats, carts, sleds) {
+	console.log("search", "".padStart(16-(boats+carts+sleds), "-"), here)
+
+	set_add(seen, here)
+
+	if (set_has(sources, here))
+		set_add(result, here)
+
+	if (boats > 0)
+		for (let next of data.locales[here].adjacent_by_waterway)
+			search_supply_rec(result, seen, sources, next, boats - 1, carts, sleds)
+	if (carts > 0)
+		for (let next of data.locales[here].adjacent_by_trackway)
+			search_supply_rec(result, seen, sources, next, boats, carts - 1, sleds)
+	if (sleds > 0)
+		for (let next of data.locales[here].adjacent)
+			search_supply_rec(result, seen, sources, next, boats, carts, sleds - 1)
+
+	set_delete(seen, here)
+}
+
+function search_supply() {
+	let sources = list_supply_sources()
+	let start = get_lord_locale(game.command)
+
+	let result = []
+
+	let boats = get_global_assets(BOAT)
+	let carts = get_global_assets(CART)
+	let sleds = get_global_assets(SLED)
+
+	console.log("SUPPLY", sources, boats, carts, sleds)
+
+	search_supply_rec(result, [], sources, start, boats, carts, sleds)
+
+	console.log(" => ", result)
+}
+
 function can_action_supply(avail) {
 	if (avail < 1)
 		return false
+	return true
+}
 
-	return false
+function goto_supply() {
+	push_undo()
+	game.state = "supply"
+
+	// TODO: Lodya - select boat OR ship (we count both here...)
+
+	let season = current_season()
+	let here = get_lord_locale(game.command)
+	let boats = 0, carts = 0, sleds = 0, ships = 0
+	if (season === SUMMER) {
+		carts = get_shared_assets(here, CART)
+	}
+	if (season === SUMMER || season === RASPUTITSA) {
+		boats = count_shared_boats()
+		ships = count_shared_ships() + count_shared_cogs_not_in_locale(here)
+	}
+	if (season === EARLY_WINTER || season === LATE_WINTER) {
+		sleds = get_shared_assets(here, SLED)
+	}
+
+	set_global_assets(BOAT, boats)
+	set_global_assets(CART, carts)
+	set_global_assets(SLED, sleds)
+	set_global_assets(SHIP, ships)
+}
+
+states.supply = {
+	prompt() {
+		view.prompt = "Supply: Select supply sources."
+
+		search_supply()
+	},
 }
 
 // === ACTION: FORAGE ===
@@ -3205,54 +3388,8 @@ function drop_loot(lord) {
 	add_lord_assets(lord, LOOT, -1)
 }
 
-function count_lord_ships(lord) {
-	let ships = get_lord_assets(lord, SHIP)
-
-	if (lord_has_capability(lord, AOW_TEUTONIC_COGS)) {
-		ships *= 2
-	}
-
-	if (lord_has_capability(lord, AOW_RUSSIAN_LODYA)) {
-		// TODO: one option or the other (only matters for supply)
-		let boats = get_lord_assets(lord, BOAT)
-		if (boats > 2)
-			boats = 2
-		ships += boats
-	}
-
-	return ships
-}
-
-function count_shared_cogs() {
-	let n = 0
-	if (game.active === TEUTONS) {
-		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-			if (lord_has_capability(lord, AOW_TEUTONIC_COGS))
-				if (!set_has(game.group, lord)) // not already counted for
-					n += get_lord_assets(lord, SHIP) * 2
-	}
-	return n
-}
-
-function count_lord_boats(lord) {
-	let boats = get_lord_assets(lord, BOAT)
-
-	if (lord_has_capability(lord, AOW_RUSSIAN_LODYA)) {
-		// TODO: one option or the other (only matters for supply)
-		let ships = get_lord_assets(lord, SHIP)
-		if (ships > 2)
-			ships = 2
-		if (boats * 2 > boats + ships)
-			boats = boats * 2
-		else
-			boats = boats + ships
-	}
-
-	return boats
-}
-
 function has_enough_available_ships_for_horses() {
-	let ships = count_group_ships() + count_shared_cogs()
+	let ships = count_group_ships() + count_shared_cogs_not_in_group()
 	let horses = count_group_horses()
 
 	let needed_ships = horses
@@ -3295,7 +3432,7 @@ states.sail = {
 		view.group = game.group
 
 		let here = get_lord_locale(game.command)
-		let ships = count_group_ships() + count_shared_cogs()
+		let ships = count_group_ships() + count_shared_cogs_not_in_group()
 		let horses = count_group_horses()
 		let prov = count_group_assets(PROV)
 		let loot = count_group_assets(LOOT)
@@ -3310,14 +3447,14 @@ states.sail = {
 			view.prompt = `Sailing with ${ships} ships and ${horses} horses. Discard loot or provender.`
 			// TODO: how strict is greed?
 			if (loot > 0 || prov > 0) {
-				for_each_group_lord(lord => {
+				for (let lord of game.group) {
 					if (loot > 0)
 						if (get_lord_assets(lord, LOOT) > 0)
 							gen_action_loot(lord)
 					if (prov > 0)
 						if (get_lord_assets(lord, PROV) > 0)
 							gen_action_prov(lord)
-				})
+				}
 			}
 		} else {
 			view.prompt = `Sail: Choose a destination Seaport.`
@@ -3337,10 +3474,10 @@ states.sail = {
 
 		let from = get_lord_locale(game.command)
 
-		for_each_group_lord(lord => {
+		for (let lord of game.group) {
 			set_lord_locale(lord, to)
 			set_lord_moved(lord, 1)
-		})
+		}
 		if (game.call_to_arms.legate_selected)
 			game.call_to_arms.legate = to
 

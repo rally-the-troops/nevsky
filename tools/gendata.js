@@ -306,15 +306,20 @@ function dumplist(name, list) {
 locales.forEach(loc => {
 	loc.adjacent = []
 	loc.adjacent_by_trackway = []
+	loc.adjacent_by_waterway = []
 	for (let [to, way] of loc.ways) {
 		if (!loc.adjacent.includes(to))
 			loc.adjacent.push(to)
 		if (ways[way].type === "trackway")
 			if (!loc.adjacent_by_trackway.includes(to))
 				loc.adjacent_by_trackway.push(to)
+		if (ways[way].type === "waterway")
+			if (!loc.adjacent_by_waterway.includes(to))
+				loc.adjacent_by_waterway.push(to)
 	}
 	loc.adjacent.sort(cmpnum)
 	loc.adjacent_by_trackway.sort(cmpnum)
+	loc.adjacent_by_waterway.sort(cmpnum)
 })
 
 function seats(list) {
