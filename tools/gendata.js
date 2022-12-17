@@ -826,6 +826,16 @@ vassals.forEach((vassal,id) => {
 	vassal.image = last_path.indexOf(path)
 })
 
+let steppe_warriors = []
+let crusaders = []
+
+for (let i = 0; i < vassals.length; ++i) {
+	if (vassals[i].capability === "Steppe Warriors")
+		steppe_warriors.push(i)
+	if (vassals[i].capability === "Crusade")
+		crusaders.push(i)
+}
+
 let script = []
 script.push("mkdir -p service300")
 script.push("montage -mode concatenate -tile 1x " + lord_service.Teutonic.join(" ") + " service300/service_lords_teutonic.png")
@@ -837,6 +847,8 @@ print("const data = {")
 print("seaports:" + JSON.stringify(seaports) + ",")
 print("conquerable:" + JSON.stringify(conquerable) + ",")
 print("strongholds:" + JSON.stringify(strongholds) + ",")
+print("steppe_warriors:" + JSON.stringify(steppe_warriors) + ",")
+print("crusaders:" + JSON.stringify(crusaders) + ",")
 dumplist("locales", locales)
 dumplist("ways", ways)
 dumplist("lords", lords)

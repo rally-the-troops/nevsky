@@ -197,7 +197,7 @@ function is_legate_action() {
 }
 
 function is_legate_selected() {
-	return !!view.call_to_arms.legate_selected
+	return !!view.nevsky.legate_selected
 }
 
 const force_type_count = 7
@@ -263,7 +263,7 @@ function count_vp1() {
 }
 
 function count_vp2() {
-	let vp = view.call_to_arms.veche_vp * 2
+	let vp = view.nevsky.veche_vp * 2
 	for (let loc of view.locales.castles2)
 		vp += 2
 	for (let loc of view.locales.conquered)
@@ -362,7 +362,6 @@ const original_boxes = {
 	"way wirz": [1295,4526,175,350],
 	"way peipus-east": [2232,4197,220,480],
 	"way peipus-north": [2053,3830,361,228],
-	// "way peipus-west": [1988,4141,218,520],
 	"calendar summer box1": [40,168,590,916],
 	"calendar summer box2": [650,168,590,916],
 	"calendar winter box3": [1313,168,590,916],
@@ -379,8 +378,6 @@ const original_boxes = {
 	"calendar winter box14": [3196,1120,590,916],
 	"calendar rasputitsa box15": [3860,1120,590,916],
 	"calendar rasputitsa box16": [4470,1120,590,916],
-	// "victory": [176,185,210,210],
-	// "turn": [402,185,210,210],
 }
 
 const calendar_xy = [
@@ -426,6 +423,7 @@ const ui = {
 	cards: [],
 	boxes: {},
 	ways: [],
+	smerdi: document.getElementById("smerdi"),
 	legate: document.getElementById("legate"),
 	veche: document.getElementById("veche"),
 	plan_dialog: document.getElementById("plan"),
@@ -975,25 +973,31 @@ function update_lord(ix) {
 }
 
 function update_legate() {
-	if (view.call_to_arms.legate === LEGATE_INDISPOSED) {
+	if (view.nevsky.legate === LEGATE_INDISPOSED) {
 		ui.legate.classList.add("hide")
 	} else {
 		ui.legate.classList.remove("hide")
 		ui.legate.classList.toggle("action", is_legate_action())
 		ui.legate.classList.toggle("selected", is_legate_selected())
-		if (view.call_to_arms.legate === LEGATE_ARRIVED) {
+		if (view.nevsky.legate === LEGATE_ARRIVED) {
 			ui.legate.style.top = "1580px"
 			ui.legate.style.left = "170px"
 		} else {
-			layout_locale_item(view.call_to_arms.legate, ui.legate, 0, -16)
+			layout_locale_item(view.nevsky.legate, ui.legate, 0, -16)
 		}
 	}
+}
+
+function update_smerdi() {
+	ui.smerdi.replaceChildren()
+	for (let i = 0; i < view.nevsky.smerdi; ++i)
+		build_div(ui.smerdi, "unit serfs")
 }
 
 function update_veche() {
 	ui.veche.replaceChildren()
 
-	let n = view.call_to_arms.veche_coin
+	let n = view.nevsky.veche_coin
 	while (n >= 3) {
 		add_asset(ui.veche, COIN, 3, VECHE)
 		n -= 3
@@ -1007,7 +1011,7 @@ function update_veche() {
 		n -= 1
 	}
 
-	for (let i = 0; i < view.call_to_arms.veche_vp; ++i)
+	for (let i = 0; i < view.nevsky.veche_vp; ++i)
 		add_veche_vp(ui.veche)
 }
 
@@ -1218,6 +1222,7 @@ function on_update() {
 	layout_calendar()
 
 	update_legate()
+	update_smerdi()
 	update_veche()
 
 	update_current_card_display()
@@ -1253,6 +1258,10 @@ function on_update() {
 	update_cards()
 
 	action_button("use_legate", "Legate")
+
+	action_button("stonemasons", "Stonemasons")
+	action_button("stone_kremlin", "Stone Kremlin")
+	action_button("smerdi", "Smerdi")
 
 	action_button("withdraw", "Withdraw")
 	action_button("end_withdraw", "End withdraw")

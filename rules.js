@@ -11,15 +11,17 @@
 // CAPABILITIES
 // TODO: Ransom (T)
 // TODO: Ransom (R)
-// TODO: Crusade
-// TODO: Steppe Warriors
-// TODO: William of Modena
+
+// TODO: Crusade - free summer muster, discard late winter
+
 // TODO: Black Sea Trade
 // TODO: Baltic Sea Trade
+// TODO: William of Modena
+// TODO: Smerdi
+
 // TODO: Hillforts
 // TODO: Stonemasons
 // TODO: Stone Kremlin
-// TODO: Smerdi
 
 // TODO: BATTLE + STORM + SALLY
 
@@ -310,6 +312,14 @@ const COMMANDERIES = [
 	LOC_WENDEN
 ]
 
+function is_in_rus(loc) {
+	return data.locales[loc].region === "Novgorodan Rus"
+}
+
+function is_in_livonia(loc) {
+	return data.locales[loc].region === "Crusader Livonia"
+}
+
 function is_commandery(loc) {
 	return (
 		loc === LOC_ADSEL ||
@@ -531,13 +541,6 @@ function feed_lord(lord) {
 
 function roll_die() {
 	return random(6) + 1
-}
-
-function has_global_capability(cap) {
-	for (let c of game.capabilities)
-		if (c === cap)
-			return true
-	return false
 }
 
 function get_shared_assets(loc, what) {
@@ -907,12 +910,24 @@ function is_trade_route(loc) {
 	return data.locales[loc].type === "traderoute"
 }
 
-function is_stronghold(loc) {
-	return data.locales[loc].stronghold > 0
+function is_fort(loc) {
+	return data.locales[loc].type === "fort"
+}
+
+function is_town(loc) {
+	return data.locales[loc].type === "town"
+}
+
+function is_city(loc) {
+	return data.locales[loc].type === "city"
 }
 
 function is_region(loc) {
 	return data.locales[loc].type === "region"
+}
+
+function is_stronghold(loc) {
+	return data.locales[loc].stronghold > 0
 }
 
 function has_conquered_marker(loc) {
@@ -967,6 +982,15 @@ function conquer_trade_route(loc) {
 			add_conquered_marker(loc)
 		}
 	}
+}
+
+function count_castles(loc) {
+	return game.locales.castles1.length + game.locales.castles2.length
+}
+
+function add_friendly_castle(loc) {
+	// only P1 can add
+	set_add(game.locales.castles1, loc)
 }
 
 function has_enemy_castle(loc) {
@@ -1163,7 +1187,7 @@ function remove_lieutenant(lord) {
 }
 
 function is_located_with_legate(lord) {
-	return get_lord_locale(lord) === game.call_to_arms.legate
+	return get_lord_locale(lord) === game.nevsky.legate
 }
 
 function group_has_capability(c) {
@@ -1229,6 +1253,23 @@ function muster_lord(lord, locale, service) {
 	}
 }
 
+function disband_vassal(vassal) {
+	let info = data.vassals[vassal]
+	let lord = data.vassals[vassal].lord
+
+	logi(`Disbanded ${info.name}.`)
+
+	add_lord_forces(lord, KNIGHTS, -(info.forces.knights | 0))
+	add_lord_forces(lord, SERGEANTS, -(info.forces.sergeants | 0))
+	add_lord_forces(lord, LIGHT_HORSE, -(info.forces.light_horse | 0))
+	add_lord_forces(lord, ASIATIC_HORSE, -(info.forces.asiatic_horse | 0))
+	add_lord_forces(lord, MEN_AT_ARMS, -(info.forces.men_at_arms | 0))
+	add_lord_forces(lord, MILITIA, -(info.forces.militia | 0))
+	add_lord_forces(lord, SERFS, -(info.forces.serfs | 0))
+
+	game.lords.vassals[v] = VASSAL_READY
+}
+
 function muster_vassal(lord, vassal) {
 	game.lords.vassals[vassal] = VASSAL_MUSTERED
 	muster_vassal_forces(lord, vassal)
@@ -1279,16 +1320,17 @@ exports.setup = function (seed, scenario, options) {
 			walls: [],
 		},
 
-		call_to_arms: {
+		nevsky: {
 			legate: LEGATE_INDISPOSED,
 			legate_selected: 0,
 			veche_vp: 0,
 			veche_coin: 0,
+			smerdi: 0,
 		},
 
 		flags: 0,
-		extra: 0, // extra commands from capabilities
 		command: NOBODY,
+		actions: 0,
 		group: 0,
 		who: NOBODY,
 		where: NOWHERE,
@@ -1336,7 +1378,7 @@ exports.setup = function (seed, scenario, options) {
 function setup_pleskau() {
 	game.turn = 1 << 1
 
-	game.call_to_arms.veche_vp = 1
+	game.nevsky.veche_vp = 1
 
 	muster_lord(LORD_HERMANN, LOC_DORPAT, 4)
 	muster_lord(LORD_KNUD_ABEL, LOC_REVAL, 3)
@@ -1351,8 +1393,8 @@ function setup_pleskau() {
 function setup_watland() {
 	game.turn = 4 << 1
 
-	game.call_to_arms.veche_vp = 1
-	game.call_to_arms.veche_coin = 1
+	game.nevsky.veche_vp = 1
+	game.nevsky.veche_coin = 1
 
 	set_add(game.locales.conquered, LOC_IZBORSK)
 	set_add(game.locales.conquered, LOC_PSKOV)
@@ -1376,8 +1418,8 @@ function setup_watland() {
 function setup_peipus() {
 	game.turn = 13 << 1
 
-	game.call_to_arms.veche_vp = 4
-	game.call_to_arms.veche_coin = 3
+	game.nevsky.veche_vp = 4
+	game.nevsky.veche_coin = 3
 
 	set_add(game.locales.castles2, LOC_KOPORYE)
 	set_add(game.locales.conquered, LOC_IZBORSK)
@@ -1406,8 +1448,8 @@ function setup_peipus() {
 function setup_return_of_the_prince() {
 	game.turn = 9 << 1
 
-	game.call_to_arms.veche_vp = 3
-	game.call_to_arms.veche_coin = 2
+	game.nevsky.veche_vp = 3
+	game.nevsky.veche_coin = 2
 
 	set_add(game.locales.castles1, LOC_KOPORYE)
 	set_add(game.locales.conquered, LOC_KAIBOLOVO)
@@ -1439,8 +1481,8 @@ function setup_return_of_the_prince() {
 function setup_return_of_the_prince_nicolle() {
 	game.turn = 9 << 1
 
-	game.call_to_arms.veche_vp = 3
-	game.call_to_arms.veche_coin = 2
+	game.nevsky.veche_vp = 3
+	game.nevsky.veche_coin = 2
 
 	set_add(game.locales.castles1, LOC_KOPORYE)
 	set_add(game.locales.conquered, LOC_KAIBOLOVO)
@@ -1468,8 +1510,8 @@ function setup_return_of_the_prince_nicolle() {
 function setup_crusade_on_novgorod() {
 	game.turn = 1 << 1
 
-	game.call_to_arms.veche_vp = 1
-	game.call_to_arms.veche_coin = 0
+	game.nevsky.veche_vp = 1
+	game.nevsky.veche_coin = 0
 
 	muster_lord(LORD_HERMANN, LOC_DORPAT, 4)
 	muster_lord(LORD_KNUD_ABEL, LOC_REVAL, 3)
@@ -1512,7 +1554,7 @@ function setup_pleskau_quickstart() {
 	set_lord_capability(LORD_YAROSLAV, 0, T3)
 
 	set_add(game.capabilities, T13)
-	game.call_to_arms.legate = LOC_DORPAT
+	game.nevsky.legate = LOC_DORPAT
 
 	set_add(game.capabilities, R8)
 	muster_lord(LORD_DOMASH, LOC_NOVGOROD)
@@ -1523,7 +1565,7 @@ function setup_pleskau_quickstart() {
 	set_lord_capability(LORD_GAVRILO, 0, R2)
 	set_lord_capability(LORD_GAVRILO, 1, R6)
 
-	game.call_to_arms.veche_coin += 1
+	game.nevsky.veche_coin += 1
 
 	goto_campaign_plan()
 
@@ -1571,6 +1613,75 @@ function end_setup_lords() {
 		log_h1("Levy " + current_turn_name())
 		log_h2("Arts of War")
 		goto_levy_arts_of_war_first()
+	}
+}
+
+// === EVENTS ===
+
+function is_event_in_play(c) {
+	return set_has(game.events, c)
+}
+
+// === CAPABILITIES ===
+
+function can_deploy_global_capability(c) {
+	if (c === AOW_TEUTONIC_WILLIAM_OF_MODENA) {
+		return !is_event_in_play(R15) // Death of the Pope
+	}
+	return true
+}
+
+function has_global_capability(cap) {
+	return set_has(game.capabilities, cap)
+}
+
+function deploy_global_capability(c) {
+	set_add(game.capabilities, c)
+
+	if (c === AOW_TEUTONIC_WILLIAM_OF_MODENA) {
+		game.nevsky.legate = LEGATE_ARRIVED
+	}
+
+	if (c === AOW_TEUTONIC_CRUSADE) {
+		for (let v of data.crusaders)
+			game.lords.vassals[v] = VASSAL_READY
+	}
+
+	if (c === AOW_RUSSIAN_SMERDI) {
+		game.nevsky.smerdi = 6
+	}
+
+	if (c === AOW_RUSSIAN_STEPPE_WARRIORS) {
+		for (let v of data.steppe_warriors)
+			game.lords.vassals[v] = VASSAL_READY
+	}
+}
+
+function discard_global_capability(c) {
+	set_delete(game.capabilities, c)
+
+	if (c === AOW_TEUTONIC_WILLIAM_OF_MODENA) {
+		game.nevsky.legate = LEGATE_INDISPOSED
+	}
+
+	if (c === AOW_TEUTONIC_CRUSADE) {
+		for (let v of data.crusaders) {
+			if (is_vassal_mustered(v))
+				disband_vassal(v)
+			game.lords.vassals[v] = VASSAL_UNAVAILABLE
+		}
+	}
+
+	if (c === AOW_RUSSIAN_SMERDI) {
+		game.nevsky.smerdi = 0
+	}
+
+	if (c === AOW_RUSSIAN_STEPPE_WARRIORS) {
+		for (let v of data.steppe_warriors) {
+			if (is_vassal_mustered(v))
+				disband_vassal(v)
+			game.lords.vassals[v] = VASSAL_UNAVAILABLE
+		}
 	}
 }
 
@@ -1656,7 +1767,7 @@ states.levy_arts_of_war_first = {
 		push_undo()
 		let c = game.what.shift()
 		logi(`C${c}`)
-		set_add(game.capabilities, c)
+		deploy_global_capability(c)
 		resume_levy_arts_of_war_first()
 	},
 	discard() {
@@ -2029,7 +2140,8 @@ states.muster_capability = {
 						if (!lord_has_capability(game.who, c))
 							gen_action_card(c)
 					} else {
-						gen_action_card(c)
+						if (can_deploy_global_capability(c))
+							gen_action_card(c)
 					}
 				}
 			}
@@ -2047,7 +2159,7 @@ states.muster_capability = {
 				return
 			}
 		} else {
-			set_add(game.capabilities, c)
+			deploy_global_capability(c)
 		}
 		pop_state()
 		resume_levy_muster_lord()
@@ -2287,8 +2399,7 @@ function is_first_march() {
 function goto_actions() {
 	log_h2(`L${game.command}`)
 
-	game.count = 0
-	game.extra = 0
+	game.actions = data.lords[game.command].command
 
 	set_flag(FLAG_FIRST_ACTION)
 	set_flag(FLAG_FIRST_MARCH)
@@ -2302,20 +2413,20 @@ function goto_actions() {
 	if (game.active === TEUTONS) {
 		if (has_global_capability(AOW_TEUTONIC_ORDENSBURGEN))
 			if (is_commandery(get_lord_locale(game.command)))
-				++game.extra
+				++game.actions
 		if (game.command === LORD_HEINRICH || game.command === LORD_KNUD_ABEL)
 			if (has_global_capability(AOW_TEUTONIC_TREATY_OF_STENSBY))
-				++game.extra
+				++game.actions
 	}
 
 	if (game.active === RUSSIANS) {
 		if (has_global_capability(AOW_RUSSIAN_ARCHBISHOPRIC))
 			if (get_lord_locale(game.command) === LOC_NOVGOROD)
-				++game.extra
+				++game.actions
 		if (this_lord_has_russian_druzhina())
-			++game.extra
+			++game.actions
 		if (this_lord_has_house_of_suzdal())
-			++game.extra
+			++game.actions
 	}
 
 	resume_actions()
@@ -2330,19 +2441,19 @@ function resume_actions() {
 
 function spend_action(cost) {
 	clear_flag(FLAG_FIRST_ACTION)
-	game.count += cost
+	game.actions -= cost
 }
 
 function spend_march_action(cost) {
 	clear_flag(FLAG_FIRST_ACTION)
 	clear_flag(FLAG_FIRST_MARCH)
-	game.count += cost
+	game.actions -= cost
 }
 
 function spend_all_actions() {
 	clear_flag(FLAG_FIRST_ACTION)
 	clear_flag(FLAG_FIRST_MARCH)
-	game.count += get_available_actions()
+	game.actions = 0
 }
 
 function end_actions() {
@@ -2352,7 +2463,7 @@ function end_actions() {
 	game.command = NOBODY
 	game.who = NOBODY
 	game.group = 0
-	game.call_to_arms.legate_selected = 0
+	game.nevsky.legate_selected = 0
 
 	clear_flag(FLAG_FIRST_ACTION)
 	clear_flag(FLAG_FIRST_MARCH)
@@ -2375,15 +2486,9 @@ function this_lord_has_house_of_suzdal() {
 	return false
 }
 
-function get_available_actions() {
-	return data.lords[game.command].command + game.extra - game.count
-}
-
 states.actions = {
 	prompt() {
-		let avail = get_available_actions()
-
-		view.prompt = `${lord_name[game.command]} has ${avail}x actions.`
+		view.prompt = `${lord_name[game.command]} has ${game.actions}x actions.`
 
 		view.group = game.group
 
@@ -2402,13 +2507,13 @@ states.actions = {
 			view.actions.legate = 1
 		}
 
-		if (avail > 0)
+		if (game.actions > 0)
 			view.actions.pass = 1
 		else
 			view.actions.end_actions = 1
 
 		if (is_lord_besieged(game.command)) {
-			if (can_action_sally(avail))
+			if (can_action_sally())
 				view.actions.sally = 1
 		}
 
@@ -2416,24 +2521,33 @@ states.actions = {
 			if (game.active === TEUTONS) {
 				if (is_first_action() && is_located_with_legate(game.command))
 					view.actions.use_legate = 1
+				if (can_action_stonemasons())
+					view.actions.stonemasons = 1
 			}
 
-			prompt_march(avail)
+			if (game.active === RUSSIANS) {
+				if (can_action_smerdi())
+					view.actions.smerdi = 1
+				if (can_action_stone_kremlin())
+					view.actions.stone_kremlin = 1
+			}
 
-			if (can_action_supply(avail))
+			prompt_march()
+
+			if (can_action_supply())
 				view.actions.supply = 1
 
-			if (can_action_siege(avail))
+			if (can_action_siege())
 				view.actions.siege = 1
-			if (can_action_storm(avail))
+			if (can_action_storm())
 				view.actions.storm = 1
-			if (can_action_forage(avail))
+			if (can_action_forage())
 				view.actions.forage = 1
-			if (can_action_ravage(avail))
+			if (can_action_ravage())
 				view.actions.ravage = 1
-			if (can_action_tax(avail))
+			if (can_action_tax())
 				view.actions.tax = 1
-			if (can_action_sail(avail))
+			if (can_action_sail())
 				view.actions.sail = 1
 		}
 	},
@@ -2441,9 +2555,9 @@ states.actions = {
 	use_legate() {
 		push_undo()
 		log(`Used Legate for +1 Command.`)
-		game.call_to_arms.legate = LEGATE_ARRIVED
-		game.call_to_arms.legate_selected = 0
-		++game.extra
+		game.nevsky.legate = LEGATE_ARRIVED
+		game.nevsky.legate_selected = 0
+		++game.actions
 	},
 
 	pass() {
@@ -2456,6 +2570,10 @@ states.actions = {
 		clear_undo()
 		end_actions()
 	},
+
+	stonemasons: goto_stonemasons,
+	stone_kremlin: goto_stone_kremlin,
+	smerdi: goto_smerdi,
 
 	forage: goto_forage,
 	ravage: goto_ravage,
@@ -2482,10 +2600,10 @@ states.actions = {
 // === ACTION: MARCH ===
 
 function toggle_legate_selected() {
-	if (game.call_to_arms.legate_selected)
-		game.call_to_arms.legate_selected = 0
+	if (game.nevsky.legate_selected)
+		game.nevsky.legate_selected = 0
 	else
-		game.call_to_arms.legate_selected = 1
+		game.nevsky.legate_selected = 1
 }
 
 function lift_siege(from) {
@@ -2508,8 +2626,8 @@ function group_has_teutonic_converts() {
 	return false
 }
 
-function prompt_march(avail) {
-	if (avail > 0 || group_has_teutonic_converts()) {
+function prompt_march() {
+	if (game.actions > 0 || group_has_teutonic_converts()) {
 		let here = get_lord_locale(game.command)
 		for (let to of data.locales[here].adjacent)
 			gen_action_locale(to)
@@ -2574,8 +2692,7 @@ states.march_laden = {
 
 		if (prov <= transport * 2) {
 			if (loot > 0 || prov > transport) {
-				let avail = get_available_actions()
-				if (avail >= 2) {
+				if (game.actions >= 2) {
 					view.prompt += " Laden!"
 					view.actions.march = 1 // other button?
 					gen_action_laden_march(to)
@@ -2638,8 +2755,8 @@ function march_with_group_2() {
 		set_lord_locale(lord, to)
 		set_lord_moved(lord, 1)
 	}
-	if (game.call_to_arms.legate_selected)
-		game.call_to_arms.legate = to
+	if (game.nevsky.legate_selected)
+		game.nevsky.legate = to
 
 	if (is_besieged_enemy_stronghold(from) && !has_friendly_lord(from))
 		lift_siege(from)
@@ -2653,10 +2770,9 @@ function march_with_group_2() {
 
 function remove_legate_if_alone_with_russian_lord(here) {
 	if (game.active === RUSSIANS) {
-		if (game.call_to_arms.legate === here) {
+		if (game.nevsky.legate === here) {
 			log("Legate removed.")
-			game.call_to_arms.legate = LEGATE_INDISPOSED
-			set_delete(game.capabilities, AOW_TEUTONIC_WILLIAM_OF_MODENA)
+			discard_global_capability(AOW_TEUTONIC_WILLIAM_OF_MODENA)
 		}
 	}
 }
@@ -3005,7 +3121,7 @@ function can_siegeworks() {
 	return false
 }
 
-function can_action_siege(avail) {
+function can_action_siege() {
 	let here = get_lord_locale(game.command)
 	if (!is_first_action())
 		return false
@@ -3086,8 +3202,8 @@ function end_siege() {
 
 // === ACTION: STORM ===
 
-function can_action_storm(avail) {
-	if (avail < 1)
+function can_action_storm() {
+	if (game.actions < 1)
 		return false
 	return false
 }
@@ -3099,8 +3215,8 @@ function goto_storm() {
 
 // === ACTION: SALLY ===
 
-function can_action_sally(avail) {
-	if (avail < 1)
+function can_action_sally() {
+	if (game.actions < 1)
 		return false
 	return true
 }
@@ -3230,8 +3346,8 @@ function filter_usable_supply_seaports(reachable, ships) {
 	return null
 }
 
-function can_action_supply(avail) {
-	if (avail < 1)
+function can_action_supply() {
+	if (game.actions < 1)
 		return false
 	return can_supply()
 }
@@ -3304,8 +3420,8 @@ function end_supply() {
 
 // === ACTION: FORAGE ===
 
-function can_action_forage(avail) {
-	if (avail < 1)
+function can_action_forage() {
+	if (game.actions < 1)
 		return false
 	let here = get_lord_locale(game.command)
 	if (has_ravaged_marker(here))
@@ -3356,9 +3472,9 @@ function can_ravage_locale(loc) {
 	)
 }
 
-function can_action_ravage(avail) {
+function can_action_ravage() {
 	// TODO: cost 2 if enemy lord is adjacent (2nd ed)
-	if (avail < 1)
+	if (game.actions < 1)
 		return false
 
 	let here = get_lord_locale(game.command)
@@ -3446,7 +3562,7 @@ function restore_mustered_forces(lord) {
 			muster_vassal_forces(lord, v)
 }
 
-function can_action_tax(avail) {
+function can_action_tax() {
 	// Must use whole action
 	if (!is_first_action())
 		return false
@@ -3504,7 +3620,7 @@ function has_enough_available_ships_for_horses() {
 	return needed_ships <= ships
 }
 
-function can_action_sail(avail) {
+function can_action_sail() {
 	// Must use whole action
 	if (!is_first_action())
 		return false
@@ -3584,8 +3700,8 @@ states.sail = {
 			set_lord_locale(lord, to)
 			set_lord_moved(lord, 1)
 		}
-		if (game.call_to_arms.legate_selected)
-			game.call_to_arms.legate = to
+		if (game.nevsky.legate_selected)
+			game.nevsky.legate = to
 
 		if (is_enemy_stronghold(from))
 			lift_siege(from)
@@ -3602,6 +3718,163 @@ states.sail = {
 		resume_actions()
 		update_supply()
 	},
+}
+
+// === ACTION: STONEMASONS (CAPABILITY) ===
+
+function can_action_stonemasons() {
+	if (!is_first_action())
+		return false
+
+	if (!lord_has_capability(game.command, AOW_TEUTONIC_STONEMASONS))
+		return false
+
+	let here = get_lord_locale(game.command)
+	if (is_in_rus(here) && (is_fort(here) || is_town(here))) {
+		if (get_shared_assets(here, PROV) < 6)
+			return false
+		if (count_castles() >= 2)
+			return false
+		if (has_castle(here))
+			return false
+		if (has_siege_marker(here))
+			return false
+		return true
+	}
+
+	return false
+}
+
+function goto_stonemasons() {
+	push_undo()
+
+	log("Stonemasons.")
+
+	game.count = 6
+	game.state = "stonemasons"
+}
+
+states.stonemasons = {
+	prompt() {
+		view.prompt = `Stonemasons: Pay ${game.count} provender.`
+		let here = get_lord_locale(game.command)
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+			if (get_lord_locale(lord) === here)
+				if (get_lord_assets(lord, PROV) > 0)
+					gen_action_prov(lord)
+	},
+	prov(lord) {
+		add_lord_assets(lord, PROV, -1)
+		game.count--
+		if (game.count === 0)
+			end_stonemasons()
+	},
+}
+
+function end_stonemasons() {
+	let here = get_lord_locale(game.command)
+	log(`Built Castle at %${here}.`)
+	add_friendly_castle(here)
+	remove_walls(here)
+	spend_all_actions()
+	resume_actions()
+}
+
+// === ACTION: STONE KREMLIN (CAPABILITY) ===
+
+function count_walls() {
+	return game.locales.walls.length
+}
+
+function has_walls(loc) {
+	return set_has(game.locales.walls, loc)
+}
+
+function add_walls(loc) {
+	return set_add(game.locales.walls, loc)
+}
+
+function remove_walls(loc) {
+	return set_delete(game.locales.walls, loc)
+}
+
+function can_action_stone_kremlin() {
+	if (!is_first_action())
+		return false
+
+	if (!lord_has_capability(game.command, AOW_RUSSIAN_STONE_KREMLIN))
+		return false
+
+	let here = get_lord_locale(game.command)
+
+	if (is_fort(here) || is_city(here) || here === LOC_NOVGOROD) {
+		if (has_walls(here))
+			return false
+		return true
+	}
+
+	return false
+}
+
+function goto_stone_kremlin() {
+	push_undo()
+
+	log("Stone Kremlin.")
+
+	if (count_walls() > 0)
+		game.state = "stone_kremlin"
+	else
+		end_stone_kremlin()
+}
+
+states.stone_kremlin = {
+	prompt() {
+		if (count_walls() === 4) {
+			view.prompt = `Stone Kremlin: You must remove one Walls marker.`
+		} else {
+			view.prompt = `Stone Kremlin: You may remove one Walls marker.`
+			view.actions.pass = 1
+		}
+		for (let wall of game.locales.walls)
+			gen_action_locale(wall)
+	},
+	locale(loc) {
+		log(`Removed Walls at %${loc}.`)
+		remove_walls(loc)
+		end_stone_kremlin()
+	},
+	pass() {
+		end_stone_kremlin()
+	},
+}
+
+function end_stone_kremlin() {
+	let here = get_lord_locale(game.command)
+	log(`Built Walls at %${here}.`)
+	add_walls(here)
+	spend_all_actions()
+	resume_actions()
+}
+
+// === ACTION: SMERDI (CAPABILITY) ===
+
+function can_action_smerdi() {
+	if (game.actions < 1)
+		return false
+	if (game.nevsky.smerdi > 0) {
+		if (is_in_rus(get_lord_locale(game.command)))
+			return true
+	}
+	return false
+}
+
+function goto_smerdi() {
+	push_undo()
+	log("Mustered Serfs.")
+	game.nevsky.smerdi --
+	add_lord_forces(game.command, SERFS, 1)
+	spend_action(1)
+	resume_actions()
 }
 
 // === CAMPAIGN: FEED ===
@@ -3768,7 +4041,7 @@ function end_feed() {
 
 function can_pay_lord(lord) {
 	if (game.active === RUSSIANS) {
-		if (game.call_to_arms.veche_coin > 0 && !is_lord_besieged(lord))
+		if (game.nevsky.veche_coin > 0 && !is_lord_besieged(lord))
 			return true
 	}
 	let loc = get_lord_locale(lord)
@@ -3817,7 +4090,7 @@ states.pay_lord = {
 		view.prompt = `Pay: You may Pay ${lord_name[game.who]} with Coin or Loot.`
 
 		if (game.active === RUSSIANS) {
-			if (game.call_to_arms.veche_coin > 0 && !is_lord_besieged(game.who))
+			if (game.nevsky.veche_coin > 0 && !is_lord_besieged(game.who))
 				view.actions.veche_coin = 1
 		}
 
@@ -3852,7 +4125,7 @@ states.pay_lord = {
 	},
 	veche_coin() {
 		log(`Paid L${game.who} with Coin from Veche.`)
-		game.call_to_arms.veche_coin--
+		game.nevsky.veche_coin--
 		add_lord_service(game.who, 1)
 		pop_state()
 	},
@@ -4101,7 +4374,7 @@ exports.view = function (state, current) {
 
 		lords: game.lords,
 		locales: game.locales,
-		call_to_arms: game.call_to_arms,
+		nevsky: game.nevsky,
 
 		command: game.command,
 		hand: null,
