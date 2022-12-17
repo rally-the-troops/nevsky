@@ -43,6 +43,15 @@ header.your_turn { background-color: orange; }
 	font-variant-numeric: tabular-nums;
 }
 
+main { display: grid; grid-template-columns: 1fr; }
+
+#center { grid-row: 1; }
+#court1 { grid-row: 2; }
+#court2 { grid-row: 3; }
+
+body.Russians #court1 { grid-row: 3; }
+body.Russians #court2 { grid-row: 2; }
+
 /* PANELS */
 
 .panel {
@@ -61,11 +70,12 @@ header.your_turn { background-color: orange; }
 /* ARTS OF WAR */
 
 #arts_of_war {
-	background-color: slategray;
+	background-color: #555;
 }
 
 #arts_of_war_header {
-	background-color: lightsteelblue;
+	background-color: #444;
+	color: white;
 }
 
 #arts_of_war_list {
