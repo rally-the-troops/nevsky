@@ -2,6 +2,8 @@
 
 // TODO: delay pay step if there is no feed or disband to be done
 
+// TODO: discard too many global capabilities
+
 // TODO: Lodya capability during supply!
 // TODO: 2nd edition supply rule - no reuse of transports
 // TODO: 2nd edition ravage cost
@@ -1619,10 +1621,10 @@ function resume_levy_arts_of_war_first() {
 		end_levy_arts_of_war_first()
 }
 
-// TODO: show and assign capabilities simultaneously
 states.levy_arts_of_war_first = {
 	prompt() {
 		let c = game.what[0]
+		view.show_arts_of_war = game.what
 		view.what = c
 		if (data.cards[c].this_lord) {
 			view.prompt = `Arts of War: Assign ${data.cards[c].capability} to a Lord.`
@@ -1644,18 +1646,21 @@ states.levy_arts_of_war_first = {
 		}
 	},
 	lord(lord) {
+		push_undo()
 		let c = game.what.shift()
 		logi(`C${c} - L${lord}`)
 		add_lord_capability(lord, c)
 		resume_levy_arts_of_war_first()
 	},
 	deploy() {
+		push_undo()
 		let c = game.what.shift()
 		logi(`C${c}`)
 		set_add(game.capabilities, c)
 		resume_levy_arts_of_war_first()
 	},
 	discard() {
+		push_undo()
 		let c = game.what.shift()
 		logi(`C${c} - discarded`)
 		resume_levy_arts_of_war_first()
@@ -1663,6 +1668,7 @@ states.levy_arts_of_war_first = {
 }
 
 function end_levy_arts_of_war_first() {
+	clear_undo()
 	game.what = NOTHING
 	set_active_enemy()
 	if (game.active === P2)
@@ -2414,12 +2420,13 @@ states.actions = {
 
 			prompt_march(avail)
 
+			if (can_action_supply(avail))
+				view.actions.supply = 1
+
 			if (can_action_siege(avail))
 				view.actions.siege = 1
 			if (can_action_storm(avail))
 				view.actions.storm = 1
-			if (can_action_supply(avail))
-				view.actions.supply = 1
 			if (can_action_forage(avail))
 				view.actions.forage = 1
 			if (can_action_ravage(avail))

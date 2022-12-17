@@ -43,56 +43,53 @@ header.your_turn { background-color: orange; }
 	font-variant-numeric: tabular-nums;
 }
 
-/* ARTS OF WAR */
+/* PANELS */
 
-#arts_of_war {
-	background-color: white;
-	border: 1px solid black;
-	position: fixed;
-	top: 80px;
-	left: 36px;
-	box-shadow: 0px 5px 10px 0px rgba(0,0,0,0.5);
-	z-index: 50;
+.panel {
 	user-select: none;
+	max-width: 1275px;
+	margin: 36px auto;
+	//box-shadow: 0px 0px 4px #0008;
 }
 
-#arts_of_war_header {
+.panel_header {
 	font-weight: bold;
-	cursor: move;
-	border-bottom: 1px solid black;
-	background-color: lightsteelblue;
+	text-align: center;
 	padding: 3px 1em;
 }
 
-#arts_of_war_list {
-	padding: 12px;
-	width: calc(186px * 4 + 12px * 3 + 12px);
-	height: 400px;
+/* ARTS OF WAR */
+
+#arts_of_war {
 	background-color: slategray;
+}
+
+#arts_of_war_header {
+	background-color: lightsteelblue;
+}
+
+#arts_of_war_list {
+	min-height: 260px;
 	display: flex;
 	justify-content: center;
 	flex-wrap: wrap;
-	overflow-y: scroll;
+	padding: 18px;
 	gap: 12px;
 }
 
 /* PLAN */
 
 #plan {
-	user-select: none;
-	max-width: 1275px;
-	margin: 36px auto;
+	background-color: #555;
 }
 
 #plan_header {
-	font-weight: bold;
-	text-align: center;
 	background-color: #444;
 	color: white;
-	padding: 3px 1em;
 }
 
 #plan_list {
+	min-height: 260px;
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: center;
@@ -101,21 +98,14 @@ header.your_turn { background-color: orange; }
 }
 
 #plan_actions {
+	background-color: #444;
+	min-height: 130px;
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: center;
 	padding: 18px;
 	gap: 12px;
 	flex-wrap: wrap;
-}
-
-#plan_list {
-	background-color: #555;
-}
-
-#plan_actions {
-	//border-top: 2px dotted white;
-	background-color: #444;
 }
 
 body.Russians #plan_actions .teutonic { display: none }
@@ -493,9 +483,13 @@ body.shift .mustered_vassals {
 	flex-wrap: wrap;
 	justify-content: center;
 	align-items: center;
-	min-height: 350px;
+	min-height: 260px;
 	max-width: 1275px;
 	gap: 16px;
+}
+
+.hand:empty {
+	display: none;
 }
 
 .card {
@@ -517,6 +511,9 @@ body.shift .mustered_vassals {
 .card.disabled {
 	filter: grayscale(100%) brightness(66%);
 }
+
+.card.selected.teutonic { background-color: #e1e6e8; box-shadow: 0 0 0 1px #666a6c, 0 0 0 3px yellow; }
+.card.selected.russian { background-color: #e1d6c1; box-shadow: 0 0 0 1px #665c4a, 0 0 0 3px yellow; }
 
 /* MAP */
 
@@ -806,14 +803,20 @@ body.shift .mustered_vassals {
 	position: absolute;
 }
 
-.service_marker.teutonic.lord.action,
-.service_marker.teutonic.vassal.action {
-	box-shadow: 0 0 0 3px red;
+.service_marker.teutonic.lord.action {
+	box-shadow: 0 0 0 1px #111, 0 0 0 3px red;
 }
 
-.service_marker.russian.lord.action,
+.service_marker.russian.lord.action {
+	box-shadow: 0 0 0 1px #555, 0 0 0 3px red;
+}
+
+.service_marker.teutonic.vassal.action {
+	box-shadow: 0 0 0 1px #0f0d0d, 0 0 0 3px white;
+}
+
 .service_marker.russian.vassal.action {
-	box-shadow: 0 0 0 3px red;
+	box-shadow: 0 0 0 1px #736e5e, 0 0 0 3px white;
 }
 
 .service_marker.teutonic.lord.selected,
@@ -1030,11 +1033,6 @@ body.shift .mustered_vassals {
 </head>
 <body>
 
-<div id="arts_of_war" class="hide">
-<div id="arts_of_war_header">Arts of War</div>
-<div id="arts_of_war_list"></div>
-</div>
-
 <header>
 	<div id="toolbar">
 		<div class="menu">
@@ -1085,6 +1083,9 @@ body.shift .mustered_vassals {
 </aside>
 
 <main>
+
+<div id="center">
+
 <div id="mapwrap">
 <div id="map">
 
@@ -1116,17 +1117,24 @@ body.shift .mustered_vassals {
 
 <div id="events"></div>
 
-<div id="plan" class="hide">
-<div id="plan_header">~ Plan ~</div>
+<div id="arts_of_war" class="panel hide">
+<div id="arts_of_war_header" class="panel_header">~ Arts of War ~</div>
+<div id="arts_of_war_list"></div>
+</div>
+
+<div id="plan" class="panel hide">
+<div id="plan_header" class="panel_header">~ Plan ~</div>
 <div id="plan_list"></div>
 <div id="plan_actions"></div>
+</div>
+
+<div id="hand" class="hand"></div>
+
 </div>
 
 <div id="court1" class="court"></div>
 
 <div id="court2" class="court"></div>
-
-<div id="hand" class="hand"></div>
 
 </main>
 
