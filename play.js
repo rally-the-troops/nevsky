@@ -1044,6 +1044,7 @@ function update_locale(loc) {
 			ui.locale_markers[loc].appendChild(get_cached_element(cn))
 	}
 
+	// TODO: max 2 castles - reuse elements
 	if (set_has(view.locales.castles1, loc)) {
 		let cn = "marker rectangle castle teutonic"
 		ui.locale_markers[loc].appendChild(get_cached_element(cn))
@@ -1054,6 +1055,7 @@ function update_locale(loc) {
 		ui.locale_markers[loc].appendChild(get_cached_element(cn))
 	}
 
+	// TODO: max 4 walls - reuse elements
 	if (set_has(view.locales.walls, loc)) {
 		let cn = "marker square walls"
 		ui.locale_markers[loc].appendChild(get_cached_element(cn))

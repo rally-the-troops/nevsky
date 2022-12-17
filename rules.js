@@ -3821,27 +3821,40 @@ function goto_stone_kremlin() {
 
 	log("Stone Kremlin.")
 
-	if (count_walls() > 0)
+	if (count_walls() > 0) {
 		game.state = "stone_kremlin"
-	else
+		game.count = 1
+	} else {
 		end_stone_kremlin()
+	}
 }
 
 states.stone_kremlin = {
 	prompt() {
-		if (count_walls() === 4) {
-			view.prompt = `Stone Kremlin: You must remove one Walls marker.`
+		let here = get_lord_locale(game.command)
+		if (game.count > 0) {
+			if (count_walls() === 4) {
+				view.prompt = `Stone Kremlin: Move one Walls marker.`
+			} else {
+				view.prompt = `Stone Kremlin: Place or move Walls.`
+				gen_action_locale(here)
+			}
+			for (let loc of game.locales.walls)
+				gen_action_locale(loc)
 		} else {
-			view.prompt = `Stone Kremlin: You may remove one Walls marker.`
-			view.actions.pass = 1
+			view.prompt = `Stone Kremlin: Place Walls.`
+			gen_action_locale(here)
 		}
-		for (let wall of game.locales.walls)
-			gen_action_locale(wall)
 	},
 	locale(loc) {
-		log(`Removed Walls at %${loc}.`)
-		remove_walls(loc)
-		end_stone_kremlin()
+		let here = get_lord_locale(game.command)
+		if (loc !== here) {
+			log(`Removed Walls at %${loc}.`)
+			remove_walls(loc)
+			game.count = 0
+		} else {
+			end_stone_kremlin()
+		}
 	},
 	pass() {
 		end_stone_kremlin()
