@@ -11,17 +11,10 @@
 // CAPABILITIES
 // TODO: Ransom (T)
 // TODO: Ransom (R)
-
 // TODO: Crusade - free summer muster, discard late winter
-
 // TODO: Black Sea Trade
 // TODO: Baltic Sea Trade
-// TODO: William of Modena
-// TODO: Smerdi
-
 // TODO: Hillforts
-// TODO: Stonemasons
-// TODO: Stone Kremlin
 
 // TODO: BATTLE + STORM + SALLY
 
@@ -4179,6 +4172,9 @@ function disband_lord(lord) {
 	}
 
 	remove_lieutenant(lord)
+
+	// Smerdi - serfs go back to card
+	game.nevsky.smerdi += get_lord_forces(lord, SERFS)
 
 	set_lord_capability(lord, 0, NOTHING)
 	set_lord_capability(lord, 1, NOTHING)
