@@ -412,15 +412,15 @@ function enemy_player() {
 }
 
 function get_spoils(type) {
-	return pack4_get(game.assets, type)
+	return pack4_get(game.spoils, type)
 }
 
 function set_spoils(type, n) {
-	game.assets = pack4_set(game.assets, type, n)
+	game.spoils = pack4_set(game.spoils, type, n)
 }
 
 function add_spoils(type, n) {
-	game.assets = pack4_set(game.assets, type, pack4_get(game.assets) + n)
+	game.spoils = pack4_set(game.spoils, type, pack4_get(game.spoils) + n)
 }
 
 function get_lord_locale(lord) {
@@ -2848,7 +2848,7 @@ function goto_avoid_battle() {
 	game.stack = game.group
 	game.who = NOBODY
 	game.state = "avoid_battle"
-	game.assets = 0
+	game.spoils = 0
 	resume_avoid_battle()
 }
 
@@ -3076,7 +3076,7 @@ function end_withdraw() {
 // === ACTION: MARCH - DIVIDE SPOILS AFTER AVOID BATTLE ===
 
 function goto_divide_spoils_after_avoid_battle() {
-	if (game.assets > 0)
+	if (game.spoils > 0)
 		game.state = "divide_spoils_after_avoid_battle"
 	else
 		march_with_group_3()
@@ -3087,7 +3087,7 @@ states.divide_spoils_after_avoid_battle = {
 		view.actions.end_spoils = 1
 	},
 	end_spoils() {
-		game.assets = 0
+		game.spoils = 0
 		march_with_group_3()
 	},
 }
