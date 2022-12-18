@@ -2492,10 +2492,10 @@ states.papal_legate_active = {
 	lord(lord) {
 		push_undo()
 
+		let here = game.pieces.legate
+
 		game.pieces.legate = LEGATE_ARRIVED
 		game.state = "papal_legate_done"
-
-		let here = game.pieces.legate
 
 		if (is_lord_ready(lord)) {
 			log(`Mustered L${lord}`)
