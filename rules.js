@@ -240,6 +240,12 @@ const AOW_RUSSIAN_LODYA = R16
 const AOW_RUSSIAN_VELIKY_KNYAZ = R17
 const AOW_RUSSIAN_STONE_KREMLIN = R18
 
+const EVENT_TEUTONIC_FAMINE = T16
+const EVENT_RUSSIAN_FAMINE = R7
+const EVENT_VALDEMAR = R11
+const EVENT_DIETRICH = R17
+const EVENT_DEATH_OF_THE_POPE = R15
+
 const VASSAL_UNAVAILABLE = 0
 const VASSAL_READY = 1
 const VASSAL_MUSTERED = 2
@@ -1653,11 +1659,21 @@ function is_event_in_play(c) {
 	return set_has(game.events, c)
 }
 
+function is_famine_in_play() {
+	if (game.active === TEUTONS)
+		if (is_event_in_play(EVENT_RUSSIAN_FAMINE))
+			return true
+	if (game.active === RUSSIANS)
+		if (is_event_in_play(EVENT_TEUTONIC_FAMINE))
+			return true
+	return false
+}
+
 // === CAPABILITIES ===
 
 function can_deploy_global_capability(c) {
 	if (c === AOW_TEUTONIC_WILLIAM_OF_MODENA) {
-		return !is_event_in_play(R15) // Death of the Pope
+		return !is_event_in_play(EVENT_DEATH_OF_THE_POPE)
 	}
 	return true
 }
@@ -3627,6 +3643,7 @@ function update_supply() {
 	let carts = 0
 	let sleds = 0
 	let ships = 0
+	let seats = 2
 
 	if (season === SUMMER) {
 		carts = get_shared_assets(here, CART)
@@ -3642,12 +3659,15 @@ function update_supply() {
 	if (ships > 2)
 		ships = 2
 
+	if (is_famine_in_play())
+		seats = 1
+
 	let sources = list_supply_sources(ships)
 	let reachable = filter_reachable_supply_sources(sources, boats, carts, sleds)
 	let supply_seats = filter_usable_supply_seats(reachable)
 	let supply_seaports = filter_usable_supply_seaports(reachable, ships)
 
-	game.supply = { supply_seats, supply_seaports, seats: 2, boats, carts, sleds, ships }
+	game.supply = { supply_seats, supply_seaports, seats, boats, carts, sleds, ships }
 }
 
 function list_supply_sources(ships) {
@@ -3812,6 +3832,10 @@ function end_supply() {
 function can_action_forage() {
 	if (game.actions < 1)
 		return false
+
+	if (is_famine_in_play())
+		return false
+
 	let here = get_lord_locale(game.command)
 	if (has_ravaged_marker(here))
 		return false
