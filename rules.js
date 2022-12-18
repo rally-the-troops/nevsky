@@ -3225,6 +3225,11 @@ function goto_sally() {
 function update_supply() {
 	// TODO: Lodya - select boat OR ship (we count both here...)
 
+	if (game.actions < 1) {
+		game.supply = 0
+		return
+	}
+
 	let season = current_season()
 	let here = get_lord_locale(game.command)
 	let boats = 0
