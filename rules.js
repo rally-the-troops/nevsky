@@ -15,6 +15,9 @@
 // TODO: Ransom (R)
 // TODO: Hillforts
 
+// TODO: Surrender
+// TODO: Spoils
+
 // TODO: BATTLE + STORM + SALLY
 
 // TODO: remove push_state/pop_state stuff - use explicit substates with common functions instead
@@ -529,6 +532,11 @@ function set_lord_unfed(lord, n) {
 function is_lord_unfed(lord) {
 	// reuse "moved" flag for hunger
 	return get_lord_moved(lord)
+}
+
+function feed_lord_skip(lord) {
+	// reuse "moved" flag for hunger
+	set_lord_moved(lord, 0)
 }
 
 function feed_lord(lord) {
@@ -2226,6 +2234,7 @@ function goto_levy_call_to_arms() {
 }
 
 function end_levy_call_to_arms() {
+	clear_lords_moved()
 	set_active_enemy()
 	if (game.active === P2)
 		goto_levy_call_to_arms()
@@ -2399,7 +2408,7 @@ function goto_black_sea_trade() {
 
 states.black_sea_trade = {
 	prompt() {
-		view.prompt = "Call to Arms: Black Sea Trade"
+		view.prompt = "Call to Arms: Black Sea Trade."
 		view.actions.veche = 1
 	},
 	veche() {
@@ -2425,7 +2434,7 @@ function goto_baltic_sea_trade() {
 
 states.baltic_sea_trade = {
 	prompt() {
-		view.prompt = "Call to Arms: Baltic Sea Trade"
+		view.prompt = "Call to Arms: Baltic Sea Trade."
 		view.actions.veche = 1
 	},
 	veche() {
@@ -3464,6 +3473,7 @@ function goto_divide_spoils_after_avoid_battle() {
 
 states.divide_spoils_after_avoid_battle = {
 	prompt() {
+		view.prompt = "Spoils: TODO"
 		view.actions.end_spoils = 1
 	},
 	end_spoils() {
@@ -4282,6 +4292,21 @@ function has_friendly_lord_who_must_feed() {
 	return false
 }
 
+function can_lord_use_hillforts(lord) {
+	return is_lord_unfed(lord) && !is_lord_besieged(lord) && is_in_livonia(get_lord_locale(lord))
+}
+
+function can_use_hillforts() {
+	if (game.active === TEUTONS) {
+		if (has_global_capability(AOW_TEUTONIC_HILLFORTS)) {
+			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+				if (can_lord_use_hillforts(lord))
+					return true
+		}
+	}
+	return false
+}
+
 function goto_feed() {
 	// Count how much food each lord needs
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
@@ -4295,9 +4320,32 @@ function goto_feed() {
 		}
 	}
 
-	game.state = "feed"
-	if (!has_friendly_lord_who_must_feed())
+	if (has_friendly_lord_who_must_feed()) {
+		if (can_use_hillforts())
+			game.state = "hillforts"
+		else
+			game.state = "feed"
+	} else {
 		end_feed()
+	}
+}
+
+states.hillforts = {
+	prompt() {
+		view.prompt = "Hillforts: Skip feeding one unbesieged lord in Livonia."
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+			if (can_lord_use_hillforts(lord))
+				gen_action_lord(lord)
+	},
+	lord(lord) {
+		push_undo()
+		log(`Hillforts fed L${lord}.`)
+		feed_lord_skip(lord)
+		if (has_friendly_lord_who_must_feed())
+			game.state = "feed"
+		else
+			end_feed()
+	},
 }
 
 states.feed = {
@@ -4374,7 +4422,6 @@ states.feed = {
 		set_lord_unfed(lord, 0)
 	},
 	end_feed() {
-		clear_undo()
 		end_feed()
 	},
 }
