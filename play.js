@@ -4,8 +4,6 @@
 //	fealty rating and starting assets + forces on calendar
 //	current assets and forces on map
 
-// TODO: held events, this_turn events
-
 // inactive command cylinder color - other color outline
 // moved/fought lord coloring - blue outline?
 

@@ -1,5 +1,6 @@
 "use strict"
 
+// TODO: skip pay step of first levy?
 // TODO: delay pay step if there is no feed or disband to be done
 
 // TODO: Lodya capability during supply!

@@ -164,7 +164,6 @@ body.Teutons #plan_actions .russian { display: none }
 }
 
 .mat .capabilities {
-	pointer-events: none;
 	position: absolute;
 	width: 372px;
 	height: 260px;
@@ -519,8 +518,11 @@ body.shift .mustered_vassals {
 }
 
 .card.disabled {
-	filter: grayscale(100%) brightness(66%);
+	filter: brightness(80%);
 }
+
+.card.action.teutonic { background-color: #e1e6e8; box-shadow: 0 0 0 1px #666a6c, 0 0 0 3px white; }
+.card.action.russian { background-color: #e1d6c1; box-shadow: 0 0 0 1px #665c4a, 0 0 0 3px white; }
 
 .card.selected.teutonic { background-color: #e1e6e8; box-shadow: 0 0 0 1px #666a6c, 0 0 0 3px yellow; }
 .card.selected.russian { background-color: #e1d6c1; box-shadow: 0 0 0 1px #665c4a, 0 0 0 3px yellow; }
