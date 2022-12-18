@@ -827,14 +827,19 @@ vassals.forEach((vassal,id) => {
 })
 
 let steppe_warriors = []
-let crusaders = []
+let summer_crusaders = []
 
 for (let i = 0; i < vassals.length; ++i) {
 	if (vassals[i].capability === "Steppe Warriors")
 		steppe_warriors.push(i)
 	if (vassals[i].capability === "Crusade")
-		crusaders.push(i)
+		summer_crusaders.push(i)
 }
+
+let bishoprics = []
+for (let loc = 0; loc < locales.length; ++loc)
+	if (locales[loc].type === "bishopric")
+		bishoprics.push(loc)
 
 let script = []
 script.push("mkdir -p service300")
@@ -845,10 +850,11 @@ script.push("montage -mode concatenate -tile 3x " + vassal_service.Russian.join(
 
 print("const data = {")
 print("seaports:" + JSON.stringify(seaports) + ",")
+print("bishoprics:" + JSON.stringify(bishoprics) + ",")
 print("conquerable:" + JSON.stringify(conquerable) + ",")
 print("strongholds:" + JSON.stringify(strongholds) + ",")
 print("steppe_warriors:" + JSON.stringify(steppe_warriors) + ",")
-print("crusaders:" + JSON.stringify(crusaders) + ",")
+print("summer_crusaders:" + JSON.stringify(summer_crusaders) + ",")
 dumplist("locales", locales)
 dumplist("ways", ways)
 dumplist("lords", lords)

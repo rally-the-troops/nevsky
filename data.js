@@ -4,7 +4,7 @@ bishoprics:[0,7,8,9],
 conquerable:[0,1,7,8,9,10,11,12,13,24,25,26,27,28,29,30,31,32,33,34,35,36],
 strongholds:[0,1,7,8,9,10,11,12,13,24,25,26,27,32,33,34,35,36],
 steppe_warriors:[18,19,22,23],
-crusaders:[2,13],
+summer_crusaders:[2,13],
 locales:[
 {"name":"Reval","type":"bishopric","stronghold":3,"walls":4,"vp":2,"region":"Danish Estonia","ways":[[5,25],[3,32]],"box":{"x":601,"y":3564,"w":206,"h":91},"adjacent":[3,5],"adjacent_by_trackway":[3,5],"adjacent_by_waterway":[]},
 {"name":"Wesenberg","type":"castle","stronghold":2,"walls":4,"vp":1,"region":"Danish Estonia","ways":[[5,26],[17,30],[6,31]],"box":{"x":1448,"y":3625,"w":304,"h":60},"adjacent":[5,6,17],"adjacent_by_trackway":[5,6,17],"adjacent_by_waterway":[]},
