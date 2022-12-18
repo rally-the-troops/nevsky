@@ -13,9 +13,6 @@
 // CAPABILITIES
 // TODO: Ransom (T)
 // TODO: Ransom (R)
-// TODO: Crusade - free summer muster
-// TODO: Black Sea Trade
-// TODO: Baltic Sea Trade
 // TODO: Hillforts
 
 // TODO: BATTLE + STORM + SALLY
@@ -2223,9 +2220,9 @@ states.muster_capability_discard = {
 
 function goto_levy_call_to_arms() {
 	if (game.active === TEUTONS)
-		goto_papal_legate()
+		goto_teutonic_call_to_arms()
 	else
-		goto_novgorod_veche()
+		goto_russian_call_to_arms()
 }
 
 function end_levy_call_to_arms() {
@@ -2248,14 +2245,15 @@ function goto_levy_discard_events() {
 
 // === LEVY: CALL TO ARMS - PAPAL LEGATE ===
 
-function goto_papal_legate() {
+function goto_teutonic_call_to_arms() {
+	log_h2("Call to Arms - Papal Legate")
 	if (has_global_capability(AOW_TEUTONIC_WILLIAM_OF_MODENA)) {
-		log_h2("Call to Arms - Papal Legate")
 		if (game.nevsky.legate === LEGATE_ARRIVED)
 			game.state = "papal_legate_arrives"
 		else
 			game.state = "papal_legate_active"
 	} else {
+		log("Skipped.")
 		end_levy_call_to_arms()
 	}
 }
@@ -2366,9 +2364,84 @@ states.papal_legate_done = {
 
 // === LEVY: CALL TO ARMS - NOVGOROD VECHE  ===
 
+function count_all_teutonic_ships() {
+	let n = 0
+	for (let lord = first_p1_lord; lord <= last_p1_lord; ++lord)
+		if (is_lord_on_map())
+			n += count_lord_ships(lord)
+	return n
+}
+
+function count_all_russian_ships() {
+	let n = 0
+	for (let lord = first_p2_lord; lord <= last_p2_lord; ++lord)
+		if (is_lord_on_map())
+			n += count_lord_ships(lord)
+	return n
+}
+
+function goto_russian_call_to_arms() {
+	log_h2("Call to Arms - Novgorod Veche")
+	goto_black_sea_trade()
+}
+
+function goto_black_sea_trade() {
+	if (has_global_capability(AOW_RUSSIAN_BLACK_SEA_TRADE)) {
+		if (!has_conquered_marker(LOC_NOVGOROD) && !has_conquered_marker(LOC_LOVAT)) {
+			if (game.nevsky.veche_coin < 8) {
+				game.state = "black_sea_trade"
+				return
+			}
+		}
+	}
+	goto_baltic_sea_trade()
+}
+
+states.black_sea_trade = {
+	prompt() {
+		view.prompt = "Call to Arms: Black Sea Trade"
+		view.actions.veche = 1
+	},
+	veche() {
+		log("Black Sea Trade added 1 coin to Veche.")
+		game.nevsky.veche_coin += 1
+		goto_baltic_sea_trade()
+	},
+}
+
+function goto_baltic_sea_trade() {
+	if (has_global_capability(AOW_RUSSIAN_BALTIC_SEA_TRADE)) {
+		if (!has_conquered_marker(LOC_NOVGOROD) && !has_conquered_marker(LOC_NEVA)) {
+			if (count_all_teutonic_ships() <= count_all_russian_ships()) {
+				if (game.nevsky.veche_coin < 8) {
+					game.state = "baltic_sea_trade"
+					return
+				}
+			}
+		}
+	}
+	goto_novgorod_veche()
+}
+
+states.baltic_sea_trade = {
+	prompt() {
+		view.prompt = "Call to Arms: Baltic Sea Trade"
+		view.actions.veche = 1
+	},
+	veche() {
+		if (game.nevsky.veche_coin === 7) {
+			log("Baltic Sea Trade added 1 coin to Veche.")
+			game.nevsky.veche_coin += 1
+		} else {
+			log("Baltic Sea Trade added 2 coins to Veche.")
+			game.nevsky.veche_coin += 2
+		}
+		goto_novgorod_veche()
+	},
+}
+
 function goto_novgorod_veche() {
 	if (game.nevsky.veche_vp > 0 || is_lord_ready(LORD_ALEKSANDR) || is_lord_ready(LORD_ANDREY)) {
-		log_h2("Call to Arms - Novgorod Veche")
 		game.state = "novgorod_veche"
 	} else {
 		end_levy_call_to_arms()

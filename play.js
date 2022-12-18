@@ -74,6 +74,11 @@ function on_click_veche_coin(evt) {
 		send_action('veche_coin')
 }
 
+function on_click_veche(evt) {
+	if (evt.button === 0)
+		send_action('veche')
+}
+
 const SUMMER = 0
 const EARLY_WINTER = 1
 const LATE_WINTER = 2
@@ -154,6 +159,10 @@ function pack1_get(word, n) {
 function pack4_get(word, n) {
 	n = n << 2
 	return (word >>> n) & 15
+}
+
+function is_veche_action() {
+	return !!(view.actions && view.actions.veche === 1)
 }
 
 function is_lord_action(lord) {
@@ -1259,6 +1268,8 @@ function on_update() {
 	update_plan()
 	update_cards()
 
+	ui.veche.classList.toggle("action", is_veche_action())
+
 	action_button("use_legate", "Legate")
 
 	action_button("stonemasons", "Stonemasons")
@@ -1487,6 +1498,7 @@ function build_map() {
 	})
 
 	document.getElementById("legate").addEventListener("mousedown", on_click_legate)
+	ui.veche.addEventListener("mousedown", on_click_veche)
 
 	for (let name in original_boxes) {
 		let x = round(original_boxes[name][0] * MAP_DPI / 300)
