@@ -204,7 +204,7 @@ function is_legate_action() {
 }
 
 function is_legate_selected() {
-	return !!view.nevsky.legate_selected
+	return !!view.pieces.legate_selected
 }
 
 const force_type_count = 7
@@ -258,32 +258,32 @@ function is_p2_locale(loc) {
 
 function count_vp1() {
 	let vp = 0
-	for (let loc of view.locales.castles1)
+	for (let loc of view.pieces.castles1)
 		vp += 2
-	for (let loc of view.locales.conquered)
+	for (let loc of view.pieces.conquered)
 		if (is_p2_locale(loc))
 			vp += data.locales[loc].vp << 1
-	for (let loc of view.locales.ravaged)
+	for (let loc of view.pieces.ravaged)
 		if (is_p2_locale(loc))
 			vp += 1
 	return vp
 }
 
 function count_vp2() {
-	let vp = view.nevsky.veche_vp * 2
-	for (let loc of view.locales.castles2)
+	let vp = view.pieces.veche_vp * 2
+	for (let loc of view.pieces.castles2)
 		vp += 2
-	for (let loc of view.locales.conquered)
+	for (let loc of view.pieces.conquered)
 		if (is_p1_locale(loc))
 			vp += data.locales[loc].vp << 1
-	for (let loc of view.locales.ravaged)
+	for (let loc of view.pieces.ravaged)
 		if (is_p1_locale(loc))
 			vp += 1
 	return vp
 }
 
 function get_lord_locale(lord) {
-	return view.lords.locale[lord]
+	return view.pieces.locale[lord]
 }
 
 function is_lord_on_map(lord) {
@@ -301,7 +301,7 @@ function is_card_in_use(c) {
 		return true
 	if (set_has(view.capabilities, c))
 		return true
-	if (view.lords.capabilities.includes(c))
+	if (view.pieces.capabilities.includes(c))
 		return true
 	if (c === 18 || c === 19 || c === 20)
 		return true
@@ -318,11 +318,11 @@ function has_global_capability(cap) {
 }
 
 function is_vassal_ready(vassal) {
-	return view.lords.vassals[vassal] === VASSAL_READY
+	return view.pieces.vassals[vassal] === VASSAL_READY
 }
 
 function is_vassal_mustered(vassal) {
-	return view.lords.vassals[vassal] === VASSAL_MUSTERED
+	return view.pieces.vassals[vassal] === VASSAL_MUSTERED
 }
 
 function for_each_teutonic_card(fn) {
@@ -336,18 +336,18 @@ function for_each_russian_card(fn) {
 }
 
 function is_upper_lord(lord) {
-	return map_has(view.lords.lieutenants, lord)
+	return map_has(view.pieces.lieutenants, lord)
 }
 
 function is_lower_lord(lord) {
-	for (let i = 1; i < view.lords.lieutenants.length; i += 2)
-		if (view.lords.lieutenants[i] === lord)
+	for (let i = 1; i < view.pieces.lieutenants.length; i += 2)
+		if (view.pieces.lieutenants[i] === lord)
 			return true
 	return false
 }
 
 function get_lower_lord(upper) {
-	return map_get(view.lords.lieutenants, upper, -1)
+	return map_get(view.pieces.lieutenants, upper, -1)
 }
 
 function for_each_friendly_card(fn) {
@@ -526,7 +526,7 @@ function on_click_plan(evt) {
 function on_focus_cylinder(evt) {
 	let lord = evt.target.my_id
 	let info = data.lords[lord]
-	let loc = view.lords.locale[lord]
+	let loc = view.pieces.locale[lord]
 	if (loc >= CALENDAR) {
 		document.getElementById("status").textContent = `${info.full_name} - ${info.fealty} Fealty`
 	} else {
@@ -540,7 +540,7 @@ function on_focus_cylinder(evt) {
 		*/
 
 		let first = true
-		let assets = view.lords.assets[lord]
+		let assets = view.pieces.assets[lord]
 		for (let i = 0; i < asset_type_count; ++i) {
 			let x = pack4_get(assets, i)
 			if (x > 0) {
@@ -554,8 +554,8 @@ function on_focus_cylinder(evt) {
 		}
 
 		first = true
-		let forces = view.lords.forces[lord]
-		let routed = view.lords.routed[lord]
+		let forces = view.pieces.forces[lord]
+		let routed = view.pieces.routed[lord]
 		for (let i = 0; i < force_type_count; ++i) {
 			let x = pack4_get(forces, i) + pack4_get(routed, i)
 			if (x > 0) {
@@ -568,10 +568,10 @@ function on_focus_cylinder(evt) {
 			}
 		}
 
-		let c = view.lords.capabilities[(lord<<1)]
+		let c = view.pieces.capabilities[(lord<<1)]
 		if (c >= 0)
 			tip += ` \u2013 ${data.cards[c].capability}`
-		c = view.lords.capabilities[(lord<<1) + 1]
+		c = view.pieces.capabilities[(lord<<1) + 1]
 		if (c >= 0)
 			tip += `, ${data.cards[c].capability}`
 
@@ -590,8 +590,8 @@ function on_focus_lord_service_marker(evt) {
 	let lord = evt.target.my_id
 	let info = data.lords[lord]
 	document.getElementById("status").textContent = `${info.full_name} - ${info.title}`
-	if (expand_calendar !== view.lords.service[lord]) {
-		expand_calendar = view.lords.service[lord]
+	if (expand_calendar !== view.pieces.service[lord]) {
+		expand_calendar = view.pieces.service[lord]
 		layout_calendar()
 	}
 }
@@ -599,7 +599,7 @@ function on_focus_lord_service_marker(evt) {
 function on_blur_lord_service_marker(evt) {
 	let id = evt.target.my_id
 	on_blur(evt)
-	if (expand_calendar === view.lords.service[id]) {
+	if (expand_calendar === view.pieces.service[id]) {
 		expand_calendar = -1
 		layout_calendar()
 	}
@@ -910,10 +910,10 @@ function update_vassals(ready_parent, mustered_parent, lord_ix) {
 }
 
 function update_lord_mat(ix) {
-	update_assets(ix, ui.assets[ix], view.lords.assets[ix])
+	update_assets(ix, ui.assets[ix], view.pieces.assets[ix])
 	update_vassals(ui.ready_vassals[ix], ui.mustered_vassals[ix], ix)
-	update_forces(ui.forces[ix], view.lords.forces[ix])
-	update_forces(ui.routed[ix], view.lords.routed[ix])
+	update_forces(ui.forces[ix], view.pieces.forces[ix])
+	update_forces(ui.routed[ix], view.pieces.routed[ix])
 }
 
 function is_lord_mat_selected(ix) {
@@ -927,8 +927,8 @@ function is_cylinder_selected(ix) {
 }
 
 function update_lord(ix) {
-	let locale = view.lords.locale[ix]
-	let service = view.lords.service[ix]
+	let locale = view.pieces.locale[ix]
+	let service = view.pieces.service[ix]
 	if (locale < 0) {
 		ui.lord_cylinder[ix].classList.add("hide")
 		ui.lord_service[ix].classList.add("hide")
@@ -942,7 +942,7 @@ function update_lord(ix) {
 		if (!is_lower_lord(ix)) {
 			if (is_upper_lord(ix)) {
 				let lo = get_lower_lord(ix)
-				if (view.lords.locale[lo] === locale) {
+				if (view.pieces.locale[lo] === locale) {
 					layout_locale_item(locale, ui.lord_cylinder[ix], 1)
 					layout_locale_item(locale, ui.lord_cylinder[lo], 0)
 				} else {
@@ -980,31 +980,31 @@ function update_lord(ix) {
 }
 
 function update_legate() {
-	if (view.nevsky.legate === LEGATE_INDISPOSED) {
+	if (view.pieces.legate === LEGATE_INDISPOSED) {
 		ui.legate.classList.add("hide")
 	} else {
 		ui.legate.classList.remove("hide")
 		ui.legate.classList.toggle("action", is_legate_action())
 		ui.legate.classList.toggle("selected", is_legate_selected())
-		if (view.nevsky.legate === LEGATE_ARRIVED) {
+		if (view.pieces.legate === LEGATE_ARRIVED) {
 			ui.legate.style.top = "1580px"
 			ui.legate.style.left = "170px"
 		} else {
-			layout_locale_item(view.nevsky.legate, ui.legate, 0, -16)
+			layout_locale_item(view.pieces.legate, ui.legate, 0, -16)
 		}
 	}
 }
 
 function update_smerdi() {
 	ui.smerdi.replaceChildren()
-	for (let i = 0; i < view.nevsky.smerdi; ++i)
+	for (let i = 0; i < view.pieces.smerdi; ++i)
 		build_div(ui.smerdi, "unit serfs")
 }
 
 function update_veche() {
 	ui.veche.replaceChildren()
 
-	let n = view.nevsky.veche_coin
+	let n = view.pieces.veche_coin
 	while (n >= 3) {
 		add_asset(ui.veche, COIN, 3, VECHE)
 		n -= 3
@@ -1018,7 +1018,7 @@ function update_veche() {
 		n -= 1
 	}
 
-	for (let i = 0; i < view.nevsky.veche_vp; ++i)
+	for (let i = 0; i < view.pieces.veche_vp; ++i)
 		add_veche_vp(ui.veche)
 }
 
@@ -1032,7 +1032,7 @@ function update_locale(loc) {
 
 	ui.locale_markers[loc].replaceChildren()
 
-	if (set_has(view.locales.ravaged, loc)) {
+	if (set_has(view.pieces.ravaged, loc)) {
 		let cn
 		if (is_p1_locale(loc))
 			cn = "marker small ravaged russian"
@@ -1041,7 +1041,7 @@ function update_locale(loc) {
 		ui.locale_markers[loc].appendChild(get_cached_element(cn))
 	}
 
-	if (set_has(view.locales.conquered, loc)) {
+	if (set_has(view.pieces.conquered, loc)) {
 		let cn
 		if (is_p1_locale(loc))
 			cn = "marker square conquered russian"
@@ -1052,23 +1052,23 @@ function update_locale(loc) {
 	}
 
 	// TODO: max 2 castles - reuse elements
-	if (set_has(view.locales.castles1, loc)) {
+	if (set_has(view.pieces.castles1, loc)) {
 		let cn = "marker rectangle castle teutonic"
 		ui.locale_markers[loc].appendChild(get_cached_element(cn))
 	}
 
-	if (set_has(view.locales.castles2, loc)) {
+	if (set_has(view.pieces.castles2, loc)) {
 		let cn = "marker rectangle castle russian"
 		ui.locale_markers[loc].appendChild(get_cached_element(cn))
 	}
 
 	// TODO: max 4 walls - reuse elements
-	if (set_has(view.locales.walls, loc)) {
+	if (set_has(view.pieces.walls, loc)) {
 		let cn = "marker square walls"
 		ui.locale_markers[loc].appendChild(get_cached_element(cn))
 	}
 
-	let sieges = map_get(view.locales.sieges, loc)
+	let sieges = map_get(view.pieces.sieges, loc)
 	if (sieges > 0) {
 		let cn
 		if (is_p1_locale(loc))
@@ -1189,10 +1189,10 @@ function update_cards() {
 	for (let ix = 0; ix < data.lords.length; ++ix) {
 		let side = ix < 6 ? "teutonic" : "russian"
 		ui.lord_capabilities[ix].replaceChildren()
-		let c = view.lords.capabilities[(ix << 1) + 0]
+		let c = view.pieces.capabilities[(ix << 1) + 0]
 		if (c >= 0)
 			ui.lord_capabilities[ix].appendChild(ui.cards[c])
-		c = view.lords.capabilities[(ix << 1) + 1]
+		c = view.pieces.capabilities[(ix << 1) + 1]
 		if (c >= 0)
 			ui.lord_capabilities[ix].appendChild(ui.cards[c])
 	}
@@ -1208,7 +1208,7 @@ function on_update() {
 	}
 
 	for (let ix = 0; ix < data.lords.length; ++ix) {
-		if (view.lords.locale[ix] < 0) {
+		if (view.pieces.locale[ix] < 0) {
 			ui.lord_cylinder[ix].classList.add("hide")
 			ui.lord_service[ix].classList.add("hide")
 			ui.lord_mat[ix].classList.add("hide")
@@ -1273,6 +1273,9 @@ function on_update() {
 	action_button("stonemasons", "Stonemasons")
 	action_button("stone_kremlin", "Stone Kremlin")
 	action_button("smerdi", "Smerdi")
+
+	action_button("left", "Left")
+	action_button("right", "Right")
 
 	action_button("withdraw", "Withdraw")
 	action_button("surrender", "Surrender")

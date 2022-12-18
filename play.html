@@ -211,7 +211,6 @@ body.shift .capabilities {
 }
 
 .mat .mustered_vassals {
-	display: none;
 	position: absolute;
 	z-index: 5;
 }
@@ -220,12 +219,14 @@ body.shift .mustered_vassals {
 	display: block;
 }
 
-.mat .ready_vassals .service_marker {
+.mat .ready_vassals .service_marker,
+.mat .mustered_vassals .service_marker {
 	transition: margin 100ms;
 	margin-top: -24px;
 }
 
-.mat .ready_vassals:hover .service_marker {
+.mat .ready_vassals:hover .service_marker,
+.mat .mustered_vassals:hover .service_marker {
 	margin-top: 1px;
 }
 
@@ -252,7 +253,7 @@ body.shift .mustered_vassals {
 .mat .routed { top: 200px; left: 18px; width: 236px; height: 48px; }
 .mat .assets { top: 255px; left: 24px; width: 230px; height: 96px; }
 .mat .ready_vassals { bottom: 22px; right: 22px; width: 94px; }
-.mat .mustered_vassals { bottom: 138px; right: 8px; width: 94px; }
+.mat .mustered_vassals { bottom: 134px; right: 6px; width: 94px; }
 
 .mat.teutonic.andreas .background { background-image:url(images/mat_teutonic_andreas.png) }
 .mat.teutonic.heinrich .background { background-image:url(images/mat_teutonic_heinrich.png) }
