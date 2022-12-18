@@ -2,11 +2,10 @@
 
 // TODO: delay pay step if there is no feed or disband to be done
 
-// TODO: discard too many global capabilities
-
 // TODO: Lodya capability during supply!
 // TODO: 2nd edition supply rule - no reuse of transports
 // TODO: 2nd edition ravage cost
+// TODO: 2nd edition disband during campaign
 
 // CAPABILITIES
 // TODO: Ransom (T)
@@ -106,6 +105,8 @@ const first_p1_locale = 0
 const last_p1_locale = 23
 const first_p2_locale = 24
 const last_p2_locale = 52
+const first_locale = 0
+const last_locale = 52
 
 const first_p1_card = 0
 const last_p1_card = 17
@@ -453,6 +454,10 @@ function get_lord_routed_forces(lord, n) {
 
 function set_lord_locale(lord, locale) {
 	game.lords.locale[lord] = locale
+}
+
+function slide_lord_cylinder(lord, dir) {
+	set_lord_locale(lord, get_lord_locale(lord) + dir)
 }
 
 function set_lord_service(lord, service) {
@@ -1588,6 +1593,8 @@ states.setup_lords = {
 	lord(lord) {
 		push_undo()
 		log(`L${lord} at %${get_lord_locale(lord)}`)
+
+		// TODO: clean up these transitions
 		push_state("muster_lord_transport")
 		set_lord_moved(lord, 1)
 		game.who = lord
@@ -1920,6 +1927,10 @@ states.levy_muster_lord = {
 
 			// Muster Ready Vassal Forces
 			for (let vassal of data.lords[game.who].vassals) {
+				// Crusaders can ONLY muster via special free muster in summer
+				// with AOW_TEUTONIC_CRUSADE capability that is handled elsewhere.
+				if (set_has(data.crusaders, vassal))
+					continue
 				if (is_vassal_ready(vassal))
 					gen_action_vassal(vassal)
 			}
@@ -2014,6 +2025,8 @@ states.muster_lord_at_seat = {
 	locale(loc) {
 		push_undo()
 		logii(`at %${loc}`)
+
+		// TODO: clean up these transitions
 		set_lord_moved(game.who, 1)
 		muster_lord(game.who, loc)
 		game.state = "muster_lord_transport"
@@ -2179,24 +2192,295 @@ states.muster_capability_discard = {
 // === LEVY: CALL TO ARMS ===
 
 function goto_levy_call_to_arms() {
-	game.state = "levy_call_to_arms"
-	end_levy_call_to_arms()
+	if (game.active === TEUTONS)
+		goto_papal_legate()
+	else
+		goto_novgorod_veche()
 }
 
-states.levy_call_to_arms = {}
-
 function end_levy_call_to_arms() {
-	goto_campaign_plan()
+	set_active_enemy()
+	if (game.active === P2)
+		goto_levy_call_to_arms()
+	else
+		goto_levy_discard_events()
+}
+
+function goto_levy_discard_events() {
+
+	// Discard "This Levy" events from play.
+	if (game.events.length > 0)
+		game.events = game.events.filter((c) => data.cards[c].when !== "this_levy")
+
+	set_active(P1)
+	goto_capability_discard()
+}
+
+// === LEVY: CALL TO ARMS - PAPAL LEGATE ===
+
+function goto_papal_legate() {
+	if (has_global_capability(AOW_TEUTONIC_WILLIAM_OF_MODENA)) {
+		log_h2("Call to Arms - Papal Legate")
+		if (game.nevsky.legate === LEGATE_ARRIVED)
+			game.state = "papal_legate_arrives"
+		else
+			game.state = "papal_legate_active"
+	} else {
+		end_levy_call_to_arms()
+	}
+}
+
+states.papal_legate_arrives = {
+	prompt() {
+		view.prompt = "Papal Legate Arrives: Place the Legate at any Bishopric."
+		for (let loc of data.bishoprics)
+			// NOTE: Legate would immediately be removed here per the ENDANGERED rule, so don't allow placing?
+			if (!has_enemy_lord(loc) || has_friendly_lord(loc))
+				gen_action_locale(loc)
+	},
+	locale(loc) {
+		push_undo()
+		log(`Legate arrived at %${loc}.`)
+		game.nevsky.legate = loc
+		game.state = "papal_legate_active"
+	},
+}
+
+states.papal_legate_active = {
+	prompt() {
+		view.prompt = "Papal Legate: You may move or use the Legate."
+
+		view.actions.end_call_to_arms = 1
+
+		let here = game.nevsky.legate
+
+		// Move to friendly locale
+		for (let loc = first_locale; loc <= last_locale; ++loc)
+			if (loc !== here && is_friendly_locale(loc))
+				gen_action_locale(loc)
+
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+			// Seat of a Ready Lord without rolling
+			if (is_lord_ready(lord)) {
+				gen_action_lord(lord)
+			}
+
+			// Seat of a Lord on the Calendar
+			else if (is_lord_on_calendar(lord)) {
+				if (is_lord_seat(lord, here))
+					gen_action_lord(lord)
+			}
+
+			// At a Friendly Locale with a Lord
+			else if (is_lord_on_map(lord)) {
+				if (get_lord_locale(lord) === here && is_friendly_locale(here))
+					gen_action_lord(lord)
+			}
+		}
+	},
+	locale(loc) {
+		push_undo()
+		log(`Legate moved to %${loc}.`)
+		game.nevsky.legate = loc
+		game.state = "papal_legate_done"
+	},
+	lord(lord) {
+		push_undo()
+
+		game.nevsky.legate = LEGATE_ARRIVED
+		game.state = "papal_legate_done"
+
+		let here = game.nevsky.legate
+
+		if (is_lord_ready(lord)) {
+			log(`Mustered L${lord}`)
+			logii(`at %${here}`)
+
+			// TODO: clean up these transitions
+			muster_lord(lord, here)
+			push_state("muster_lord_transport")
+			game.who = lord
+			game.count = data.lords[lord].assets.transport | 0
+			resume_muster_lord_transport()
+		}
+
+		else if (is_lord_on_calendar(lord)) {
+			log(`Slid L${lord} one box left.`)
+			slide_lord_cylinder(lord, -1)
+		}
+
+		else {
+			log_h3(`L${lord} at %${get_lord_locale(lord)}`)
+			push_state("levy_muster_lord")
+			game.who = lord
+			game.count = data.lords[lord].lordship
+		}
+	},
+	end_call_to_arms() {
+		clear_undo()
+		end_levy_call_to_arms()
+	},
+}
+
+states.papal_legate_done = {
+	prompt() {
+		view.prompt = "Papal Legate: All done."
+		view.actions.end_call_to_arms = 1
+	},
+	end_call_to_arms() {
+		clear_undo()
+		end_levy_call_to_arms()
+	},
+}
+
+// === LEVY: CALL TO ARMS - NOVGOROD VECHE  ===
+
+function goto_novgorod_veche() {
+	if (game.nevsky.veche_vp > 0 || is_lord_ready(LORD_ALEKSANDR) || is_lord_ready(LORD_ANDREY)) {
+		log_h2("Call to Arms - Novgorod Veche")
+		game.state = "novgorod_veche"
+	} else {
+		end_levy_call_to_arms()
+	}
+}
+
+states.novgorod_veche = {
+	prompt() {
+		view.prompt = "Novgorod Veche: Take one action with the Veche."
+		view.actions.end_call_to_arms = 1
+
+		if (is_lord_ready(LORD_ALEKSANDR) || is_lord_ready(LORD_ANDREY)) {
+			if (game.nevsky.veche_vp < 8)
+				view.actions.delay = 1
+		}
+
+		if (game.nevsky.veche_vp > 0) {
+			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+				if (is_lord_on_calendar(lord) || is_lord_at_friendly_locale(lord))
+					gen_action_lord(lord)
+		}
+	},
+	delay() {
+		push_undo()
+		log("Added 1VP to Veche.")
+		game.state = "novgorod_veche_done"
+
+		view.actions.veche_vp += 1
+		if (is_lord_ready(LORD_ALEKSANDR)) {
+			log(`Delayed L${LORD_ALEKSANDR}.`)
+			slide_lord_cylinder(LORD_ALEKSANDR, 1)
+		}
+		if (is_lord_ready(LORD_ANDREY)) {
+			log(`Delayed L${LORD_ANDREY}.`)
+			slide_lord_cylinder(LORD_ANDREY, 1)
+		}
+	},
+	lord(lord) {
+		push_undo()
+		log("Removed 1VP from Veche.")
+		game.nevsky.veche_vp -= 1
+		game.state = "novgorod_veche_done"
+
+		if (is_lord_ready(lord)) {
+			log(`Mustered L${lord}`)
+			push_state("muster_lord_at_seat")
+			game.who = lord
+		}
+
+		else if (is_lord_on_calendar(lord)) {
+			log(`Slid L${lord} one box left.`)
+			slide_lord_cylinder(lord, -1)
+		}
+
+		else {
+			log_h3(`L${lord} at %${get_lord_locale(lord)}`)
+			push_state("levy_muster_lord")
+			game.who = lord
+			game.count = data.lords[lord].lordship
+		}
+	},
+	end_call_to_arms() {
+		clear_undo()
+		end_levy_call_to_arms()
+	},
+}
+
+states.novgorod_veche_done = {
+	prompt() {
+		view.prompt = "Novgorod Veche: All done."
+		view.actions.end_call_to_arms = 1
+	},
+	end_call_to_arms() {
+		clear_undo()
+		end_levy_call_to_arms()
+	},
+}
+
+// === CAMPAIGN: CAPABILITY DISCARD ===
+
+function count_mustered_lords() {
+	let n = 0
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (is_lord_on_map(lord))
+			++n
+	return n
+}
+
+function count_global_capabilities() {
+	let n = 0
+	for (let c of game.capabilities) {
+		if (game.active === P1 && c >= first_p1_card && c <= last_p1_card)
+			++n
+		if (game.active === P2 && c >= first_p2_card && c <= last_p2_card)
+			++n
+	}
+	return n
+}
+
+function goto_capability_discard() {
+	if (count_global_capabilities() > count_mustered_lords())
+		game.state = "capability_discard"
+	else
+		end_capability_discard()
+}
+
+states.capability_discard = {
+	prompt() {
+		if (count_global_capabilities() > count_mustered_lords()) {
+			view.prompt = "Discard Capabilities in excess of Mustered Lords."
+			for (let c of game.capabilities) {
+				if (game.active === P1 && c >= first_p1_card && c <= last_p1_card)
+					gen_action_card(c)
+				if (game.active === P2 && c >= first_p2_card && c <= last_p2_card)
+					gen_action_card(c)
+			}
+		} else {
+			view.prompt = "Discard Capabilities: All done."
+			view.actions.end_discard = 1
+		}
+	},
+	card(c) {
+		push_undo()
+		discard_global_capability(c)
+	},
+	end_discard() {
+		clear_undo()
+		end_capability_discard()
+	},
+}
+
+function end_capability_discard() {
+	set_active_enemy()
+	if (game.active === P2)
+		goto_campaign_plan()
+	else
+		goto_capability_discard()
 }
 
 // === CAMPAIGN: PLAN ===
 
 function goto_campaign_plan() {
 	game.turn++
-
-	// Discard "This Levy" events from play.
-	if (game.events.length > 0)
-		game.events = game.events.filter((c) => data.cards[c].when !== "this_levy")
 
 	log_h1("Campaign " + current_turn_name())
 
@@ -2369,14 +2653,6 @@ function goto_command_activation() {
 	} else {
 		goto_actions()
 	}
-}
-
-function goto_end_campaign() {
-	// TODO: end game check
-	game.turn++
-	log_h1("Levy " + current_turn_name())
-	log_h2("Arts of War")
-	goto_levy_arts_of_war()
 }
 
 // === CAMPAIGN: ACTIONS ===
@@ -2754,6 +3030,8 @@ function march_with_group_2() {
 	if (is_besieged_enemy_stronghold(from) && !has_friendly_lord(from))
 		lift_siege(from)
 
+	remove_legate_if_endangered(from)
+
 	if (has_unbesieged_enemy_lord(to)) {
 		goto_avoid_battle()
 	} else {
@@ -2761,19 +3039,17 @@ function march_with_group_2() {
 	}
 }
 
-function remove_legate_if_alone_with_russian_lord(here) {
-	if (game.active === RUSSIANS) {
-		if (game.nevsky.legate === here) {
-			log("Legate removed.")
-			discard_global_capability(AOW_TEUTONIC_WILLIAM_OF_MODENA)
-		}
+function remove_legate_if_endangered(here) {
+	if (game.nevsky.legate === here && has_enemy_lord(here) && !has_friendly_lord(here)) {
+		log("Legate removed.")
+		discard_global_capability(AOW_TEUTONIC_WILLIAM_OF_MODENA)
 	}
 }
 
 function march_with_group_3() {
 	let to = game.where
 
-	remove_legate_if_alone_with_russian_lord(to)
+	remove_legate_if_endangered(to)
 
 	if (is_besieged_friendly_stronghold(to)) {
 		lift_siege(to)
@@ -3704,7 +3980,7 @@ states.sail = {
 		if (is_enemy_stronghold(from))
 			lift_siege(from)
 
-		remove_legate_if_alone_with_russian_lord(from)
+		remove_legate_if_endangered(from)
 
 		if (is_unbesieged_enemy_stronghold(to))
 			add_siege_marker(to)
@@ -4241,12 +4517,52 @@ function end_disband() {
 // === CAMPAIGN: REMOVE MARKERS ===
 
 function goto_remove_markers() {
+	clear_lords_moved()
+	goto_command_activation()
+}
+
+// === END CAMPAIGN: RESET ===
+
+function goto_end_campaign() {
+
+	log("TODO: Game End")
+	log("TODO: Grow (2nd ed)")
+	log("TODO: Plow & Reap")
+	log("TODO: Wastage")
+
+	goto_reset()
+}
+
+function goto_reset() {
+	// Unstack Lieutenants and Lower Lords
+	game.lords.lieutenants = []
+
+	// Remove all Serfs to the Smerdi card
+	if (has_global_capability(AOW_RUSSIAN_SMERDI)) {
+		for (let lord = first_p2_lord; lord <= last_p2_lord; ++lord)
+			set_lord_forces(lord, SERFS, 0)
+		game.nevsky.smerdi = 6
+	}
+
 	// Discard "This Campaign" events from play.
 	if (game.events.length > 0)
 		game.events = game.events.filter((c) => data.cards[c].when !== "this_campaign")
 
-	clear_lords_moved()
-	goto_command_activation()
+	log("TODO: Discard Arts of War cards")
+
+	goto_advance_campaign()
+}
+
+function goto_advance_campaign() {
+	game.turn++
+
+	log_h1("Levy " + current_turn_name())
+
+	if (current_season() === LATE_WINTER)
+		discard_global_capability(AOW_TEUTONIC_CRUSADE)
+
+	log_h2("Arts of War")
+	goto_levy_arts_of_war()
 }
 
 // === GAME OVER ===

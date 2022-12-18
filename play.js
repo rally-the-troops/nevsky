@@ -1266,8 +1266,6 @@ function on_update() {
 	action_button("smerdi", "Smerdi")
 
 	action_button("withdraw", "Withdraw")
-	action_button("end_withdraw", "End withdraw")
-
 	action_button("surrender", "Surrender")
 	action_button("siegeworks", "Siegeworks")
 
@@ -1288,6 +1286,7 @@ function on_update() {
 
 	action_button("capability", "Capability")
 
+	action_button("delay", "Delay") // delay Aleksandr/Andrey
 	action_button("deploy", "Deploy")
 	action_button("discard", "Discard")
 	action_button("hold", "Hold")
@@ -1295,7 +1294,9 @@ function on_update() {
 
 	action_button("end_actions", "End actions")
 	action_button("end_avoid_battle", "End avoid battle")
+	action_button("end_call_to_arms", "End call to arms")
 	action_button("end_disband", "End disband")
+	action_button("end_discard", "End discard")
 	action_button("end_feed", "End feed")
 	action_button("end_levy", "End levy")
 	action_button("end_muster", "End muster")
@@ -1304,6 +1305,7 @@ function on_update() {
 	action_button("end_setup", "End setup")
 	action_button("end_spoils", "End spoils")
 	action_button("end_supply", "End supply")
+	action_button("end_withdraw", "End withdraw")
 
 	action_button("pass", "Pass")
 	action_button("done", "Done")
