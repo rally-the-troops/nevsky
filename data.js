@@ -200,7 +200,7 @@ cards:[
 {"name":"T12","event":"Khan Baty","when":"now","capability":"Ordensburgen","this_lord":false,"lords":null},
 {"name":"T13","event":"Heinrich Sees the Curia","when":"hold","capability":"William of Modena","this_lord":false,"lords":null},
 {"name":"T14","event":"Bountiful Harvest","when":"now","capability":"Trebuchets","this_lord":true,"lords":[0,1,2,3,4,5]},
-{"name":"T15","event":"Mindaugas","when":"now","capability":"Warrior Monks","this_lord":false,"lords":[0,4]},
+{"name":"T15","event":"Mindaugas","when":"now","capability":"Warrior Monks","this_lord":true,"lords":[0,4]},
 {"name":"T16","event":"Famine","when":"this_campaign","capability":"Ransom","this_lord":false,"lords":null},
 {"name":"T17","event":"Dietrich von Grüningen","when":"hold","capability":"Stonemasons","this_lord":true,"lords":[0,1,2,3,4,5]},
 {"name":"T18","event":"Swedish Crusade","when":"now","capability":"Cogs","this_lord":true,"lords":[0,1,3]},
