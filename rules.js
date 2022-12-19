@@ -2636,7 +2636,7 @@ function goto_novgorod_veche() {
 
 states.novgorod_veche = {
 	prompt() {
-		view.prompt = "Novgorod Veche: Take one action with the Veche."
+		view.prompt = "Novgorod Veche: You may take one action with the Veche."
 		view.actions.end_call_to_arms = 1
 
 		if (is_lord_ready(LORD_ALEKSANDR) || is_lord_ready(LORD_ANDREY)) {
@@ -3434,7 +3434,7 @@ function resume_avoid_battle() {
 
 states.avoid_battle = {
 	prompt() {
-		view.prompt = `Avoid Battle`
+		view.prompt = `Avoid Battle: You may avoid battle.`
 		view.group = game.group
 
 		let here = get_lord_locale(game.command)

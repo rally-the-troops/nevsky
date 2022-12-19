@@ -586,48 +586,42 @@ body.shift .mustered_vassals {
 .box.way.peipus-north { border-radius: 36px 36px 36px 75%  }
 
 .locale {
+	box-sizing: border-box;
 	position: absolute;
 	border: 3px solid transparent;
 }
 
-.locale.action {
-	border-color: white;
-	//box-shadow: 0 0 6px white, inset 0 0 6px 0px white;
-}
-
-.locale.action.laden {
-	border-color: red;
-}
-
-.locale.region {
-	border-radius: 50%;
-}
-
-.locale.town {
-	border-radius: 8px;
-}
-
-.locale_extra {
+.locale_name {
+	box-sizing: border-box;
 	position: absolute;
+	border: 3px solid transparent;
 }
 
-.locale_extra.action {
-	box-shadow: 0 0 8px 2px white, inset 0 0 12px 2px white;
-}
-.locale_extra.action.laden {
-	box-shadow: 0 0 8px 2px red, inset 0 0 12px 2px red;
-}
+.locale.region { border-radius: 50% }
+.locale.town { border-radius: 80px 80px 36px 36px; }
 
-.locale_extra.traderoute { border-radius: 50% 30% 10% 10% }
-.locale_extra.town { border-radius: 50% 50% 0 0 }
-.locale_extra.fort { border-radius: 30% 30% 0 0 }
-.locale_extra.bishopric { border-radius: 50% 50% 20% 20% }
-.locale_extra.city { border-radius: 50% 50% 0 0 }
-.locale_extra.novgorod { border-radius: 50% 50% 25% 25%; }
+.locale.traderoute { border-radius: 60% 40% 0 0 }
+.locale.fort { border-radius: 24px 24px 0 0 }
+.locale.castle { border-radius: 18px 18px 0 0 }
+.locale.city { border-radius: 50% 50% 0 0 }
+.locale.bishopric { border-radius: 50% 50% 0 0 }
+.locale.novgorod { border-radius: 50% 50% 0 0 }
 
-.locale.tip, .locale_extra.tip {
-	background-color: #ff06;
-	box-shadow: 0 0 8px #ff06;
+.locale.action { border-color: white; box-shadow: 0 0 4px white; }
+.locale.action.laden { border-color: red; box-shadow: 0 0 4px red; }
+
+.locale.action.region { background-color: #5A02 }
+.locale.action.town { background-color: #fc02 }
+.locale.action.traderoute { background-color: #0af2 }
+.locale.action.fort { background-color: #f552 }
+.locale.action.city { background-color: #f552 }
+.locale.action.novgorod { background-color: #f552 }
+.locale.action.castle { background-color: #0002 }
+.locale.action.bishopric { background-color: #0002 }
+
+.locale.tip, .locale_name.tip {
+	background-color: #ff08;
+	box-shadow: 0 0 8px #ff08;
 }
 
 .locale_markers {

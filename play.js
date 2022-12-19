@@ -414,7 +414,7 @@ let expand_calendar = -1
 
 const ui = {
 	locale: [],
-	locale_extra: [],
+	locale_name: [],
 	locale_markers: [],
 	lord_cylinder: [],
 	lord_service: [],
@@ -458,17 +458,7 @@ function clean_name(name) {
 	return name.toLowerCase().replaceAll("&", "and").replaceAll(" ", "_")
 }
 
-const extra_size_100 = {
-	town: [ 60, 42 ],
-	castle: [ 60, 42 ],
-	fort: [ 72, 42 ],
-	traderoute: [ 72, 42 ],
-	bishopric: [ 84, 60 ],
-	city: [ 132, 72 ],
-	novgorod: [ 156, 96 ],
-}
-
-const extra_size = {
+const extra_size_OLD = {
 	town: [ 45, 32 ],
 	castle: [ 45, 32 ],
 	fort: [ 54, 32 ],
@@ -675,14 +665,14 @@ function sub_card_event(match, p1) {
 
 function on_focus_locale_tip(loc) {
 	ui.locale[loc].classList.add("tip")
-	if (ui.locale_extra[loc])
-		ui.locale_extra[loc].classList.add("tip")
+	if (ui.locale_name[loc])
+		ui.locale_name[loc].classList.add("tip")
 }
 
 function on_blur_locale_tip(loc) {
 	ui.locale[loc].classList.remove("tip")
-	if (ui.locale_extra[loc])
-		ui.locale_extra[loc].classList.remove("tip")
+	if (ui.locale_name[loc])
+		ui.locale_name[loc].classList.remove("tip")
 }
 
 function on_click_locale_tip(loc) {
@@ -1025,9 +1015,9 @@ function update_veche() {
 function update_locale(loc) {
 	ui.locale[loc].classList.toggle("action", is_locale_action(loc) || is_laden_march_action(loc))
 	ui.locale[loc].classList.toggle("laden", is_laden_march_action(loc))
-	if (ui.locale_extra[loc]) {
-		ui.locale_extra[loc].classList.toggle("action", is_locale_action(loc) || is_laden_march_action(loc))
-		ui.locale_extra[loc].classList.toggle("laden", is_laden_march_action(loc))
+	if (ui.locale_name[loc]) {
+		ui.locale_name[loc].classList.toggle("action", is_locale_action(loc) || is_laden_march_action(loc))
+		ui.locale_name[loc].classList.toggle("laden", is_laden_march_action(loc))
 	}
 
 	ui.locale_markers[loc].replaceChildren()
@@ -1268,36 +1258,38 @@ function on_update() {
 
 	ui.veche.classList.toggle("action", is_veche_action())
 
-	action_button("use_legate", "Legate")
-
-	action_button("stonemasons", "Stonemasons")
-	action_button("stone_kremlin", "Stone Kremlin")
-	action_button("smerdi", "Smerdi")
-
+	// Misc
 	action_button("left", "Left")
 	action_button("right", "Right")
-
+	action_button("march", "March")
 	action_button("withdraw", "Withdraw")
 	action_button("surrender", "Surrender")
 	action_button("siegeworks", "Siegeworks")
 
-	action_button("march", "March")
-	action_button("sail", "Sail")
+	// Use all commands
+	action_button("use_legate", "Legate")
+	action_button("stonemasons", "Stonemasons")
+	action_button("stone_kremlin", "Stone Kremlin")
+	action_button("tax", "Tax")
 	action_button("siege", "Siege")
+
+	// Use one command
+	action_button("smerdi", "Smerdi")
 	action_button("storm", "Storm")
 	action_button("sally", "Sally")
+	action_button("sail", "Sail")
 	action_button("supply", "Supply")
 	action_button("forage", "Forage")
 	action_button("ravage", "Ravage")
-	action_button("tax", "Tax")
 
+	// Muster
 	action_button("ship", "Ship")
 	action_button("boat", "Boat")
 	action_button("cart", "Cart")
 	action_button("sled", "Sled")
-
 	action_button("capability", "Capability")
 
+	// Events
 	action_button("delay", "Delay") // delay Aleksandr/Andrey
 	action_button("deploy", "Deploy")
 	action_button("discard", "Discard")
@@ -1394,58 +1386,80 @@ function build_way(name, sel) {
 	ui.ways[way].addEventListener("mousedown", on_click_way)
 }
 
+const locale_size = {
+	region: [ 88, 56 ],
+	town: [ 80, 72 ],
+	traderoute: [ 90, 54 ],
+	fort: [ 96, 54 ],
+	castle: [ 96, 56 ],
+	city: [ 126, 80 ],
+	bishopric: [ 106, 72 ],
+	novgorod: [ 144, 86 ],
+}
+
 function build_map() {
 	data.locales.forEach((locale, ix) => {
-		let e = ui.locale[ix] = document.createElement("div")
 		let region = clean_name(locale.region)
-		e.className = "locale " + locale.type + " " + region
-		let x = round(locale.box.x * MAP_DPI / 300)
-		let y = round(locale.box.y * MAP_DPI / 300)
-		let w = floor((locale.box.x+locale.box.w) * MAP_DPI / 300) - x
-		let h = floor((locale.box.y+locale.box.h) * MAP_DPI / 300) - y
-		if (locale.type === 'town') {
-			locale_xy[ix] = [ round(x + w / 2), y - 24 ]
-			x -= 11
-			y -= 5
-			w += 16
-			h += 5
-		} else if (locale.type === 'region') {
-			locale_xy[ix] = [ round(x + w / 2), round(y + h / 2) - 32 ]
-			x -= 3
-			y -= 4
-			// XXX
-			x -= 8
-			y -= 6
-			w += 16
-			h += 12
+		let x = floor(locale.box.x * MAP_DPI / 300)
+		let y = floor(locale.box.y * MAP_DPI / 300)
+		let w = ceil((locale.box.x+locale.box.w) * MAP_DPI / 300) - x
+		let h = ceil((locale.box.y+locale.box.h) * MAP_DPI / 300) - y
+		let xc = round(x + w / 2)
+		let yc = round(y + h / 2)
+		let e
 
-		} else {
-			locale_xy[ix] = [ round(x + w / 2), y - 36 ]
-			x -= 2
-			y -= 2
-			w -= 2
-			h -= 2
+		switch (locale.type) {
+		case "town":
+			locale_xy[ix] = [ xc, y - 24 ]
+			w = locale_size.town[0]
+			h = locale_size.town[1]
+			x = xc - w/2
+			y = y - h + 16
+			break
+		case "region":
+			xc += 2
+			yc -= 3
+			locale_xy[ix] = [ xc, yc - 24 ]
+			w = locale_size.region[0]
+			h = locale_size.region[1]
+			x = xc - w/2
+			y = yc - h/2
+			break
+		default:
+			locale_xy[ix] = [ xc, y - 36 ]
+			break
 		}
-		e.style.left = x + "px"
-		e.style.top = y + "px"
-		e.style.width = w + "px"
-		e.style.height = h + "px"
+
+		// Main Area
+		e = ui.locale[ix] = document.createElement("div")
+		e.className = "locale " + locale.type + " " + region
 		e.my_id = ix
+		if (locale.type !== "region" && locale.type !== "town") {
+			let ew = locale_size[locale.type][0]
+			let eh = locale_size[locale.type][1]
+			e.style.top = (y - eh) + "px"
+			e.style.left = (xc - ew/2) + "px"
+			e.style.width = (ew) + "px"
+			e.style.height = (eh) + "px"
+		} else {
+			e.style.left = x + "px"
+			e.style.top = y + "px"
+			e.style.width = w + "px"
+			e.style.height = h + "px"
+		}
 		e.addEventListener("mousedown", on_click_locale)
 		e.addEventListener("mouseenter", on_focus_locale)
 		e.addEventListener("mouseleave", on_blur)
 		document.getElementById("locales").appendChild(e)
 
-		if (locale.type !== 'region') {
-			e = ui.locale_extra[ix] = document.createElement("div")
-			e.className = "locale_extra " + locale.type + " " + region
-			let cx = x + (w >> 1) + 4
-			let ew = extra_size[locale.type][0]
-			let eh = extra_size[locale.type][1]
-			e.style.top = (y - eh) + "px"
-			e.style.left = (cx - ew/2) + "px"
-			e.style.width = ew + "px"
-			e.style.height = eh + "px"
+		// Name Plate
+		if (locale.type !== 'region' && locale.type !== 'town') {
+			e = ui.locale_name[ix] = document.createElement("div")
+			e.className = "locale_name " + locale.type + " " + region
+			e.style.left = x + "px"
+			e.style.top = y + "px"
+			e.style.width = w + "px"
+			e.style.height = h + "px"
 			e.my_id = ix
 			e.addEventListener("mousedown", on_click_locale)
 			e.addEventListener("mouseenter", on_focus_locale)
@@ -1453,10 +1467,11 @@ function build_map() {
 			document.getElementById("locales").appendChild(e)
 		}
 
+		// Locale Markers
 		e = ui.locale_markers[ix] = document.createElement("div")
 		e.className = "locale_markers " + locale.type + " " + region
-		x = (locale.box.x + locale.box.w / 2) * MAP_DPI / 300 - 196/2
-		y = (locale.box.y + locale.box.h * 0) * MAP_DPI / 300 - 8
+		x = xc - 196/2
+		y = y - 8
 		e.style.top = y + "px"
 		e.style.left = x + "px"
 		e.style.width = 196 + "px"
