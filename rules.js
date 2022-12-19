@@ -1251,15 +1251,13 @@ function restore_lord_forces(lord, type, count) {
 
 function restore_vassal_forces(lord, vassal) {
 	let info = data.vassals[vassal]
-	let restored = 0
-	restored |= restore_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
-	restored |= restore_lord_forces(lord, SERGEANTS, info.forces.sergeants | 0)
-	restored |= restore_lord_forces(lord, LIGHT_HORSE, info.forces.light_horse | 0)
-	restored |= restore_lord_forces(lord, ASIATIC_HORSE, info.forces.asiatic_horse | 0)
-	restored |= restore_lord_forces(lord, MEN_AT_ARMS, info.forces.men_at_arms | 0)
-	restored |= restore_lord_forces(lord, MILITIA, info.forces.militia | 0)
-	restored |= restore_lord_forces(lord, SERFS, info.forces.serfs | 0)
-	return restored > 0
+	restore_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
+	restore_lord_forces(lord, SERGEANTS, info.forces.sergeants | 0)
+	restore_lord_forces(lord, LIGHT_HORSE, info.forces.light_horse | 0)
+	restore_lord_forces(lord, ASIATIC_HORSE, info.forces.asiatic_horse | 0)
+	restore_lord_forces(lord, MEN_AT_ARMS, info.forces.men_at_arms | 0)
+	restore_lord_forces(lord, MILITIA, info.forces.militia | 0)
+	restore_lord_forces(lord, SERFS, info.forces.serfs | 0)
 }
 
 function muster_lord(lord, locale, service) {
@@ -1846,7 +1844,6 @@ function deploy_global_capability(c) {
 	if (c === AOW_TEUTONIC_CRUSADE) {
 		for (let v of data.summer_crusaders)
 			game.pieces.vassals[v] = VASSAL_READY
-		muster_summer_crusaders()
 	}
 
 	if (c === AOW_RUSSIAN_SMERDI) {
@@ -2062,9 +2059,6 @@ function end_levy_arts_of_war() {
 function goto_levy_muster() {
 	log_h2(game.active + " Muster")
 	game.state = "levy_muster"
-
-	restore_summer_crusaders()
-	muster_summer_crusaders()
 }
 
 function end_levy_muster() {
@@ -2237,7 +2231,6 @@ states.muster_lord_at_seat = {
 		// TODO: clean up these transitions
 		set_lord_moved(game.who, 1)
 		muster_lord(game.who, loc)
-		muster_summer_crusaders()
 		game.state = "muster_lord_transport"
 		game.count = data.lords[game.who].assets.transport | 0
 		resume_muster_lord_transport()
@@ -2437,7 +2430,7 @@ function goto_teutonic_call_to_arms() {
 			game.state = "papal_legate_active"
 	} else {
 		log("Skipped.")
-		end_levy_call_to_arms()
+		end_papal_legate()
 	}
 }
 
@@ -2512,7 +2505,6 @@ states.papal_legate_active = {
 
 			// TODO: clean up these transitions
 			muster_lord(lord, here)
-			muster_summer_crusaders()
 			push_state("muster_lord_transport")
 			game.who = lord
 			game.count = data.lords[lord].assets.transport | 0
@@ -2533,7 +2525,7 @@ states.papal_legate_active = {
 	},
 	end_call_to_arms() {
 		clear_undo()
-		end_levy_call_to_arms()
+		end_papal_legate()
 	},
 }
 
@@ -2544,7 +2536,59 @@ states.papal_legate_done = {
 	},
 	end_call_to_arms() {
 		clear_undo()
-		end_levy_call_to_arms()
+		end_papal_legate()
+	},
+}
+
+function end_papal_legate() {
+	goto_summer_crusaders()
+}
+
+// === LEVY: SUMMER CRUSADERS (CAPABILITY) ===
+
+function goto_summer_crusaders() {
+	if (current_season() === SUMMER && has_global_capability(AOW_TEUTONIC_CRUSADE)) {
+		for (let v of data.summer_crusaders) {
+			if (can_muster_summer_crusader(v)) {
+				game.state = "summer_crusaders"
+				return
+			}
+		}
+	}
+	end_levy_call_to_arms()
+}
+
+function can_muster_summer_crusader(v) {
+	let lord = data.vassals[v].lord
+	if (is_lord_on_map(lord) && is_lord_unbesieged(lord)) {
+		if (is_vassal_ready(v))
+			return true
+		if (get_lord_forces(lord, KNIGHTS) < data.vassals[v].forces.knights)
+			return true
+	}
+}
+
+function muster_summer_crusaders(v) {
+	let lord = data.vassals[v].lord
+	if (is_vassal_ready(v)) {
+		log(`Summer Crusaders mustered.`)
+		muster_vassal(lord, v)
+	} else {
+		log(`Summer Crusaders restored.`)
+		restore_lord_forces(lord, KNIGHTS, data.vassals[v].forces.knights | 0)
+	}
+}
+
+states.summer_crusaders = {
+	prompt() {
+		view.prompt = "Levy: Summer Crusaders."
+		for (let v of data.summer_crusaders)
+			if (can_muster_summer_crusader(v))
+				gen_action_vassal(v)
+	},
+	vassal(v) {
+		muster_summer_crusaders(v)
+		goto_summer_crusaders()
 	},
 }
 
@@ -4694,35 +4738,6 @@ function end_feed() {
 			goto_feed()
 		else
 			goto_pay()
-	}
-}
-
-// === LEVY: SUMMER CRUSADERS ===
-
-function muster_summer_crusaders() {
-	// TODO: muster as separate state
-	if (game.active === TEUTONS && current_season() === SUMMER && has_global_capability(AOW_TEUTONIC_CRUSADE)) {
-		for (let v of data.summer_crusaders) {
-			let lord = data.vassals[v].lord
-			if (is_lord_on_map(lord) && is_lord_unbesieged(lord) && is_vassal_ready(v)) {
-				log(`Mustered L${lord}'s Summer Crusaders.`)
-				muster_vassal(lord, v)
-			}
-		}
-	}
-}
-
-function restore_summer_crusaders() {
-	// TODO: restore as separate state
-	if (game.active === TEUTONS && current_season() === SUMMER && has_global_capability(AOW_TEUTONIC_CRUSADE)) {
-		for (let v of data.summer_crusaders) {
-			let lord = data.vassals[v].lord
-			if (is_lord_on_map(lord) && is_lord_unbesieged(lord) && is_vassal_ready(v)) {
-				if (restore_vassal_forces(lord, v)) {
-					log(`Restored L${lord}'s Summer Crusaders.`)
-				}
-			}
-		}
 	}
 }
 
