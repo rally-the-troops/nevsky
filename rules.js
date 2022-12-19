@@ -4,6 +4,7 @@
 // TODO: delay pay step if there is no feed or disband to be done
 
 // TODO: Lodya capability during supply!
+
 // TODO: 2nd edition supply rule - no reuse of transports
 // TODO: 2nd edition ravage cost
 // TODO: 2nd edition disband during campaign
@@ -14,9 +15,7 @@
 // CAPABILITIES
 // TODO: Ransom (T)
 // TODO: Ransom (R)
-// TODO: Hillforts
 
-// TODO: Surrender
 // TODO: Spoils
 
 // TODO: BATTLE + STORM + SALLY
@@ -1017,6 +1016,16 @@ function has_castle(loc) {
 		set_has(game.pieces.castles1, loc) ||
 		set_has(game.pieces.castles2, loc)
 	)
+}
+
+function flip_castle(loc) {
+	if (game.active === P1) {
+		set_delete(game.pieces.castle2, loc)
+		set_add(game.pieces.castle1, loc)
+	} else {
+		set_delete(game.pieces.castle1, loc)
+		set_add(game.pieces.castle2, loc)
+	}
 }
 
 function has_conquered_stronghold(loc) {
@@ -3699,6 +3708,27 @@ function goto_surrender() {
 		goto_siegeworks()
 }
 
+function surrender_stronghold(here) {
+	log(`%${here} surrendered.`)
+
+	remove_all_siege_markers(here)
+
+	if (has_conquered_marker(here))
+		remove_conquered_marker(here)
+	else
+		add_conquered_marker(here)
+
+	if (has_enemy_castle(here))
+		flip_castle(here)
+
+	if (here === LOC_NOVGOROD) {
+		if (game.pieces.veche_coin > 0) {
+			log(`Removed ${game.pieces.veche_coin} coin from Veche.`)
+			game.pieces.veche_coin = 0
+		}
+	}
+}
+
 states.surrender = {
 	prompt() {
 		view.prompt = "Siege: You may roll for Surrender."
@@ -3709,8 +3739,17 @@ states.surrender = {
 			view.actions.pass = 1
 	},
 	surrender() {
-		log("TODO: Surrender roll!")
-		goto_siegeworks()
+		let here = get_lord_locale(game.command)
+		let die = roll_die()
+		let n = count_siege_markers(here)
+		if (die <= n) {
+			log(`Surrender ${die} <= ${n}.`)
+			surrender_stronghold(here)
+			end_siege()
+		} else {
+			log(`Surrender ${die} > ${n} failed.`)
+			goto_siegeworks()
+		}
 	},
 	siegeworks() {
 		log("Declined Surrender.")
