@@ -450,7 +450,7 @@ const ui = {
 	vp2: document.getElementById("vp2"),
 }
 
-let locale_layout = new Array(data.locales.length).fill(0)
+let locale_layout = []
 let calendar_layout_service = []
 let calendar_layout_cylinder = []
 
@@ -749,21 +749,52 @@ function on_log(text) {
 	return p
 }
 
-function layout_locale_item(loc, e, is_upper, yofs = 0) {
-	let [x, y] = locale_xy[loc]
-	let z = 0
-	if (is_upper) {
-		y -= 18
-		z = 1
-	}
-	x += locale_layout[loc] * 44
-	y += yofs
+function layout_locale_item(loc, e, is_upper) {
+	locale_layout[loc].push([e, is_upper])
 	e.classList.toggle("lieutenant", is_upper)
-	e.style.top = (y - 23) + "px"
-	e.style.left = (x - 23) + "px"
-	e.style.zIndex = z
-	if (!is_upper)
-		locale_layout[loc] ++
+}
+
+function layout_locale_cylinders(loc) {
+	let [xc, yc] = locale_xy[loc]
+
+	let n = 0
+	for (let [e,is_upper] of locale_layout[loc])
+		if (!is_upper)
+			++n
+
+	let wrap = 3
+	switch (data.locales[loc].type) {
+	case "region": wrap = 2; break
+	case "town": wrap = 2; break
+	case "novgorod": wrap = 4; break
+	}
+
+	let m = Math.floor((n-1) / wrap)
+	let i = 0
+	let k = 0
+	for (let [e,is_upper] of locale_layout[loc]) {
+		let nn = n
+		if (nn > wrap)
+			nn = wrap
+		let x = xc + (i - (nn-1)/2) * 44 + k * 22
+		let y = yc + (k * 32) - m * 32
+		let z = 0
+		if (is_upper) {
+			y -= 18
+			z = 1
+		}
+		if (e === ui.legate)
+			y -= 16
+		e.style.top = (y - 23) + "px"
+		e.style.left = (x - 23) + "px"
+		e.style.zIndex = z
+		if (!is_upper)
+			++i
+		if (i >= wrap) {
+			i = 0
+			++k
+		}
+	}
 }
 
 function layout_calendar() {
@@ -980,7 +1011,7 @@ function update_legate() {
 			ui.legate.style.top = "1580px"
 			ui.legate.style.left = "170px"
 		} else {
-			layout_locale_item(view.pieces.legate, ui.legate, 0, -16)
+			layout_locale_item(view.pieces.legate, ui.legate, 0)
 		}
 	}
 }
@@ -1013,6 +1044,8 @@ function update_veche() {
 }
 
 function update_locale(loc) {
+	layout_locale_cylinders(loc)
+
 	ui.locale[loc].classList.toggle("action", is_locale_action(loc) || is_laden_march_action(loc))
 	ui.locale[loc].classList.toggle("laden", is_laden_march_action(loc))
 	if (ui.locale_name[loc]) {
@@ -1191,11 +1224,13 @@ function update_cards() {
 function on_update() {
 	restart_cache()
 
-	locale_layout.fill(0)
 	for (let i = 0; i < 18; ++i) {
 		calendar_layout_cylinder[i] = []
 		calendar_layout_service[i] = []
 	}
+
+	for (let i = 0; i < data.locales.length; ++i)
+		locale_layout[i].length = 0
 
 	for (let ix = 0; ix < data.lords.length; ++ix) {
 		if (view.pieces.locale[ix] < 0) {
@@ -1207,9 +1242,6 @@ function on_update() {
 			update_lord(ix)
 		}
 	}
-
-	for (let loc = 0; loc < data.locales.length; ++loc)
-		update_locale(loc)
 
 	for (let way = 0; way < ui.ways.length; ++way) {
 		if (is_way_action(way))
@@ -1223,6 +1255,9 @@ function on_update() {
 	update_legate()
 	update_smerdi()
 	update_veche()
+
+	for (let loc = 0; loc < data.locales.length; ++loc)
+		update_locale(loc)
 
 	update_current_card_display()
 
@@ -1262,6 +1297,7 @@ function on_update() {
 	action_button("left", "Left")
 	action_button("right", "Right")
 	action_button("march", "March")
+	action_button("avoid", "Avoid battle")
 	action_button("withdraw", "Withdraw")
 	action_button("surrender", "Surrender")
 	action_button("siegeworks", "Siegeworks")
@@ -1398,6 +1434,9 @@ const locale_size = {
 }
 
 function build_map() {
+	for (let i = 0; i < data.locales.length; ++i)
+		locale_layout[i] = []
+
 	data.locales.forEach((locale, ix) => {
 		let region = clean_name(locale.region)
 		let x = floor(locale.box.x * MAP_DPI / 300)

@@ -3528,6 +3528,7 @@ states.avoid_battle_laden = {
 			}
 		} else {
 			gen_action_locale(to)
+			view.actions.avoid = 1
 		}
 	},
 	prov(lord) {
@@ -3537,6 +3538,9 @@ states.avoid_battle_laden = {
 		spoil_loot(lord)
 	},
 	locale(to) {
+		avoid_battle_2(false)
+	},
+	avoid() {
 		avoid_battle_2(false)
 	},
 }
