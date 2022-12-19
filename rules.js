@@ -4751,72 +4751,87 @@ function has_friendly_lord_who_may_be_paid() {
 
 function goto_pay() {
 	game.state = "pay"
+	game.who = NOBODY
 	if (!has_friendly_lord_who_may_be_paid())
 		end_pay()
 }
 
+function resume_pay() {
+	if (!can_pay_lord(game.who))
+		game.who = NOBODY
+}
+
 states.pay = {
 	prompt() {
-		view.prompt = "Pay: You may Pay your Lords."
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 			if (is_lord_on_map(lord) && can_pay_lord(lord))
 				gen_action_lord(lord)
+
+		if (game.who === NOBODY) {
+			view.prompt = "Pay: You may Pay your Lords."
+		} else {
+
+			let here = get_lord_locale(game.who)
+			let pay_with_loot = is_friendly_locale(here)
+
+			if (pay_with_loot)
+				view.prompt = `Pay: You may Pay ${lord_name[game.who]} with Coin or Loot.`
+			else
+				view.prompt = `Pay: You may Pay ${lord_name[game.who]} with Coin.`
+
+			if (game.active === RUSSIANS) {
+				if (game.pieces.veche_coin > 0 && !is_lord_besieged(game.who))
+					view.actions.veche_coin = 1
+			}
+
+			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+				if (get_lord_locale(lord) === here) {
+					if (get_lord_assets(lord, COIN) > 0)
+						gen_action_coin(lord)
+					if (pay_with_loot && get_lord_assets(lord, LOOT) > 0)
+						gen_action_loot(lord)
+				}
+			}
+		}
+
 		view.actions.end_pay = 1
 	},
 	lord(lord) {
-		push_undo()
-		push_state("pay_lord")
-		game.who = lord
-	},
-	end_pay() {
-		push_undo()
-		end_pay()
-	},
-}
-
-states.pay_lord = {
-	prompt() {
-		view.prompt = `Pay: You may Pay ${lord_name[game.who]} with Coin or Loot.`
-
-		if (game.active === RUSSIANS) {
-			if (game.pieces.veche_coin > 0 && !is_lord_besieged(game.who))
-				view.actions.veche_coin = 1
-		}
-
-		let loc = get_lord_locale(game.who)
-		let pay_with_loot = is_friendly_locale(loc)
-		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
-			if (get_lord_locale(lord) === loc) {
-				if (get_lord_assets(lord, COIN) > 0)
-					gen_action_coin(lord)
-				if (pay_with_loot && get_lord_assets(lord, LOOT) > 0)
-					gen_action_loot(lord)
-			}
-		}
+		if (game.who === lord)
+			game.who = NOBODY
+		else
+			game.who = lord
 	},
 	loot(lord) {
+		push_undo_without_who()
 		if (game.who === lord)
 			log(`Paid L${game.who} with Loot.`)
 		else
 			log(`Paid L${game.who} with Loot from L${lord}.`)
 		add_lord_assets(lord, LOOT, -1)
 		add_lord_service(game.who, 1)
-		pop_state()
+		resume_pay()
 	},
 	coin(lord) {
+		push_undo_without_who()
 		if (game.who === lord)
 			log(`Paid L${game.who} with Coin.`)
 		else
 			log(`Paid L${game.who} with Coin from L${lord}.`)
 		add_lord_assets(lord, COIN, -1)
 		add_lord_service(game.who, 1)
-		pop_state()
+		resume_pay()
 	},
 	veche_coin() {
+		push_undo_without_who()
 		log(`Paid L${game.who} with Coin from Veche.`)
 		game.pieces.veche_coin--
 		add_lord_service(game.who, 1)
-		pop_state()
+		resume_pay()
+	},
+	end_pay() {
+		push_undo_without_who()
+		end_pay()
 	},
 }
 
@@ -5193,6 +5208,13 @@ function pack4_set(word, n, x) {
 function clear_undo() {
 	if (game.undo.length > 0)
 		game.undo = []
+}
+
+function push_undo_without_who() {
+	let save_who = game.who
+	game.who = NOBODY
+	push_undo()
+	game.who = save_who
 }
 
 function push_undo() {
