@@ -1155,15 +1155,19 @@ function update_plan() {
 }
 
 function update_cards() {
+	for (let c = 0; c < 42; ++c) {
+		let elt = ui.cards[c]
+		elt.classList.toggle("selected", c === view.what)
+		elt.classList.toggle("action", is_card_action(c))
+		elt.classList.toggle("disabled", false)
+	}
+
 	if (Array.isArray(view.show_arts_of_war)) {
 		ui.arts_of_war_dialog.classList.remove("hide")
 		ui.arts_of_war_list.replaceChildren()
 		for (let c of view.show_arts_of_war) {
 			let elt = ui.cards[c]
 			ui.arts_of_war_list.appendChild(ui.cards[c])
-			elt.classList.toggle("selected", c === view.what)
-			elt.classList.toggle("action", is_card_action(c))
-			elt.classList.remove("disabled")
 		}
 	} else if (view.show_arts_of_war === 1) {
 		ui.arts_of_war_dialog.classList.remove("hide")
@@ -1172,19 +1176,11 @@ function update_cards() {
 			if (!is_card_in_use(c)) {
 				let elt = ui.cards[c]
 				ui.arts_of_war_list.appendChild(elt)
-				elt.classList.toggle("selected", c === view.what)
-				elt.classList.toggle("action", is_card_action(c))
 				elt.classList.toggle("disabled", !is_card_action(c))
 			}
 		})
 	} else {
 		ui.arts_of_war_dialog.classList.add("hide")
-		for (let c = 0; c < 42; ++c) {
-			let elt = ui.cards[c]
-			elt.classList.toggle("selected", false)
-			elt.classList.toggle("action", is_card_action(c))
-			elt.classList.toggle("disabled", false)
-		}
 	}
 
 	ui.events.replaceChildren()
