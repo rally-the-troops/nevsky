@@ -4177,7 +4177,7 @@ states.ravage = {
 		}
 
 		if (this_lord_has_russian_raiders()) {
-			for (let there of data.locales[here].adjacent_by_trackway)
+			for (let there of data.locales[here].adjacent)
 				if (can_ravage_locale(there) && !has_enemy_lord(there))
 					gen_action_locale(there)
 		}
