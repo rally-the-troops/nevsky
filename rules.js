@@ -2597,7 +2597,7 @@ states.summer_crusaders = {
 function count_all_teutonic_ships() {
 	let n = 0
 	for (let lord = first_p1_lord; lord <= last_p1_lord; ++lord)
-		if (is_lord_on_map())
+		if (is_lord_on_map(lord))
 			n += count_lord_ships(lord)
 	return n
 }
@@ -2605,7 +2605,7 @@ function count_all_teutonic_ships() {
 function count_all_russian_ships() {
 	let n = 0
 	for (let lord = first_p2_lord; lord <= last_p2_lord; ++lord)
-		if (is_lord_on_map())
+		if (is_lord_on_map(lord))
 			n += count_lord_ships(lord)
 	return n
 }
