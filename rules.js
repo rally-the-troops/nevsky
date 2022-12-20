@@ -1776,7 +1776,7 @@ function action_shift_lord(lord) {
 
 states.shift_lord = {
 	prompt() {
-		view.prompt = `Shift ${data.lords[game.who].name} or Service up to ${game.count}.`
+		view.prompt = `Shift ${lord_name[game.who]} or Service up to ${game.count}.`
 		// TODO: click on calendar boxes? - need off-calendar buttons?
 		let here = 0
 		if (is_lord_on_calendar(lord))
@@ -4126,7 +4126,7 @@ function can_ravage_locale(loc) {
 		is_enemy_territory(loc) &&
 		!has_conquered_marker(loc) &&
 		!has_ravaged_marker(loc) &&
-		!is_friendly_locale(loc)
+		!is_friendly_locale(loc) // XXX same as no-enemy-lords/no friendly castle?
 	)
 }
 
@@ -4142,12 +4142,14 @@ function can_action_ravage() {
 
 	if (this_lord_has_teutonic_raiders()) {
 		for (let there of data.locales[here].adjacent_by_trackway)
+			// XXX has_enemy_lord redundant with is_friendly_locale in can_ravage_locale
 			if (can_ravage_locale(there) && !has_enemy_lord(there))
 				return true
 	}
 
 	if (this_lord_has_russian_raiders()) {
 		for (let there of data.locales[here].adjacent_by_trackway)
+			// XXX has_enemy_lord redundant with is_friendly_locale in can_ravage_locale
 			if (can_ravage_locale(there) && !has_enemy_lord(there))
 				return true
 	}
@@ -4924,10 +4926,13 @@ states.disband = {
 			view.actions.end_disband = 1
 	},
 	service(lord) {
-		disband_lord(lord)
+		this.lord(lord)
 	},
 	lord(lord) {
-		disband_lord(lord)
+		if (can_ransom_besieged_lord(lord))
+			goto_ransom_besieged_lord(lord)
+		else
+			disband_lord(lord)
 	},
 	end_disband() {
 		end_disband()
@@ -4950,6 +4955,59 @@ function end_disband() {
 	}
 }
 
+// === LEVY & CAMPAIGN: RANSOM BESIEGED LORD WHO DISBANDS (CAPABILITY)
+
+function can_ransom_besieged_lord(lord) {
+	if (is_lord_besieged(lord)) {
+		if (game.active === TEUTONS && has_global_capability(AOW_RUSSIAN_RANSOM))
+			return true
+		if (game.active === RUSSIANS && has_global_capability(AOW_TEUTONIC_RANSOM))
+			return true
+	}
+	return false
+}
+
+function goto_ransom_besieged_lord(lord) {
+	clear_undo()
+	set_active_enemy()
+	game.state = "ransom_besieged_lord"
+	game.count = data.lords[lord].service
+	game.who = lord
+	log(`Ransom L${lord}`)
+}
+
+function end_ransom_besieged_lord() {
+	set_active_enemy()
+	disband_lord(game.who)
+	game.state = "disband"
+	game.who = NOBODY
+}
+
+states.ransom_besieged_lord = {
+	prompt() {
+		if (game.count > 0) {
+			view.prompt = `Ransom ${lord_name[game.who]}: Add ${game.count} Coin to a friendly Lord.`
+			let here = get_lord_locale(game.who)
+			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+				if (get_lord_locale(lord) === here)
+					gen_action_lord(lord)
+		} else {
+			view.prompt = `Ransom ${lord_name[game.who]}: All done.`
+			view.actions.end_ransom = 1
+		}
+	},
+	lord(lord) {
+		push_undo()
+		logi(`Coin to L${lord}.`)
+		add_lord_assets(lord, COIN, 1)
+		game.count--
+	},
+	end_ransom() {
+		clear_undo()
+		end_ransom_besieged_lord()
+	}
+}
+
 // === CAMPAIGN: REMOVE MARKERS ===
 
 function goto_remove_markers() {
@@ -4962,7 +5020,6 @@ function goto_remove_markers() {
 function goto_end_campaign() {
 
 	log("TODO: Game End")
-	log("TODO: Grow (2nd ed)")
 	log("TODO: Plow & Reap")
 	log("TODO: Wastage")
 

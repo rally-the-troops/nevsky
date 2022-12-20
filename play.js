@@ -1340,6 +1340,7 @@ function on_update() {
 	action_button("end_muster", "End muster")
 	action_button("end_pay", "End pay")
 	action_button("end_plan", "End plan")
+	action_button("end_ransom", "End ransom")
 	action_button("end_setup", "End setup")
 	action_button("end_spoils", "End spoils")
 	action_button("end_supply", "End supply")
