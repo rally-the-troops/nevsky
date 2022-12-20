@@ -1,6 +1,5 @@
 "use strict"
 
-// TODO: skip pay step of first levy?
 // TODO: delay pay step if there is no feed or disband to be done
 
 // TODO: Lodya capability during supply!
@@ -9,15 +8,8 @@
 // TODO: 2nd edition ravage cost
 // TODO: 2nd edition disband during campaign
 
-// TODO: click on summer crusaders to muster them
-// TODO: click on summer crusaders to restore them
-
 // CAPABILITIES
-// TODO: Ransom (T)
-// TODO: Ransom (R)
-
 // TODO: Spoils
-
 // TODO: BATTLE + STORM + SALLY
 
 // TODO: remove push_state/pop_state stuff - use explicit substates with common functions instead
@@ -35,6 +27,7 @@ const P2 = RUSSIANS
 
 // NOTE: With Hidden Mats option, the player order of feed/pay may matter.
 const FEED_PAY_DISBAND = true // feed, pay, disband in one go
+const WASTAGE_DISCARD = true // wastage, discard in one go
 
 let game = null
 let view = null
@@ -87,6 +80,8 @@ const CART = 3
 const SLED = 4
 const BOAT = 5
 const SHIP = 6
+
+const asset_type_name = [ "prov", "coin", "loot", "cart", "sled", "boat", "ship" ]
 
 function find_card(name) {
 	return data.cards.findIndex((x) => x.name === name)
@@ -750,6 +745,17 @@ function is_card_in_use(c) {
 	return false
 }
 
+function can_discard_card(c) {
+	if (set_has(game.hand1, c))
+		return true
+	if (set_has(game.hand2, c))
+		return true
+	if (set_has(game.capabilities, c))
+		return true
+	if (game.pieces.capabilities.includes(c))
+		return true
+}
+
 function is_lord_on_map(lord) {
 	let loc = get_lord_locale(lord)
 	return loc !== NOWHERE && loc < CALENDAR
@@ -898,6 +904,14 @@ function has_unbesieged_friendly_lord(loc) {
 		if (get_lord_locale(lord) === loc && is_lord_unbesieged(lord))
 			return true
 	return false
+}
+
+function is_p1_locale(loc) {
+	return loc >= first_p1_locale && loc <= last_p1_locale
+}
+
+function is_p2_locale(loc) {
+	return loc >= first_p2_locale && loc <= last_p2_locale
 }
 
 function is_friendly_territory(loc) {
@@ -2066,7 +2080,10 @@ function end_levy_arts_of_war() {
 // === LEVY: MUSTER ===
 
 function goto_levy_muster() {
-	log_h2(game.active + " Muster")
+	if (game.active === TEUTONS)
+		log_h2("Teutonic Muster")
+	else
+		log_h2("Russian Muster")
 	game.state = "levy_muster"
 }
 
@@ -2149,14 +2166,14 @@ states.levy_muster_lord = {
 			// Add Transport
 			if (data.lords[game.who].ships) {
 				if (can_add_transport(game.who, SHIP))
-					view.actions.ship = 1
+					view.actions.muster_ship = 1
 			}
 			if (can_add_transport(game.who, BOAT))
-				view.actions.boat = 1
+				view.actions.muster_boat = 1
 			if (can_add_transport(game.who, CART))
-				view.actions.cart = 1
+				view.actions.muster_cart = 1
 			if (can_add_transport(game.who, SLED))
-				view.actions.sled = 1
+				view.actions.muster_sled = 1
 
 			// Add Capability
 			view.actions.capability = 1
@@ -2189,25 +2206,25 @@ states.levy_muster_lord = {
 		resume_levy_muster_lord()
 	},
 
-	ship() {
+	muster_ship() {
 		push_undo()
 		logi("Ship")
 		add_lord_assets(game.who, SHIP, 1)
 		resume_levy_muster_lord()
 	},
-	boat() {
+	muster_boat() {
 		push_undo()
 		logi("Boat")
 		add_lord_assets(game.who, BOAT, 1)
 		resume_levy_muster_lord()
 	},
-	cart() {
+	muster_cart() {
 		push_undo()
 		logi("Cart")
 		add_lord_assets(game.who, CART, 1)
 		resume_levy_muster_lord()
 	},
-	sled() {
+	muster_sled() {
 		push_undo()
 		logi("Sled")
 		add_lord_assets(game.who, SLED, 1)
@@ -2262,37 +2279,37 @@ states.muster_lord_transport = {
 		view.prompt += ` ${game.count} left.`
 		if (data.lords[game.who].ships) {
 			if (can_add_transport(game.who, SHIP))
-				view.actions.ship = 1
+				view.actions.muster_ship = 1
 		}
 		if (can_add_transport(game.who, BOAT))
-			view.actions.boat = 1
+			view.actions.muster_boat = 1
 		if (can_add_transport(game.who, CART))
-			view.actions.cart = 1
+			view.actions.muster_cart = 1
 		if (can_add_transport(game.who, SLED))
-			view.actions.sled = 1
+			view.actions.muster_sled = 1
 	},
-	ship() {
+	muster_ship() {
 		push_undo()
 		logii("Ship")
 		add_lord_assets(game.who, SHIP, 1)
 		--game.count
 		resume_muster_lord_transport()
 	},
-	boat() {
+	muster_boat() {
 		push_undo()
 		logii("Boat")
 		add_lord_assets(game.who, BOAT, 1)
 		--game.count
 		resume_muster_lord_transport()
 	},
-	cart() {
+	muster_cart() {
 		push_undo()
 		logii("Cart")
 		add_lord_assets(game.who, CART, 1)
 		--game.count
 		resume_muster_lord_transport()
 	},
-	sled() {
+	muster_sled() {
 		push_undo()
 		logii("Sled")
 		add_lord_assets(game.who, SLED, 1)
@@ -5021,16 +5038,312 @@ function goto_remove_markers() {
 	goto_command_activation()
 }
 
-// === END CAMPAIGN: RESET ===
+// === END CAMPAIGN: GAME END ===
 
 function goto_end_campaign() {
-
-	log("TODO: Game End")
-	log("TODO: Plow & Reap")
-	log("TODO: Wastage")
-
-	goto_reset()
+	log_h1("End Campaign")
+	set_active(P1)
+	goto_game_end()
 }
+
+function count_vp1() {
+	let vp = 0
+	for (let loc of game.pieces.castles1)
+		vp += 2
+	for (let loc of game.pieces.conquered)
+		if (is_p2_locale(loc))
+			vp += data.locales[loc].vp << 1
+	for (let loc of game.pieces.ravaged)
+		if (is_p2_locale(loc))
+			vp += 1
+	return vp
+}
+
+function count_vp2() {
+	let vp = game.pieces.veche_vp * 2
+	for (let loc of game.pieces.castles2)
+		vp += 2
+	for (let loc of game.pieces.conquered)
+		if (is_p1_locale(loc))
+			vp += data.locales[loc].vp << 1
+	for (let loc of game.pieces.ravaged)
+		if (is_p1_locale(loc))
+			vp += 1
+	return vp
+}
+
+function goto_game_end() {
+	// GAME END
+	if (current_turn() === scenario_last_turn[game.scenario]) {
+		let vp1 = count_vp1()
+		let vp2 = count_vp2()
+		if (vp1 > vp2)
+			goto_game_over(P1, `${P1} wins with ${vp1} VP.`)
+		else if (vp2 > vp1)
+			goto_game_over(P2, `${P2} wins with ${vp2} VP.`)
+		else
+			goto_game_over("Draw", "The game ended in a draw.")
+	} else {
+		goto_plow_and_reap()
+	}
+}
+
+// === END CAMPAIGN: PLOW AND REAP ===
+
+function goto_plow_and_reap() {
+	let turn = current_turn()
+	if (turn === 2 || turn === 10 || turn === 6 || turn === 14) {
+		if (game.active === TEUTONS)
+			log_h2("Teutonic Plow, Reap, and Wastage")
+		else
+			log_h2("Russian Plow, Reap, and Wastage")
+		game.state = "plow_and_reap"
+	} else {
+		if (game.active === TEUTONS)
+			log_h2("Teutonic Wastage")
+		else
+			log_h2("Russian Wastage")
+		end_plow_and_reap()
+	}
+}
+
+function flip_and_discard_half(lord, from_type, to_type) {
+	add_lord_assets(lord, get_lord_assets(lord, from_type, to_type))
+	set_lord_assets(lord, from_type, 0)
+	set_lord_assets(lord, to_type, Math.ceil(get_lord_assets(lord, to_type)))
+}
+
+states.plow_and_reap = {
+	prompt() {
+		let from_type, to_type
+		if (turn === 2 || turn === 10) {
+			view.prompt = "Plow and Reap: Flip Carts to Sleds and discard half."
+			from_type = CART
+			to_type = SLED
+		} else {
+			view.prompt = "Plow and Reap: Flip Sleds to Carts and discard half."
+			from_type = SLED
+			to_type = CART
+		}
+		let done = true
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+			if (get_lord_assets(lord, from_type) > 0) {
+				done = false
+				if (from_type === CART)
+					gen_action_cart(lord)
+				if (from_type === SLED)
+					gen_action_sled(lord)
+			}
+		}
+		if (done) {
+			view.prompt = "Plow and Reap: All done."
+			view.action.end_plow_and_reap = 1
+		}
+	},
+	cart(lord) {
+		flip_and_discard_half(lord, CART, SLED)
+	},
+	sled(lord) {
+		flip_and_discard_half(lord, SLED, CART)
+	},
+	end_plow_and_reap() {
+		end_plow_and_reap()
+	}
+}
+
+function end_plow_and_reap() {
+	goto_wastage()
+}
+
+// === END CAMPAIGN: WASTAGE ===
+
+function goto_wastage() {
+	clear_lords_moved()
+
+	let done = true
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+		if (check_lord_wastage(lord)) {
+			set_lord_moved(lord, 1)
+			done = false
+		}
+	}
+
+	if (done)
+		end_wastage()
+	else
+		game.state = "wastage"
+}
+
+function check_lord_wastage(lord) {
+	if (get_lord_assets(lord, PROV) > 1)
+		return true
+	if (get_lord_assets(lord, COIN) > 1)
+		return true
+	if (get_lord_assets(lord, LOOT) > 1)
+		return true
+	if (get_lord_assets(lord, CART) > 1)
+		return true
+	if (get_lord_assets(lord, SLED) > 1)
+		return true
+	if (get_lord_assets(lord, BOAT) > 1)
+		return true
+	if (get_lord_assets(lord, SHIP) > 1)
+		return true
+	if (get_lord_capability(lord, 0) !== NOTHING && get_lord_capability(lord, 1) !== NOTHING)
+		return true
+	return false
+}
+
+function prompt_wastage(lord) {
+	if (get_lord_assets(lord, PROV) > 0)
+		gen_action_prov(lord)
+	if (get_lord_assets(lord, COIN) > 0)
+		gen_action_coin(lord)
+	if (get_lord_assets(lord, LOOT) > 0)
+		gen_action_loot(lord)
+	if (get_lord_assets(lord, CART) > 0)
+		gen_action_cart(lord)
+	if (get_lord_assets(lord, SLED) > 0)
+		gen_action_sled(lord)
+	if (get_lord_assets(lord, BOAT) > 0)
+		gen_action_boat(lord)
+	if (get_lord_assets(lord, SHIP) > 0)
+		gen_action_ship(lord)
+	for (let i = 0; i < 2; ++i) {
+		let c = get_lord_capability(lord, i)
+		if (c !== NOTHING)
+			gen_action_card(c)
+	}
+}
+
+function action_wastage(lord, type) {
+	push_undo()
+	log(`L${lord} discarded ${asset_type_name[type]}.`)
+	set_lord_moved(lord, 0)
+	add_lord_assets(lord, type, -1)
+}
+
+function find_lord_capability(c) {
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (lord_has_capability(lord, c))
+			return lord
+	return NOBODY
+}
+
+states.wastage = {
+	prompt() {
+		let done = true
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+			if (get_lord_moved(lord)) {
+				prompt_wastage(lord)
+				done = false
+			}
+		}
+		if (done) {
+			view.prompt = "Wastage: All done."
+			view.actions.end_wastage = 1
+		} else {
+			view.prompt = "Wastage: Discard one asset or capability from each affected Lord."
+		}
+	},
+	card(c) {
+		push_undo()
+		let lord = find_lord_capability(c)
+		log(`L${lord} wasted C${c}.`)
+		set_lord_moved(lord, 0)
+		discard_lord_capability(lord, c)
+	},
+	prov(lord) { action_wastage(lord, PROV) },
+	coin(lord) { action_wastage(lord, COIN) },
+	loot(lord) { action_wastage(lord, LOOT) },
+	cart(lord) { action_wastage(lord, CART) },
+	sled(lord) { action_wastage(lord, SLED) },
+	boat(lord) { action_wastage(lord, BOAT) },
+	ship(lord) { action_wastage(lord, SHIP) },
+	end_wastage() {
+		end_wastage()
+	}
+}
+
+function end_wastage() {
+	if (WASTAGE_DISCARD) {
+		push_undo()
+		goto_reset_discard()
+	} else {
+		clear_undo()
+		set_active_enemy()
+		if (game.active === P2)
+			goto_plow_and_reap()
+		else
+			goto_reset_discard()
+
+	}
+}
+
+// === END CAMPAIGN: DISCARD ARTS OF WAR ===
+
+function goto_reset_discard() {
+	game.state = "reset_discard"
+}
+
+states.reset_discard = {
+	prompt() {
+		view.prompt = "Reset: You may discard any Arts of War cards desired."
+		if (game.active === P1) {
+			for (let c = first_p1_card; c <= last_p1_card; ++c)
+				if (can_discard_card(c))
+					gen_action_card(c)
+		}
+		if (game.active === P2) {
+			for (let c = first_p2_card; c <= last_p2_card; ++c)
+				if (can_discard_card(c))
+					gen_action_card(c)
+		}
+		view.actions.end_discard = 1
+	},
+	card(c) {
+		push_undo()
+		if (has_global_capability(c)) {
+			log(`Discarded C${c}.`)
+			discard_global_capability(c)
+		} else if (set_has(game.hand1, c)) {
+			log("Discarded held card.")
+			set_delete(game.hand1, c)
+		} else if (set_has(game.hand2, c)) {
+			log("Discarded held card.")
+			set_delete(game.hand2, c)
+		} else {
+			let lord = find_lord_capability(c)
+			if (lord !== NOBODY) {
+				log(`L${lord} discarded C${c}.`)
+				discard_lord_capability(lord, c)
+			}
+		}
+	},
+	end_discard() {
+		end_reset_discard()
+	},
+}
+
+function end_reset_discard() {
+	if (WASTAGE_DISCARD) {
+		clear_undo()
+		set_active_enemy()
+		if (game.active === P2)
+			goto_plow_and_reap()
+		else
+			goto_reset()
+	} else {
+		clear_undo()
+		set_active_enemy()
+		if (game.active === P2)
+			goto_reset_discard()
+		else
+			goto_reset()
+	}
+}
+
+// === END CAMPAIGN: RESET ===
 
 function goto_reset() {
 	// Unstack Lieutenants and Lower Lords
@@ -5046,8 +5359,6 @@ function goto_reset() {
 	// Discard "This Campaign" events from play.
 	if (game.events.length > 0)
 		game.events = game.events.filter((c) => data.cards[c].when !== "this_campaign")
-
-	log("TODO: Discard Arts of War cards")
 
 	goto_advance_campaign()
 }
@@ -5187,6 +5498,22 @@ function gen_action_coin(lord) {
 
 function gen_action_loot(lord) {
 	gen_action("loot", lord)
+}
+
+function gen_action_cart(lord) {
+	gen_action("cart", lord)
+}
+
+function gen_action_sled(lord) {
+	gen_action("sled", lord)
+}
+
+function gen_action_boat(lord) {
+	gen_action("boat", lord)
+}
+
+function gen_action_ship(lord) {
+	gen_action("ship", lord)
 }
 
 exports.view = function (state, current) {

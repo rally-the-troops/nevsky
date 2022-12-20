@@ -1317,10 +1317,10 @@ function on_update() {
 	action_button("ravage", "Ravage")
 
 	// Muster
-	action_button("ship", "Ship")
-	action_button("boat", "Boat")
-	action_button("cart", "Cart")
-	action_button("sled", "Sled")
+	action_button("muster_ship", "Ship")
+	action_button("muster_boat", "Boat")
+	action_button("muster_cart", "Cart")
+	action_button("muster_sled", "Sled")
 	action_button("capability", "Capability")
 
 	// Events
@@ -1331,6 +1331,8 @@ function on_update() {
 	action_button("play", "Play")
 
 	action_button("end_actions", "End actions")
+	action_button("end_wastage", "End wastage")
+	action_button("end_plow_and_reap", "End plow and reap")
 	action_button("end_avoid_battle", "End avoid battle")
 	action_button("end_call_to_arms", "End call to arms")
 	action_button("end_disband", "End disband")
