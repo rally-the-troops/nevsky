@@ -297,6 +297,8 @@ function is_marshal(lord) {
 }
 
 function is_card_in_use(c) {
+	if (set_has(view.hand, c))
+		return true
 	if (set_has(view.events, c))
 		return true
 	if (set_has(view.capabilities, c))

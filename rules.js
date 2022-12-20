@@ -733,6 +733,10 @@ function is_marshal(lord) {
 }
 
 function is_card_in_use(c) {
+	if (set_has(game.hand1, c))
+		return true
+	if (set_has(game.hand2, c))
+		return true
 	if (set_has(game.events, c))
 		return true
 	if (set_has(game.capabilities, c))
