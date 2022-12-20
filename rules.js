@@ -1779,6 +1779,7 @@ states.shift_lord = {
 		view.prompt = `Shift ${lord_name[game.who]} or Service up to ${game.count}.`
 		// TODO: click on calendar boxes? - need off-calendar buttons?
 		let here = 0
+		let lord = game.who
 		if (is_lord_on_calendar(lord))
 			here = get_lord_locale(lord) - CALENDAR
 		else
@@ -1794,6 +1795,7 @@ states.shift_lord = {
 		view.actions.done = 1
 	},
 	turn(turn) {
+		let lord = game.who
 		log(`Shifted L${lord} to ${turn}.`)
 		if (is_lord_on_calendar(lord))
 			set_lord_locale(lord, CALENDAR + turn)
@@ -1803,6 +1805,7 @@ states.shift_lord = {
 			end_immediate_event()
 	},
 	left() {
+		let lord = game.who
 		log(`Shifted L${lord} left.`)
 		if (is_lord_on_calendar(lord))
 			shift_lord_cylinder(lord, -1)
@@ -1812,6 +1815,7 @@ states.shift_lord = {
 			end_immediate_event()
 	},
 	right() {
+		let lord = game.who
 		log(`Shifted L${lord} right.`)
 		if (is_lord_on_calendar(lord))
 			shift_lord_cylinder(lord, 1)
@@ -2008,6 +2012,7 @@ function resume_levy_arts_of_war() {
 states.levy_arts_of_war = {
 	prompt() {
 		let c = game.what[0]
+		view.show_arts_of_war = [ c ]
 		view.what = c
 		switch (data.cards[c].when) {
 			case "this_levy":
@@ -3092,7 +3097,7 @@ function this_lord_has_russian_druzhina() {
 function this_lord_has_house_of_suzdal() {
 	if (game.active === RUSSIANS)
 		if (lord_has_capability(game.command, AOW_RUSSIAN_HOUSE_OF_SUZDAL))
-			return is_lord_on_map(LORD_ALEKSANDR) || is_lord_on_map(LORD_ANDREY)
+			return is_lord_on_map(LORD_ALEKSANDR) && is_lord_on_map(LORD_ANDREY)
 	return false
 }
 
@@ -3814,6 +3819,7 @@ states.surrender = {
 }
 
 function goto_siegeworks() {
+	// TODO: automatic or manual placement?
 	if (can_siegeworks())
 		game.state = "siegeworks"
 	else
