@@ -1517,8 +1517,8 @@ function build_map() {
 		// Locale Markers
 		e = ui.locale_markers[ix] = document.createElement("div")
 		e.className = "locale_markers " + locale.type + " " + region
-		x = xc - 196/2
-		y = y - 8
+		x = locale_xy[ix][0] - 196/2
+		y = locale_xy[ix][1] + 36
 		e.style.top = y + "px"
 		e.style.left = x + "px"
 		e.style.width = 196 + "px"
