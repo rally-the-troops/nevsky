@@ -4211,6 +4211,13 @@ function goto_forage() {
 
 // === ACTION: RAVAGE ===
 
+function has_adjacent_unbesieged_enemy_lord(loc) {
+	for (let next of data.locales[loc].adjacent)
+		if (has_unbesieged_enemy_lord(next))
+			return true
+	return false
+}
+
 function has_not_used_teutonic_raiders() {
 	return !game.flags.teutonic_raiders
 }
@@ -4231,16 +4238,22 @@ function this_lord_has_russian_raiders() {
 }
 
 function can_ravage_locale(loc) {
-	return (
-		is_enemy_territory(loc) &&
-		!has_conquered_marker(loc) &&
-		!has_ravaged_marker(loc) &&
-		!is_friendly_locale(loc) // XXX same as no-enemy-lords/no friendly castle?
-	)
+	// TODO: cost 2 if enemy lord is adjacent (2nd ed)
+	if (!is_enemy_territory(loc))
+		return false
+	if (has_conquered_marker(loc))
+		return false
+	if (has_ravaged_marker(loc))
+		return false
+	if (is_friendly_locale(loc)) // faster check?
+		return false
+	if (has_adjacent_unbesieged_enemy_lord(loc))
+		return game.actions >= 2
+	else
+		return game.actions >= 1
 }
 
 function can_action_ravage() {
-	// TODO: cost 2 if enemy lord is adjacent (2nd ed)
 	if (game.actions < 1)
 		return false
 
@@ -4318,7 +4331,10 @@ function ravage_location(here, there) {
 			add_lord_assets(game.command, LOOT, 1)
 	}
 
-	spend_action(1)
+	if (has_adjacent_unbesieged_enemy_lord(there))
+		spend_action(2)
+	else
+		spend_action(1)
 	resume_actions()
 }
 
