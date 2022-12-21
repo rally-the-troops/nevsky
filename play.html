@@ -127,6 +127,66 @@ body.Teutons #plan_actions .russian { display: none }
 	background-size: 93px 130px;
 }
 
+/* BATTLE */
+
+#battle {
+	position: relative;
+	margin: 24px auto;
+	width: 372px;
+	height: 372px;
+	background-size: 360px 360px;
+	background-position: center;
+	background-repeat: no-repeat;
+	background-color: #d1c07e;
+	border-radius: 12px;
+	border-width: 2px;
+	border-style: solid;
+}
+
+#battle.defender { background-image: url(images/mat_battle_defender.png); }
+#battle.attacker { background-image: url(images/mat_battle_attacker.png); }
+
+#battle.defender #battle_attacker_reserves { width: 356px !important; top: 4px; left: 8px; }
+#battle.defender #battle_attacker_left	{ top: 96px; left: 32px; }
+#battle.defender #battle_attacker_center	{ top: 96px; left: 162px; }
+#battle.defender #battle_attacker_right	{ top: 96px; right: 32px; }
+#battle.defender #battle_defender_garrison { width: 356px !important; top: 172px; left: 8px; }
+#battle.defender #battle_defender_left	{ top: 220px; left: 32px; }
+#battle.defender #battle_defender_center	{ top: 220px; left: 162px; }
+#battle.defender #battle_defender_right	{ top: 220px; right: 32px; }
+#battle.defender #battle_sally_left	{ bottom: 60px; left: 4px; }
+#battle.defender #battle_sally_center	{ bottom: 60px; right: 200px; }
+#battle.defender #battle_sally_right	{ bottom: 60px; right: 4px; }
+#battle.defender #battle_defender_reserves { width: 356px !important; bottom: 4px; left: 8px; }
+
+#battle.attacker #battle_attacker_reserves { width: 356px !important; bottom: 4px; left: 8px; }
+#battle.attacker #battle_attacker_left	{ bottom: 96px; right: 32px; }
+#battle.attacker #battle_attacker_center	{ bottom: 96px; left: 162px; }
+#battle.attacker #battle_attacker_right	{ bottom: 96px; left: 32px; }
+#battle.attacker #battle_defender_garrison { width: 356px !important; bottom: 172px; left: 8px; }
+#battle.attacker #battle_defender_left	{ bottom: 220px; right: 32px; }
+#battle.attacker #battle_defender_center	{ bottom: 220px; left: 162px; }
+#battle.attacker #battle_defender_right	{ bottom: 220px; left: 32px; }
+#battle.attacker #battle_sally_left	{ top: 60px; right: 4px; }
+#battle.attacker #battle_sally_center	{ top: 60px; left: 200px; }
+#battle.attacker #battle_sally_right	{ top: 60px; left: 4px; }
+#battle.attacker #battle_defender_reserves { width: 356px !important; top: 4px; left: 8px; }
+
+#battle > div {
+	position: absolute;
+	width: 48px;
+	height: 48px;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 2px;
+}
+
+#battle .cylinder, #battle .unit {
+	position: static
+}
+
 /* MATS */
 
 .court {
@@ -876,6 +936,7 @@ body.shift .mustered_vassals {
 /* BACKGROUND COLORS AND BORDERS */
 /* :r !node tools/colors.mjs */
 
+#battle { background-color: #d1c07e; border-color: #f2e19d #b1a05f #b1a05f #f2e19d; box-shadow: 0 0 0 1px #584800, 1px 2px 4px #0008; }
 .mat .background { background-color: #d1c07e; border-color: #f2e19d #b1a05f #b1a05f #f2e19d; box-shadow: 0 0 0 1px #584800, 1px 2px 4px #0008; }
 .card.teutonic { background-color: #e1e6e8; border-color: #fbffff #c1c5c7 #c1c5c7 #fbffff; box-shadow: 0 0 0 1px #666a6c, 1px 2px 4px #0008; }
 .card.russian { background-color: #e1d6c1; border-color: #fff7e1 #c1b6a1 #c1b6a1 #fff7e1; box-shadow: 0 0 0 1px #665c4a, 1px 2px 4px #0008; }
@@ -1147,10 +1208,54 @@ body.shift .mustered_vassals {
 
 <div id="hand" class="hand"></div>
 
+<div id="battle" class="defender">
+<div id="battle_attacker_reserves">
+<div class="cylinder lord teutonic knud_and_abel"></div>
+<div class="cylinder lord teutonic rudolf"></div>
+</div>
+<div id="battle_attacker_right">
+<div class="cylinder lord teutonic andreas"></div>
+</div>
+<div id="battle_attacker_center">
+<div class="cylinder lord teutonic heinrich"></div>
+</div>
+<div id="battle_attacker_left">
+<div class="cylinder lord teutonic hermann"></div>
+</div>
+<div id="battle_defender_garrison">
+<div class="unit knights"></div>
+<div class="unit men_at_arms"></div>
+<div class="unit men_at_arms"></div>
+<div class="unit men_at_arms"></div>
+</div>
+<div id="battle_defender_left">
+<div class="cylinder lord russian aleksandr"></div>
+</div>
+<div id="battle_defender_center">
+<div class="cylinder lord russian andrey"></div>
+</div>
+<div id="battle_defender_right">
+<div class="cylinder lord russian domash"></div>
+</div>
+<div id="battle_defender_reserves">
+<div class="cylinder lord russian gavrilo"></div>
+<div class="cylinder lord russian karelians"></div>
+<div class="cylinder lord russian vladislav"></div>
+</div>
+<div id="battle_sally_left">
+<div class="cylinder lord teutonic yaroslav"></div>
+</div>
+<div id="battle_sally_center">
+<div class="cylinder lord teutonic yaroslav"></div>
+</div>
+<div id="battle_sally_right">
+<div class="cylinder lord teutonic yaroslav"></div>
+</div>
+</div>
+
 </div>
 
 <div id="court1" class="court"></div>
-
 <div id="court2" class="court"></div>
 
 </main>

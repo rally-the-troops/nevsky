@@ -4691,13 +4691,15 @@ function start_battle() {
 	log_h3(`Battle at %${here}`)
 
 	game.battle = {
-		attacker: game.active,
 		where: here,
+		attacker: game.active,
 		conceded: 0,
 		array: [
-			NOBODY, NOBODY, NOBODY,
-			NOBODY, NOBODY, NOBODY,
+			NOBODY, NOBODY, NOBODY, // attacker
+			NOBODY, NOBODY, NOBODY, // defender
+			NOBODY, NOBODY, NOBODY, // sally
 		],
+		garrison: 0,
 		reserves: [],
 		routed: [],
 		loser: 0,
