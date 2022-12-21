@@ -1318,11 +1318,14 @@ function on_update() {
 	action_button("forage", "Forage")
 	action_button("ravage", "Ravage")
 
-	// Muster
-	action_button("muster_ship", "Ship")
-	action_button("muster_boat", "Boat")
-	action_button("muster_cart", "Cart")
-	action_button("muster_sled", "Sled")
+	// Muster & Spoils
+	action_button("take_prov", "Prov")
+	action_button("take_loot", "Loot")
+	action_button("take_coin", "Coin")
+	action_button("take_ship", "Ship")
+	action_button("take_boat", "Boat")
+	action_button("take_cart", "Cart")
+	action_button("take_sled", "Sled")
 	action_button("capability", "Capability")
 
 	// Events

@@ -902,13 +902,13 @@ function has_free_seat(lord) {
 
 function has_teutonic_lord(here) {
 	for (let lord = first_p1_lord; lord <= last_p1_lord; ++lord)
-		if (get_lord_locale(lord) === loc)
+		if (get_lord_locale(lord) === here)
 			return true
 }
 
 function has_russian_lord(here) {
 	for (let lord = first_p2_lord; lord <= last_p2_lord; ++lord)
-		if (get_lord_locale(lord) === loc)
+		if (get_lord_locale(lord) === here)
 			return true
 }
 
@@ -2208,14 +2208,14 @@ states.levy_muster_lord = {
 			// Add Transport
 			if (data.lords[game.who].ships) {
 				if (can_add_transport(game.who, SHIP))
-					view.actions.muster_ship = 1
+					view.actions.take_ship = 1
 			}
 			if (can_add_transport(game.who, BOAT))
-				view.actions.muster_boat = 1
+				view.actions.take_boat = 1
 			if (can_add_transport(game.who, CART))
-				view.actions.muster_cart = 1
+				view.actions.take_cart = 1
 			if (can_add_transport(game.who, SLED))
-				view.actions.muster_sled = 1
+				view.actions.take_sled = 1
 
 			// Add Capability
 			view.actions.capability = 1
@@ -2248,25 +2248,25 @@ states.levy_muster_lord = {
 		resume_levy_muster_lord()
 	},
 
-	muster_ship() {
+	take_ship() {
 		push_undo()
 		logi("Ship")
 		add_lord_assets(game.who, SHIP, 1)
 		resume_levy_muster_lord()
 	},
-	muster_boat() {
+	take_boat() {
 		push_undo()
 		logi("Boat")
 		add_lord_assets(game.who, BOAT, 1)
 		resume_levy_muster_lord()
 	},
-	muster_cart() {
+	take_cart() {
 		push_undo()
 		logi("Cart")
 		add_lord_assets(game.who, CART, 1)
 		resume_levy_muster_lord()
 	},
-	muster_sled() {
+	take_sled() {
 		push_undo()
 		logi("Sled")
 		add_lord_assets(game.who, SLED, 1)
@@ -2321,37 +2321,37 @@ states.muster_lord_transport = {
 		view.prompt += ` ${game.count} left.`
 		if (data.lords[game.who].ships) {
 			if (can_add_transport(game.who, SHIP))
-				view.actions.muster_ship = 1
+				view.actions.take_ship = 1
 		}
 		if (can_add_transport(game.who, BOAT))
-			view.actions.muster_boat = 1
+			view.actions.take_boat = 1
 		if (can_add_transport(game.who, CART))
-			view.actions.muster_cart = 1
+			view.actions.take_cart = 1
 		if (can_add_transport(game.who, SLED))
-			view.actions.muster_sled = 1
+			view.actions.take_sled = 1
 	},
-	muster_ship() {
+	take_ship() {
 		push_undo()
 		logii("Ship")
 		add_lord_assets(game.who, SHIP, 1)
 		--game.count
 		resume_muster_lord_transport()
 	},
-	muster_boat() {
+	take_boat() {
 		push_undo()
 		logii("Boat")
 		add_lord_assets(game.who, BOAT, 1)
 		--game.count
 		resume_muster_lord_transport()
 	},
-	muster_cart() {
+	take_cart() {
 		push_undo()
 		logii("Cart")
 		add_lord_assets(game.who, CART, 1)
 		--game.count
 		resume_muster_lord_transport()
 	},
-	muster_sled() {
+	take_sled() {
 		push_undo()
 		logii("Sled")
 		add_lord_assets(game.who, SLED, 1)
@@ -3642,9 +3642,11 @@ states.avoid_battle_laden = {
 		}
 	},
 	prov(lord) {
+		push_undo()
 		spoil_prov(lord)
 	},
 	loot(lord) {
+		push_undo()
 		spoil_loot(lord)
 	},
 	locale(to) {
@@ -3750,20 +3752,85 @@ function end_march_withdraw() {
 
 // === ACTION: MARCH - DIVIDE SPOILS AFTER AVOID BATTLE ===
 
+function list_spoils() {
+	let list = []
+	for (let type = 0; type < 7; ++type) {
+		let n = get_spoils(type)
+		if (n > 0)
+			list.push(`${n} ${asset_type_name[type]}`)
+	}
+	if (list.length > 0)
+		return list.join(", ")
+	return "nothing"
+}
+
+function prompt_spoils() {
+	if (get_spoils(PROV) > 0)
+		view.actions.take_prov = 1
+	if (get_spoils(LOOT) > 0)
+		view.actions.take_loot = 1
+	if (get_spoils(COIN) > 0)
+		view.actions.take_coin = 1
+	if (get_spoils(SHIP) > 0)
+		view.actions.take_ship = 1
+	if (get_spoils(BOAT) > 0)
+		view.actions.take_boat = 1
+	if (get_spoils(CART) > 0)
+		view.actions.take_cart = 1
+	if (get_spoils(SLED) > 0)
+		view.actions.take_sled = 1
+}
+
+function take_spoils(type) {
+	push_undo_without_who()
+	add_lord_assets(game.who, type, 1)
+	add_spoils(type, -1)
+	if (!has_any_spoils())
+		game.who = NOBODY
+}
+
+function take_spoils_prov() { take_spoils(PROV) }
+function take_spoils_loot() { take_spoils(LOOT) }
+function take_spoils_coin() { take_spoils(COIN) }
+function take_spoils_ship() { take_spoils(SHIP) }
+function take_spoils_boat() { take_spoils(BOAT) }
+function take_spoils_cart() { take_spoils(CART) }
+function take_spoils_sled() { take_spoils(SLED) }
+
 function goto_spoils_after_avoid_battle() {
-	if (has_any_spoils())
+	if (has_any_spoils()) {
 		game.state = "spoils_after_avoid_battle"
-	else
+		if (game.group.length === 1)
+			game.who = game.group[0]
+	} else {
 		goto_battle()
+	}
 }
 
 states.spoils_after_avoid_battle = {
 	prompt() {
-		view.prompt = "Spoils: TODO"
-		view.actions.end_spoils = 1
+		if (has_any_spoils()) {
+			view.prompt = "Spoils: Divide " + list_spoils() + "."
+			// only moving lords get to divide the spoils
+			for (let lord of game.group)
+				if (lord !== game.who)
+					gen_action_lord(lord)
+			if (game.who !== NOBODY)
+				prompt_spoils()
+		} else {
+			view.prompt = "Spoils: All done."
+			view.actions.end_spoils = 1
+		}
 	},
+	lord(lord) {
+		game.who = lord
+	},
+	take_prov: take_spoils_prov,
+	take_loot: take_spoils_loot,
 	end_spoils() {
+		clear_undo()
 		game.spoils = 0
+		game.who = NOBODY
 		goto_battle()
 	},
 }
@@ -5000,24 +5067,61 @@ function goto_battle_losses() {
 
 // === ENDING THE BATTLE: SPOILS ===
 
+function find_lone_friendly_lord_at(loc) {
+	let who = NOBODY
+	let n = 0
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+		if (get_lord_locale(lord) === loc) {
+			who = lord
+			++n
+		}
+	}
+	if (n === 1)
+		return who
+	return NOBODY
+}
+
 function goto_battle_spoils() {
 	set_active_victor()
-	if (has_any_spoils())
+	if (has_any_spoils()) {
 		game.state = "battle_spoils"
-	else
+		game.who = find_lone_friendly_lord_at(game.battle.where)
+	} else {
 		end_battle_spoils()
+	}
 }
 
 function end_battle_spoils() {
+	game.who = NOBODY
 	game.spoils = 0
 	goto_battle_service()
 }
 
 states.battle_spoils = {
 	prompt() {
-		view.prompt = "Spoils: TODO"
-		view.actions.end_spoils = 1
+		if (has_any_spoils()) {
+			view.prompt = "Spoils: Divide " + list_spoils() + "."
+			let here = game.battle.where
+			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+				if (get_lord_locale(lord) === here)
+					if (lord !== game.who)
+						gen_action_lord(lord)
+			if (game.who !== NOBODY)
+				prompt_spoils()
+		} else {
+			view.prompt = "Spoils: All done."
+			view.actions.end_spoils = 1
+		}
 	},
+	lord(lord) {
+		game.who = lord
+	},
+	take_prov: take_spoils_prov,
+	take_loot: take_spoils_loot,
+	take_coin: take_spoils_coin,
+	take_boat: take_spoils_boat,
+	take_cart: take_spoils_cart,
+	take_sled: take_spoils_sled,
 	end_spoils() {
 		clear_undo()
 		end_battle_spoils()
@@ -5055,6 +5159,7 @@ states.battle_service = {
 		else if (die <= 6)
 			add_lord_service(lord, -3)
 		set_delete(game.battle.retreated, lord)
+		set_lord_moved(lord, 1)
 		resume_battle_service()
 	},
 }
@@ -5072,10 +5177,6 @@ function goto_battle_aftermath() {
 		set_lord_moved(lord, 1)
 	for (let lord of game.battle.routed)
 		set_lord_moved(lord, 1)
-	if (game.battle.retreated) {
-		for (let lord of game.battle.retreated)
-			set_lord_moved(lord, 1)
-	}
 
 	game.battle = 0
 
@@ -5326,7 +5427,8 @@ states.pay = {
 	prompt() {
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 			if (is_lord_on_map(lord) && can_pay_lord(lord))
-				gen_action_lord(lord)
+				if (lord !== game.who)
+					gen_action_lord(lord)
 
 		if (game.who === NOBODY) {
 			view.prompt = "Pay: You may Pay your Lords."
@@ -5358,10 +5460,7 @@ states.pay = {
 		view.actions.end_pay = 1
 	},
 	lord(lord) {
-		if (game.who === lord)
-			game.who = NOBODY
-		else
-			game.who = lord
+		game.who = lord
 	},
 	loot(lord) {
 		push_undo_without_who()
