@@ -1,12 +1,17 @@
 "use strict"
 
-// TODO: delay pay step if there is no feed or disband to be done
+// clean up game.who (use only in muster / events, not for command)
+
+// TEST: legate removal during battle and retreats etc
 
 // TODO: Lodya capability during supply!
 
 // TODO: 2nd edition supply rule - no reuse of transports
 // TODO: 2nd edition ravage cost
 // TODO: 2nd edition disband during campaign
+
+// TODO: show besieged lords differently in UI
+// TODO: mark moved/fought units (blue highlight?)
 
 // CAPABILITIES
 // TODO: Spoils
@@ -28,6 +33,9 @@ const P2 = RUSSIANS
 // NOTE: With Hidden Mats option, the player order of feed/pay may matter.
 const FEED_PAY_DISBAND = true // feed, pay, disband in one go
 const WASTAGE_DISCARD = true // wastage, discard in one go
+// option ACTIVE_FEED_FIRST // active card feeds first (instead of P1 always first)
+// option DELAY_PAY_IF_NO_FEED_OR_DISBAND
+// option SERVICE_BEFORE_SPOILS
 
 let game = null
 let view = null
@@ -418,16 +426,30 @@ function enemy_player() {
 	return null
 }
 
-function get_spoils(type) {
-	return pack4_get(game.spoils, type)
+function has_any_spoils() {
+	return (
+		game.spoils &&
+		game.spoils[PROV] +
+			game.spoils[COIN] +
+			game.spoils[LOOT] +
+			game.spoils[CART] +
+			game.spoils[SLED] +
+			game.spoils[BOAT] +
+			game.spoils[SHIP] >
+			0
+	)
 }
 
-function set_spoils(type, n) {
-	game.spoils = pack4_set(game.spoils, type, n)
+function get_spoils(type, n) {
+	if (game.spoils)
+		return game.spoils[type]
+	return 0
 }
 
 function add_spoils(type, n) {
-	game.spoils = pack4_set(game.spoils, type, pack4_get(game.spoils) + n)
+	if (!game.spoils)
+		game.spoils = [ 0, 0, 0, 0, 0, 0, 0 ]
+	game.spoils[type] += n
 }
 
 function get_lord_locale(lord) {
@@ -663,10 +685,10 @@ function count_group_ships() {
 	return n
 }
 
-function count_group_assets(asset) {
+function count_group_assets(type) {
 	let n = 0
 	for (let lord of game.group)
-		n += get_lord_assets(lord, asset)
+		n += get_lord_assets(lord, type)
 	return n
 }
 
@@ -876,6 +898,18 @@ function has_free_seat(lord) {
 			result = true
 	})
 	return result
+}
+
+function has_teutonic_lord(here) {
+	for (let lord = first_p1_lord; lord <= last_p1_lord; ++lord)
+		if (get_lord_locale(lord) === loc)
+			return true
+}
+
+function has_russian_lord(here) {
+	for (let lord = first_p2_lord; lord <= last_p2_lord; ++lord)
+		if (get_lord_locale(lord) === loc)
+			return true
 }
 
 function has_friendly_lord(loc) {
@@ -1231,6 +1265,14 @@ function group_has_capability(c) {
 	return false
 }
 
+function count_unbesieged_friendly_lords(loc) {
+	let n = 0
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (get_lord_locale(lord) === loc && is_lord_unbesieged(lord))
+			++n
+	return n
+}
+
 // === SETUP ===
 
 function setup_lord_on_calendar(lord, turn) {
@@ -1391,10 +1433,10 @@ exports.setup = function (seed, scenario, options) {
 		what: NOTHING,
 		count: 0,
 
-		approach: 0,
-		avoid: 0,
-		spoils: 0,
 		supply: 0,
+		march: 0,
+		battle: 0,
+		spoils: 0,
 	}
 
 	update_aliases()
@@ -3067,8 +3109,6 @@ function goto_actions() {
 
 function resume_actions() {
 	game.state = "actions"
-	game.who = game.command
-	game.where = NOWHERE
 }
 
 function spend_action(cost) {
@@ -3093,7 +3133,6 @@ function end_actions() {
 
 	set_active(P1)
 	game.command = NOBODY
-	game.who = NOBODY
 	game.group = 0
 	game.pieces.legate_selected = 0
 
@@ -3271,11 +3310,10 @@ function goto_march(to) {
 	let from = get_lord_locale(game.command)
 	let ways = list_ways(from, to)
 	if (ways.length > 2) {
-		game.where = to
+		game.march = { from, to, approach: -1, avoid: -1 }
 		game.state = "march_way"
 	} else {
-		game.where = to
-		game.approach = ways[1]
+		game.march = { from, to, approach: ways[1], avoid: -1 }
 		march_with_group_1()
 	}
 }
@@ -3284,20 +3322,20 @@ states.march_way = {
 	prompt() {
 		view.prompt = `March: Select way.`
 		view.group = game.group
-		let from = get_lord_locale(game.command)
-		let to = game.where
+		let from = game.march.from
+		let to = game.march.to
 		let ways = list_ways(from, to)
 		for (let i = 1; i < ways.length; ++i)
 			gen_action_way(ways[i])
 	},
 	way(way) {
-		game.approach = way
+		game.march.approach = way
 		march_with_group_1()
 	},
 }
 
 function march_with_group_1() {
-	let way = game.approach
+	let way = game.march.approach
 	let transport = count_group_transport(data.ways[way].type)
 	let prov = count_group_assets(PROV)
 	let loot = count_group_assets(LOOT)
@@ -3313,8 +3351,8 @@ function march_with_group_1() {
 
 states.march_laden = {
 	prompt() {
-		let to = game.where
-		let way = game.approach
+		let to = game.march.to
+		let way = game.march.approach
 		let transport = count_group_transport(data.ways[way].type)
 		let prov = count_group_assets(PROV)
 		let loot = count_group_assets(LOOT)
@@ -3364,8 +3402,8 @@ states.march_laden = {
 
 function march_with_group_2() {
 	let from = get_lord_locale(game.command)
-	let way = game.approach
-	let to = game.where
+	let way = game.march.approach
+	let to = game.march.to
 	let transport = count_group_transport(data.ways[way].type)
 	let prov = count_group_assets(PROV)
 	let loot = count_group_assets(LOOT)
@@ -3403,30 +3441,32 @@ function march_with_group_2() {
 }
 
 function remove_legate_if_endangered(here) {
-	if (game.pieces.legate === here && has_enemy_lord(here) && !has_friendly_lord(here)) {
+	if (game.pieces.legate === here && has_russian_lord(here) && !has_teutonic_lord(here)) {
 		log("Legate removed.")
 		discard_global_capability(AOW_TEUTONIC_WILLIAM_OF_MODENA)
 	}
 }
 
 function march_with_group_3() {
-	let to = game.where
+	let here = get_lord_locale(game.command)
 
-	remove_legate_if_endangered(to)
+	remove_legate_if_endangered(here)
 
-	if (is_besieged_friendly_stronghold(to)) {
-		lift_siege(to)
+	if (is_besieged_friendly_stronghold(here)) {
+		lift_siege(here)
 	}
 
-	if (is_unbesieged_enemy_stronghold(to)) {
-		add_siege_marker(to)
+	if (is_unbesieged_enemy_stronghold(here)) {
+		add_siege_marker(here)
 		log(`Encamped.`)
 		spend_all_actions() // ENCAMP
 	}
 
-	if (is_trade_route(to)) {
-		conquer_trade_route(to)
+	if (is_trade_route(here)) {
+		conquer_trade_route(here)
 	}
+
+	game.march = 0
 
 	resume_actions()
 	update_supply()
@@ -3465,7 +3505,7 @@ function spoil_loot(lord) {
 }
 
 function can_avoid_battle(to, way) {
-	if (way === game.approach)
+	if (way === game.march.approach)
 		return false
 	if (has_unbesieged_enemy_lord(to))
 		return false
@@ -3474,40 +3514,40 @@ function can_avoid_battle(to, way) {
 	return true
 }
 
-function select_all_lords() {
+function select_all_lords(here) {
 	game.group = []
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-		if (get_lord_locale(lord) === game.where)
+		if (get_lord_locale(lord) === here)
 			game.group.push(lord)
 }
 
 function goto_avoid_battle() {
 	clear_undo()
 	set_active_enemy()
-	game.stack = game.group
-	game.who = NOBODY
+	game.stack = game.group // XXX
 	game.state = "avoid_battle"
 	game.spoils = 0
 	resume_avoid_battle()
 }
 
 function resume_avoid_battle() {
-	if (has_unbesieged_friendly_lord(game.where)) {
+	let here = game.march.to
+	if (has_unbesieged_friendly_lord(here)) {
 		// TODO: select all or no lords?
-		select_all_lords()
+		select_all_lords(here)
 		// game.group = []
 		game.state = "avoid_battle"
 	} else {
-		goto_withdraw()
+		end_avoid_battle()
 	}
 }
 
 states.avoid_battle = {
 	prompt() {
-		view.prompt = `Avoid Battle: You may avoid battle.`
+		view.prompt = `March: You may avoid battle.`
 		view.group = game.group
 
-		let here = get_lord_locale(game.command)
+		let here = game.march.to
 
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 			if (get_lord_locale(lord) === here && !is_lower_lord(lord))
@@ -3532,17 +3572,17 @@ states.avoid_battle = {
 		let from = get_lord_locale(game.command)
 		let ways = list_ways(from, to)
 		if (ways.length > 2) {
-			game.where = to
+			game.march.avoid_to = to
 			game.state = "avoid_battle_way"
 		} else {
-			game.where = to
-			game.avoid = ways[1]
+			game.march.avoid_to = to
+			game.march.avoid_way = ways[1]
 			avoid_battle_1()
 		}
 	},
 	end_avoid_battle() {
 		push_undo()
-		goto_withdraw()
+		end_avoid_battle()
 	},
 }
 
@@ -3550,20 +3590,20 @@ states.avoid_battle_way = {
 	prompt() {
 		view.prompt = `Avoid Battle: Select way.`
 		view.group = game.group
-		let from = get_lord_locale(game.command)
-		let to = game.where
+		let from = game.march.to
+		let to = game.march.avoid_to
 		let ways = list_ways(from, to)
 		for (let i = 1; i < ways.length; ++i)
 			gen_action_way(ways[i])
 	},
 	way(way) {
-		game.avoid = way
+		game.avoid_way = way
 		avoid_battle_1()
 	},
 }
 
 function avoid_battle_1() {
-	let way = game.avoid
+	let way = game.march.avoid_way
 	let transport = count_group_transport(data.ways[way].type)
 	let prov = count_group_assets(PROV)
 	let loot = count_group_assets(LOOT)
@@ -3575,8 +3615,8 @@ function avoid_battle_1() {
 
 states.avoid_battle_laden = {
 	prompt() {
-		let to = game.where
-		let way = game.avoid
+		let to = game.march.avoid_to
+		let way = game.march.avoid_way
 		let transport = count_group_transport(data.ways[way].type)
 		let prov = count_group_assets(PROV)
 		let loot = count_group_assets(LOOT)
@@ -3608,17 +3648,17 @@ states.avoid_battle_laden = {
 		spoil_loot(lord)
 	},
 	locale(to) {
-		avoid_battle_2(false)
+		avoid_battle_2()
 	},
 	avoid() {
-		avoid_battle_2(false)
+		avoid_battle_2()
 	},
 }
 
 function avoid_battle_2() {
-	let from = get_lord_locale(game.command)
-	let way = game.avoid
-	let to = game.where
+	let from = game.march.to
+	let to = game.march.avoid_to
+	let way = game.march.avoid_way
 
 	if (data.ways[way].name)
 		log(`Avoided Battle via ${data.ways[way].name} to %${to}.`)
@@ -3630,9 +3670,14 @@ function avoid_battle_2() {
 		set_lord_moved(lord, 1)
 	}
 
-	game.where = get_lord_locale(game.command)
-	game.avoid = 0
+	game.march.avoid_to = 0
+	game.march.avoid_way = 0
 	resume_avoid_battle()
+}
+
+function end_avoid_battle() {
+	game.group = game.stack // XXX
+	goto_march_withdraw()
 }
 
 // === ACTION: MARCH - AMBUSH ===
@@ -3641,38 +3686,34 @@ function avoid_battle_2() {
 
 // === ACTION: MARCH - WITHDRAW ===
 
-function can_withdraw() {
-	if (is_unbesieged_friendly_stronghold(game.where))
-		if (stronghold_capacity(game.where) > 0)
+function can_withdraw(here, n) {
+	if (is_unbesieged_friendly_stronghold(here))
+		if (stronghold_capacity(here) >= n)
 			return true
 	return false
 }
 
-function goto_withdraw() {
-	if (has_unbesieged_friendly_lord(game.where) && can_withdraw()) {
-		if (count_friendly_lords_at(game.where) <= stronghold_capacity(game.where))
-			select_all_lords()
-		else
-			game.group = []
-		game.state = "withdraw"
+function goto_march_withdraw() {
+	let here = game.march.to
+	if (has_unbesieged_friendly_lord(here) && can_withdraw(here, 1)) {
+		game.state = "march_withdraw"
 	} else {
-		end_withdraw()
+		end_march_withdraw()
 	}
 }
 
-states.withdraw = {
+states.march_withdraw = {
 	prompt() {
-		view.prompt = `Withdraw`
-		view.group = game.group
+		view.prompt = `March: You may withdraw lords into stronghold.`
 
 		let here = get_lord_locale(game.command)
 		let capacity = stronghold_capacity(here)
 
-		if (game.group.length < capacity) {
+		if (capacity >= 1) {
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
-				if (get_lord_locale(lord) === here && !is_lower_lord(lord)) {
+				if (get_lord_locale(lord) === here && !is_lower_lord(lord) && !is_lord_besieged(lord)) {
 					if (is_upper_lord(lord)) {
-						if (game.group.length + 2 <= capacity)
+						if (capacity >= 2)
 							gen_action_lord(lord)
 					} else {
 						gen_action_lord(lord)
@@ -3681,58 +3722,49 @@ states.withdraw = {
 			}
 		}
 
-		if (game.group.length > 0)
-			view.actions.withdraw = 1
-		else
-			view.actions.withdraw = 0
-
 		view.actions.end_withdraw = 1
 	},
 	lord(lord) {
-		set_toggle(game.group, lord)
-		if (is_upper_lord(lord))
-			set_toggle(game.group, get_lower_lord(lord))
-	},
-	withdraw() {
 		push_undo()
-		for (let lord of game.group) {
-			log(`Withdrew with L${lord}`)
+		let lower = get_lower_lord(lord)
+
+		log(`L${lord} withdrew.`)
+		set_lord_besieged(lord, 1)
+
+		if (lower !== NOBODY) {
+			log(`L${lower} withdrew.`)
 			set_lord_besieged(lord, 1)
 		}
-		end_withdraw()
 	},
 	end_withdraw() {
-		end_withdraw()
+		end_march_withdraw()
 	},
 }
 
-function end_withdraw() {
+function end_march_withdraw() {
 	clear_undo()
 	set_active_enemy()
-	game.where = get_lord_locale(game.command)
-	game.who = game.command
-	game.group = game.stack
-	game.stack = []
-	goto_divide_spoils_after_avoid_battle()
+	game.stack = [] // XXX ???
+	goto_spoils_after_avoid_battle()
 }
 
 // === ACTION: MARCH - DIVIDE SPOILS AFTER AVOID BATTLE ===
 
-function goto_divide_spoils_after_avoid_battle() {
-	if (game.spoils > 0)
-		game.state = "divide_spoils_after_avoid_battle"
+function goto_spoils_after_avoid_battle() {
+	if (has_any_spoils())
+		game.state = "spoils_after_avoid_battle"
 	else
-		march_with_group_3()
+		goto_battle()
 }
 
-states.divide_spoils_after_avoid_battle = {
+states.spoils_after_avoid_battle = {
 	prompt() {
 		view.prompt = "Spoils: TODO"
 		view.actions.end_spoils = 1
 	},
 	end_spoils() {
 		game.spoils = 0
-		march_with_group_3()
+		goto_battle()
 	},
 }
 
@@ -4573,6 +4605,491 @@ function goto_smerdi() {
 	resume_actions()
 }
 
+// === BATTLE ===
+
+function goto_battle() {
+	if (has_unbesieged_enemy_lord(game.march.to))
+		start_battle()
+	else
+		march_with_group_3()
+}
+
+function start_battle() {
+	let here = get_lord_locale(game.command)
+
+	log_h3(`Battle at %${here}`)
+
+	game.battle = {
+		attacker: game.active,
+		where: here,
+		conceded: 0,
+		array: [
+			NOBODY, NOBODY, NOBODY,
+			NOBODY, NOBODY, NOBODY,
+		],
+		reserves: [],
+		routed: [],
+		loser: 0,
+	}
+
+	for (let lord = first_lord; lord <= last_lord; ++lord)
+		if (get_lord_locale(lord) === here && !is_lord_besieged(lord))
+			set_add(game.battle.reserves, lord)
+
+	// battle array
+	// events
+	// relief sally
+	// rounds:
+	//	concede?
+	//	reposition
+	//	for each strike
+	//		roll walls
+	//		assign
+	//		roll by hit
+	// end battle
+
+	log("TODO: Battle...")
+
+	game.battle.conceded = P2
+	game.battle.loser = P2
+	end_battle()
+}
+
+// === ENDING THE BATTLE ===
+
+function set_active_loser() {
+	set_active(game.battle.loser)
+}
+
+function set_active_victor() {
+	if (game.battle.loser === P1)
+		set_active(P2)
+	else
+		set_active(P1)
+}
+
+function end_battle() {
+	// Ending the Battle
+	//	retreat, withdrawal, or removal
+	//		withdraw
+	//		retreat
+	//		remove
+	//	losses
+	//	spoils
+	//	service
+
+	set_active(game.battle.loser)
+	set_active_loser()
+	goto_battle_withdraw()
+}
+
+// === ENDING THE BATTLE: WITHDRAW ===
+
+function lord_has_no_forces(lord) {
+	return game.pieces.forces[lord] === 0
+}
+
+function withdrawal_capacity_needed(here) {
+	let n_upper = 0
+	let n_other = 0
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+		if (get_lord_locale(lord) === here && !is_lower_lord(lord)) {
+			if (is_upper_lord(lord))
+				n_upper++
+			else
+				n_other++
+		}
+	}
+	return n_upper > 0 && n_other === 0
+}
+
+function goto_battle_withdraw() {
+	game.spoils = 0
+	let here = game.battle.where
+	let wn = withdrawal_capacity_needed(here)
+	if (can_withdraw(here, wn)) {
+		game.state = "battle_withdraw"
+	} else {
+		end_battle_withdraw()
+	}
+}
+
+function end_battle_withdraw() {
+	goto_retreat()
+}
+
+states.battle_withdraw = {
+	prompt() {
+		let here = game.battle.where
+		let capacity = stronghold_capacity(here)
+		console.log("capacity", capacity)
+
+		view.prompt = "Battle: You may withdraw losing lords into stronghold."
+
+		// TODO: Sally must withdraw!
+
+		if (capacity >= 1) {
+			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+				if (get_lord_locale(lord) === here && !is_lower_lord(lord) && !is_lord_besieged(lord)) {
+					if (is_upper_lord(lord)) {
+						if (capacity >= 2)
+							gen_action_lord(lord)
+					} else {
+						gen_action_lord(lord)
+					}
+				}
+			}
+		}
+
+
+		view.actions.end_withdraw = 1
+	},
+	lord(lord) {
+		push_undo()
+		let lower = get_lower_lord(lord)
+
+		log(`L${lord} withdrew.`)
+		set_lord_besieged(lord, 1)
+
+		if (lower !== NOBODY) {
+			log(`L${lower} withdrew.`)
+			set_lord_besieged(lord, 1)
+		}
+	},
+	end_withdraw() {
+		push_undo()
+		end_battle_withdraw()
+	},
+}
+
+// === ENDING THE BATTLE: RETREAT ===
+
+function count_retreat_transport(type) {
+	let n = 0
+	for (let lord of game.battle.retreated)
+		n += count_lord_transport(lord, type)
+	return n
+}
+
+function count_retreat_assets(type) {
+	let n = 0
+	for (let lord of game.battle.retreated)
+		n += get_lord_assets(lord, type)
+	return n
+}
+
+// TODO: manually lose all assets!?
+function transfer_assets_except_ships(lord) {
+	add_spoils(PROV, get_lord_assets(lord, PROV))
+	add_spoils(COIN, get_lord_assets(lord, COIN))
+	add_spoils(LOOT, get_lord_assets(lord, LOOT))
+	add_spoils(CART, get_lord_assets(lord, CART))
+	add_spoils(SLED, get_lord_assets(lord, SLED))
+	add_spoils(BOAT, get_lord_assets(lord, BOAT))
+	set_lord_assets(lord, PROV, 0)
+	set_lord_assets(lord, COIN, 0)
+	set_lord_assets(lord, LOOT, 0)
+	set_lord_assets(lord, CART, 0)
+	set_lord_assets(lord, SLED, 0)
+	set_lord_assets(lord, BOAT, 0)
+}
+
+function can_retreat_to(to) {
+	return !has_unbesieged_enemy_lord(to) && !is_unbesieged_enemy_stronghold(to)
+}
+
+function can_retreat() {
+	if (game.active === game.battle.attacker)
+		return can_retreat_to(game.march.from)
+	for (let [to, way] of data.locales[game.march.to].ways)
+		if (way !== game.march.approach && can_retreat_to(to))
+			return true
+	return false
+}
+
+function goto_retreat() {
+	let here = game.march.to
+	if (count_unbesieged_friendly_lords(here) > 0 && can_retreat()) {
+		game.battle.retreated = []
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+			if (get_lord_locale(lord) === here && !is_lord_besieged(lord))
+				set_add(game.battle.retreated, lord)
+		game.state = "retreat"
+	} else {
+		end_retreat()
+	}
+}
+
+function end_retreat() {
+	goto_battle_remove()
+}
+
+states.retreat = {
+	prompt() {
+		view.prompt = "Battle: Retreat losing lords."
+		view.group = game.battle.retreated
+		if (game.active === game.battle.attacker) {
+			gen_action_locale(game.march.from)
+		} else {
+			for (let [to, way] of data.locales[game.march.to].ways)
+			if (way !== game.march.approach && can_retreat_to(to))
+				gen_action_locale(to)
+		}
+	},
+	locale(to) {
+		push_undo()
+		if (game.active === game.battle.attacker) {
+			game.march.retreat_to = to
+			game.march.retreat_way = game.march.approach
+			retreat_1()
+		} else {
+			let ways = list_ways(game.march.to, to)
+			if (ways.length > 2) {
+				game.march.retreat_to = to
+				game.state = "retreat_way"
+			} else {
+				game.march.retreat_to = to
+				game.march.retreat_way = ways[1]
+				retreat_1()
+			}
+		}
+	},
+}
+
+states.retreat_way = {
+	prompt() {
+		view.prompt = `Retreat: Select way.`
+		view.group = game.battle.retreated
+		let from = game.march.to
+		let to = game.march.retreat_to
+		let ways = list_ways(from, to)
+		for (let i = 1; i < ways.length; ++i)
+			gen_action_way(ways[i])
+	},
+	way(way) {
+		game.march.retreat_way = way
+		retreat_1()
+	},
+}
+
+function retreat_1() {
+	// Retreated without having conceded the Field
+	if (game.battle.conceded !== game.active) {
+		for (let lord of game.battle.retreated)
+			transfer_assets_except_ships(lord)
+		retreat_2()
+	} else {
+		let way = game.march.retreat_way
+		let transport = count_retreat_transport(data.ways[way].type)
+		let prov = count_retreat_assets(PROV)
+		let loot = count_retreat_assets(LOOT)
+		if (prov > transport || loot > 0)
+			game.state = 'retreat_laden'
+		else
+			retreat_2()
+	}
+}
+
+states.retreat_laden = {
+	prompt() {
+		let to = game.march.retreat_to
+		let way = game.march.retreat_way
+		let transport = count_retreat_transport(data.ways[way].type)
+		let prov = count_retreat_assets(PROV)
+		let loot = count_retreat_assets(LOOT)
+
+		view.prompt = `Retreat with ${prov} provender and ${transport} transport.`
+		view.group = game.battle.retreated
+
+		if (loot > 0) {
+			view.prompt += " Discard Loot."
+			for (let lord of game.battle.retreated) {
+				if (get_lord_assets(lord, LOOT) > 0)
+					gen_action_loot(lord)
+			}
+		} else if (prov > transport) {
+			view.prompt += " Discard Provender."
+			for (let lord of game.battle.retreated) {
+				if (get_lord_assets(lord, PROV) > 0)
+					gen_action_prov(lord)
+			}
+		} else {
+			gen_action_locale(to)
+			view.actions.retreat = 1
+		}
+	},
+	prov(lord) {
+		spoil_prov(lord)
+	},
+	loot(lord) {
+		spoil_loot(lord)
+	},
+	locale(to) {
+		retreat_2()
+	},
+	retreat() {
+		retreat_2()
+	},
+}
+
+function retreat_2() {
+	let from = game.march.to
+	let to = game.march.retreat_to
+	let way = game.march.retreat_way
+
+	if (data.ways[way].name)
+		log(`Retreated via ${data.ways[way].name} to %${to}.`)
+	else
+		log(`Retreated to %${to}.`)
+
+	for (let lord of game.battle.retreated) {
+		set_lord_locale(lord, to)
+		set_lord_moved(lord, 1)
+	}
+
+	game.march.retreat_to = 0
+	game.march.retreat_way = 0
+	end_retreat()
+}
+
+// === ENDING THE BATTLE: REMOVE ===
+
+function goto_battle_remove() {
+	if (count_unbesieged_friendly_lords(game.battle.where) > 0)
+		game.state = "battle_remove"
+	else
+		end_battle_remove()
+}
+
+function end_battle_remove() {
+	clear_undo()
+	goto_battle_losses()
+}
+
+states.battle_remove = {
+	prompt() {
+		view.prompt = "Battle: Remove losing lords who cannot Retreat or Withdraw."
+		let here = game.battle.where
+		let done = true
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+			if (get_lord_locale(lord) === here && is_lord_unbesieged(lord)) {
+				gen_action_lord(lord)
+				done = false
+			}
+		}
+		if (done)
+			view.actions.end_remove = 1
+	},
+	lord(lord) {
+		push_undo()
+		transfer_assets_except_ships(lord)
+		disband_lord(lord, true)
+	},
+	end_remove() {
+		push_undo()
+		end_battle_remove()
+	},
+}
+
+// === ENDING THE BATTLE: LOSSES ===
+
+function goto_battle_losses() {
+	log("TODO: losses")
+	goto_battle_spoils()
+}
+
+// === ENDING THE BATTLE: SPOILS ===
+
+function goto_battle_spoils() {
+	set_active_victor()
+	if (has_any_spoils())
+		game.state = "battle_spoils"
+	else
+		end_battle_spoils()
+}
+
+function end_battle_spoils() {
+	game.spoils = 0
+	goto_battle_service()
+}
+
+states.battle_spoils = {
+	prompt() {
+		view.prompt = "Spoils: TODO"
+		view.actions.end_spoils = 1
+	},
+	end_spoils() {
+		clear_undo()
+		end_battle_spoils()
+	},
+}
+
+// === ENDING THE BATTLE: SERVICE ===
+
+function goto_battle_service() {
+	set_active_loser()
+	if (game.battle.retreated)
+		game.state = "battle_service"
+	else
+		goto_battle_aftermath()
+}
+
+function resume_battle_service() {
+	if (game.battle.retreated.length === 0)
+		goto_battle_aftermath()
+}
+
+states.battle_service = {
+	prompt() {
+		view.prompt = "Battle: Roll to shift service of each retreated lord."
+		for (let lord of game.battle.retreated)
+			gen_action_service(lord)
+	},
+	service(lord) {
+		let die = roll_die()
+		log(`L${lord} rolled ${die}.`)
+		if (die <= 2)
+			add_lord_service(lord, -1)
+		else if (die <= 4)
+			add_lord_service(lord, -2)
+		else if (die <= 6)
+			add_lord_service(lord, -3)
+		set_delete(game.battle.retreated, lord)
+		resume_battle_service()
+	},
+}
+
+// === ENDING THE BATTLE: AFTERMATH ===
+
+function goto_battle_aftermath() {
+	set_active(game.battle.attacker)
+
+	// Moved/Fought
+	for (let lord of game.battle.array)
+		if (lord !== NOBODY)
+			set_lord_moved(lord, 1)
+	for (let lord of game.battle.reserves)
+		set_lord_moved(lord, 1)
+	for (let lord of game.battle.routed)
+		set_lord_moved(lord, 1)
+	if (game.battle.retreated) {
+		for (let lord of game.battle.retreated)
+			set_lord_moved(lord, 1)
+	}
+
+	game.battle = 0
+
+	// Events
+	if (game.events.length > 0)
+		game.events = game.events.filter((c) => data.cards[c].when !== "hold")
+
+	// Recovery
+	spend_all_actions()
+
+	// Siege/Conquest
+	march_with_group_3()
+}
+
 // === CAMPAIGN: FEED ===
 
 function can_feed_from_shared(lord) {
@@ -4881,6 +5398,7 @@ states.pay = {
 
 function end_pay() {
 	// NOTE: We can combine Pay & Disband steps because disband is mandatory only.
+	game.who = NOBODY
 	goto_disband()
 }
 
@@ -4899,15 +5417,19 @@ function goto_disband() {
 		end_disband()
 }
 
-function disband_lord(lord) {
+function disband_lord(lord, permanently = false) {
 	let here = get_lord_locale(lord)
 
-	if (get_lord_service(lord) < current_turn()) {
-		log(`Disbanded L${lord} beyond service limit`)
+	if (permanently) {
+		log(`Disbanded L${lord} permanently.`)
+		set_lord_locale(lord, NOWHERE)
+		set_lord_service(lord, NEVER)
+	} else if (get_lord_service(lord) < current_turn()) {
+		log(`Disbanded L${lord} beyond service limit.`)
 		set_lord_locale(lord, NOWHERE)
 		set_lord_service(lord, NEVER)
 	} else {
-		log(`Disbanded L${lord}`)
+		log(`Disbanded L${lord}.`)
 		let turn = current_turn() + data.lords[lord].service
 		set_lord_locale(lord, CALENDAR + turn)
 		set_lord_service(lord, turn)

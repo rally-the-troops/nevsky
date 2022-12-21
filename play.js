@@ -204,7 +204,7 @@ function is_legate_action() {
 }
 
 function is_legate_selected() {
-	return !!view.pieces.legate_selected
+	return player === "Teutons" && !!view.pieces.legate_selected
 }
 
 const force_type_count = 7
@@ -944,7 +944,7 @@ function is_lord_mat_selected(ix) {
 }
 
 function is_cylinder_selected(ix) {
-	if (view.who === undefined)
+	if (view.who === undefined && view.group === undefined)
 		return ix === view.command
 	return ix === view.who || !!(view.group && set_has(view.group, ix))
 }
@@ -1297,6 +1297,8 @@ function on_update() {
 	action_button("march", "March")
 	action_button("avoid", "Avoid battle")
 	action_button("withdraw", "Withdraw")
+	action_button("retreat", "Retreat")
+	action_button("remove", "Remove")
 	action_button("surrender", "Surrender")
 	action_button("siegeworks", "Siegeworks")
 
