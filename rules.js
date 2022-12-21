@@ -13,9 +13,9 @@
 // TODO: show besieged lords differently in UI
 // TODO: mark moved/fought units (blue highlight?)
 
-// CAPABILITIES
-// TODO: Spoils
-// TODO: BATTLE + STORM + SALLY
+// TODO: BATTLE
+// TODO: SALLY
+// TODO: STORM
 
 // TODO: remove push_state/pop_state stuff - use explicit substates with common functions instead
 
@@ -3849,7 +3849,7 @@ function count_besieging_lords(loc) {
 	return count_friendly_lords_at(loc)
 }
 
-function can_siegeworks() {
+function can_build_siegeworks() {
 	let here = get_lord_locale(game.command)
 	if (count_besieging_lords(here) >= stronghold_strength(here))
 		if (count_siege_markers(here) < 4)
@@ -3878,7 +3878,7 @@ function goto_surrender() {
 	if (count_besieged_lords(here) === 0)
 		game.state = "surrender"
 	else 
-		goto_siegeworks()
+		build_siegeworks()
 }
 
 function surrender_stronghold(here) {
@@ -3906,12 +3906,13 @@ states.surrender = {
 	prompt() {
 		view.prompt = "Siege: You may roll for Surrender."
 		view.actions.surrender = 1
-		if (can_siegeworks())
+		if (can_build_siegeworks())
 			view.actions.siegeworks = 1
 		else
 			view.actions.pass = 1
 	},
 	surrender() {
+		clear_undo()
 		let here = get_lord_locale(game.command)
 		let die = roll_die()
 		let n = count_siege_markers(here)
@@ -3921,38 +3922,24 @@ states.surrender = {
 			end_siege()
 		} else {
 			log(`Surrender ${die} > ${n} failed.`)
-			goto_siegeworks()
+			build_siegeworks()
 		}
 	},
 	siegeworks() {
-		log("Declined Surrender.")
-		goto_siegeworks()
+		build_siegeworks()
 	},
 	pass() {
-		log("Declined Surrender.")
-		goto_siegeworks()
-	},
-}
-
-function goto_siegeworks() {
-	// TODO: automatic or manual placement?
-	if (can_siegeworks())
-		game.state = "siegeworks"
-	else
 		end_siege()
+	},
 }
 
-states.siegeworks = {
-	prompt() {
-		view.prompt = "Siege: Siegeworks - add one siege marker."
-		let here = get_lord_locale(game.command)
-		gen_action_locale(here)
-	},
-	locale(here) {
+function build_siegeworks() {
+	if (can_build_siegeworks()) {
 		log("Added Siege marker.")
+		let here = get_lord_locale(game.command)
 		add_siege_marker(here)
-		end_siege()
-	},
+	}
+	end_siege()
 }
 
 function end_siege() {

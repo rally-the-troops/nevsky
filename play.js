@@ -940,7 +940,9 @@ function update_lord_mat(ix) {
 }
 
 function is_lord_mat_selected(ix) {
-	return ix === view.who
+	if (view.who >= 0)
+		return ix === view.who
+	return ix === view.command
 }
 
 function is_cylinder_selected(ix) {
