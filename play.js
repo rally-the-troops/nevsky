@@ -55,6 +55,17 @@ const SLED = 4
 const BOAT = 5
 const SHIP = 6
 
+// battle array
+const ARRAY_ATK_C = 0
+const ARRAY_DEF_C = 1
+const ARRAY_SALLY_C = 2
+const ARRAY_ATK_L = 3
+const ARRAY_DEF_R = 4
+const ARRAY_SALLY_R = 5
+const ARRAY_ATK_R = 6
+const ARRAY_DEF_L = 7
+const ARRAY_SALLY_L = 8
+
 const VECHE = 100
 
 const on_click_asset = [
@@ -167,6 +178,14 @@ function is_lord_action(lord) {
 	return !!(view.actions && view.actions.lord && set_has(view.actions.lord, lord))
 }
 
+function is_battle_lord_action(lord) {
+	return !!(view.actions && view.actions.battle_lord && set_has(view.actions.battle_lord, lord))
+}
+
+function is_battle_array_action(ix) {
+	return !!(view.actions && view.actions.array && set_has(view.actions.array, ix))
+}
+
 function is_asset_action(lord, action) {
 	return !!(view.actions && view.actions[action] && set_has(view.actions[action], lord))
 }
@@ -246,6 +265,13 @@ function restart_cache() {
 		while (u.length > 0)
 			uu.push(u.pop())
 	}
+}
+
+function is_attacking_lord(lord) {
+	if (view.battle.attacker === "Teutons")
+		return lord < 6
+	else
+		return lord >= 6
 }
 
 function is_p1_locale(loc) {
@@ -419,6 +445,7 @@ const ui = {
 	locale_name: [],
 	locale_markers: [],
 	lord_cylinder: [],
+	battle_cylinder: [],
 	lord_service: [],
 	lord_mat: [],
 	lord_buttons: [],
@@ -450,6 +477,21 @@ const ui = {
 	turn: document.getElementById("turn"),
 	vp1: document.getElementById("vp1"),
 	vp2: document.getElementById("vp2"),
+	battle_attacker_reserves: document.getElementById("array_attacker_reserves"),
+	battle_defender_reserves: document.getElementById("array_defender_reserves"),
+	battle_garrison: document.getElementById("array_defender_garrison"),
+	battle: document.getElementById("battle"),
+	battle_array: [
+		document.getElementById("array_attacker_center"),
+		document.getElementById("array_defender_center"),
+		document.getElementById("array_sally_center"),
+		document.getElementById("array_attacker_left"),
+		document.getElementById("array_defender_right"),
+		document.getElementById("array_sally_right"),
+		document.getElementById("array_attacker_right"),
+		document.getElementById("array_defender_left"),
+		document.getElementById("array_sally_left"),
+	],
 }
 
 let locale_layout = []
@@ -498,6 +540,13 @@ function on_click_cylinder(evt) {
 	if (evt.button === 0) {
 		let id = evt.target.my_id
 		send_action('lord', id)
+	}
+}
+
+function on_click_battle_cylinder(evt) {
+	if (evt.button === 0) {
+		let id = evt.target.my_id
+		send_action('battle_lord', id)
 	}
 }
 
@@ -614,6 +663,11 @@ function on_focus_vassal_service_marker(evt) {
 function on_click_legate(evt) {
 	if (evt.button === 0)
 		send_action('legate')
+}
+
+function on_click_array(evt) {
+	if (evt.button === 0)
+		send_action('array', evt.target.my_id)
 }
 
 function on_blur(evt) {
@@ -1221,6 +1275,29 @@ function update_cards() {
 	}
 }
 
+function update_battle() {
+	let array = view.battle.array
+	ui.battle_attacker_reserves.replaceChildren()
+	ui.battle_defender_reserves.replaceChildren()
+	for (let i = 0; i < array.length; ++i) {
+		let lord = array[i]
+		ui.battle_array[i].replaceChildren()
+		if (lord >= 0)
+			ui.battle_array[i].appendChild(ui.battle_cylinder[lord])
+		ui.battle_array[i].classList.toggle("action", is_battle_array_action(i))
+	}
+	for (let lord of view.battle.reserves) {
+		if (is_attacking_lord(lord))
+			ui.battle_attacker_reserves.appendChild(ui.battle_cylinder[lord])
+		else
+			ui.battle_defender_reserves.appendChild(ui.battle_cylinder[lord])
+	}
+	for (let lord = 0; lord < 12; ++lord) {
+		ui.battle_cylinder[lord].classList.toggle("action", is_battle_lord_action(lord))
+		ui.battle_cylinder[lord].classList.toggle("selected", view.who === lord)
+	}
+}
+
 function on_update() {
 	restart_cache()
 
@@ -1293,6 +1370,16 @@ function on_update() {
 
 	ui.veche.classList.toggle("action", is_veche_action())
 
+	if (view.battle) {
+		if (view.battle.attacker === player)
+			ui.battle.className = "attacker"
+		else
+			ui.battle.className = "defender"
+		update_battle()
+	} else {
+		ui.battle.className = "hide"
+	}
+
 	// Misc
 	action_button("left", "Left")
 	action_button("right", "Right")
@@ -1337,22 +1424,27 @@ function on_update() {
 	action_button("hold", "Hold")
 	action_button("play", "Play")
 
+	action_button("concede", "Concede")
+	action_button("battle", "Battle")
+
 	action_button("end_actions", "End actions")
-	action_button("end_wastage", "End wastage")
-	action_button("end_plow_and_reap", "End plow and reap")
+	action_button("end_array", "End array")
 	action_button("end_avoid_battle", "End avoid battle")
 	action_button("end_call_to_arms", "End call to arms")
 	action_button("end_disband", "End disband")
-	action_button("end_discard", "End discard")
+	action_button("end_disband", "End disband")
 	action_button("end_feed", "End feed")
 	action_button("end_levy", "End levy")
 	action_button("end_muster", "End muster")
 	action_button("end_pay", "End pay")
 	action_button("end_plan", "End plan")
+	action_button("end_plow_and_reap", "End plow and reap")
 	action_button("end_ransom", "End ransom")
+	action_button("end_remove", "End remove")
 	action_button("end_setup", "End setup")
 	action_button("end_spoils", "End spoils")
 	action_button("end_supply", "End supply")
+	action_button("end_wastage", "End wastage")
 	action_button("end_withdraw", "End withdraw")
 
 	action_button("pass", "Pass")
@@ -1536,6 +1628,13 @@ function build_map() {
 		e.addEventListener("mouseleave", on_blur)
 		document.getElementById("pieces").appendChild(e)
 
+		e = ui.battle_cylinder[ix] = document.createElement("div")
+		e.className = "cylinder lord " + clean_name(lord.side) + " " + clean_name(lord.name)
+		e.my_id = ix
+		e.addEventListener("mousedown", on_click_battle_cylinder)
+		e.addEventListener("mouseenter", on_focus_cylinder)
+		e.addEventListener("mouseleave", on_blur)
+
 		e = ui.lord_service[ix] = document.createElement("div")
 		e.className = "service_marker lord image" + lord.image + " " + clean_name(lord.side) + " " + clean_name(lord.name) + " hide"
 		e.my_id = ix
@@ -1584,6 +1683,11 @@ function build_map() {
 
 	build_plan()
 
+	for (let i = 0; i < ui.battle_array.length; ++i) {
+		ui.battle_array[i].my_id = i
+		ui.battle_array[i].addEventListener("mousedown", on_click_array)
+	}
+
 	for (let c = 0; c < 21; ++c)
 		build_card("teutonic", c)
 	for (let c = 21; c < 42; ++c)
@@ -1591,6 +1695,4 @@ function build_map() {
 }
 
 build_map()
-// drag_element_with_mouse("#battle", "#battle_header")
-drag_element_with_mouse("#arts_of_war", "#arts_of_war_header")
 scroll_with_middle_mouse("main")
