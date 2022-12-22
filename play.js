@@ -4,6 +4,9 @@
 //	fealty rating and starting assets + forces on calendar
 //	current assets and forces on map
 
+// TODO: battle.where marker on map
+// TODO: battle.conceded pursuit marker on battle mat
+
 // inactive command cylinder color - other color outline
 // moved/fought lord coloring - blue outline?
 
@@ -54,17 +57,6 @@ const CART = 3
 const SLED = 4
 const BOAT = 5
 const SHIP = 6
-
-// battle array
-const ARRAY_ATK_C = 0
-const ARRAY_DEF_C = 1
-const ARRAY_SALLY_C = 2
-const ARRAY_ATK_L = 3
-const ARRAY_DEF_R = 4
-const ARRAY_SALLY_R = 5
-const ARRAY_ATK_R = 6
-const ARRAY_DEF_L = 7
-const ARRAY_SALLY_L = 8
 
 const VECHE = 100
 
@@ -479,18 +471,21 @@ const ui = {
 	vp2: document.getElementById("vp2"),
 	battle_attacker_reserves: document.getElementById("array_attacker_reserves"),
 	battle_defender_reserves: document.getElementById("array_defender_reserves"),
-	battle_garrison: document.getElementById("array_defender_garrison"),
+	battle_garrison: document.getElementById("array_garrison"),
 	battle: document.getElementById("battle"),
 	battle_array: [
-		document.getElementById("array_attacker_center"),
-		document.getElementById("array_defender_center"),
-		document.getElementById("array_sally_center"),
-		document.getElementById("array_attacker_left"),
-		document.getElementById("array_defender_right"),
-		document.getElementById("array_sally_right"),
-		document.getElementById("array_attacker_right"),
-		document.getElementById("array_defender_left"),
-		document.getElementById("array_sally_left"),
+		document.getElementById("array_attacker_x"),
+		document.getElementById("array_attacker_c"),
+		document.getElementById("array_attacker_y"),
+		document.getElementById("array_defender_x"),
+		document.getElementById("array_defender_c"),
+		document.getElementById("array_defender_y"),
+		document.getElementById("array_reserve_x"),
+		document.getElementById("array_reserve_c"),
+		document.getElementById("array_reserve_y"),
+		document.getElementById("array_sally_x"),
+		document.getElementById("array_sally_c"),
+		document.getElementById("array_sally_y"),
 	],
 }
 
@@ -1277,8 +1272,16 @@ function update_cards() {
 
 function update_battle() {
 	let array = view.battle.array
+
 	ui.battle_attacker_reserves.replaceChildren()
 	ui.battle_defender_reserves.replaceChildren()
+	for (let lord of view.battle.reserves) {
+		if (is_attacking_lord(lord))
+			ui.battle_attacker_reserves.appendChild(ui.battle_cylinder[lord])
+		else
+			ui.battle_defender_reserves.appendChild(ui.battle_cylinder[lord])
+	}
+
 	for (let i = 0; i < array.length; ++i) {
 		let lord = array[i]
 		ui.battle_array[i].replaceChildren()
@@ -1286,12 +1289,7 @@ function update_battle() {
 			ui.battle_array[i].appendChild(ui.battle_cylinder[lord])
 		ui.battle_array[i].classList.toggle("action", is_battle_array_action(i))
 	}
-	for (let lord of view.battle.reserves) {
-		if (is_attacking_lord(lord))
-			ui.battle_attacker_reserves.appendChild(ui.battle_cylinder[lord])
-		else
-			ui.battle_defender_reserves.appendChild(ui.battle_cylinder[lord])
-	}
+
 	for (let lord = 0; lord < 12; ++lord) {
 		ui.battle_cylinder[lord].classList.toggle("action", is_battle_lord_action(lord))
 		ui.battle_cylinder[lord].classList.toggle("selected", view.who === lord)
@@ -1441,6 +1439,7 @@ function on_update() {
 	action_button("end_plow_and_reap", "End plow and reap")
 	action_button("end_ransom", "End ransom")
 	action_button("end_remove", "End remove")
+	action_button("end_sally", "End sally")
 	action_button("end_setup", "End setup")
 	action_button("end_spoils", "End spoils")
 	action_button("end_supply", "End supply")
