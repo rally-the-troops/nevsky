@@ -21,6 +21,9 @@
 
 const data = require("./data.js")
 
+// packed strike and hit group data
+const GROUPS = [[[0,0,0,0,0,0,0,0,0,[[8,1]],[[8,2]],[[8,3]],[[8,4]],[[8,5]],[[8,2]],[[8,7]],0,[[16,1]],[[16,2]],[[16,3]],[[16,4]],[[16,1]],[[16,6]],[[16,7]],0,[[24,1]],[[24,2]],[[8,1],[16,2]],[[24,4]],[[24,1]],[[24,2]],[[8,1],[16,6]],0,[[32,1]],[[32,2]],[[32,2]],[[32,4]],[[32,5]],[[32,6]],[[32,7]],0,[[40,1]],[[40,2]],[[8,3],[32,2]],[[40,4]],[[8,1],[32,4]],[[8,2],[32,6]],[[8,3],[32,6]],0,[[48,1]],[[48,2]],[[48,2]],[[48,4]],[[16,1],[32,4]],[[16,2],[32,4]],[[16,3],[32,4]],0,[[56,1]],[[56,2]],[[8,1],[48,2]],[[56,4]],[[24,1],[32,4]],[[24,2],[32,4]],[[8,1],[16,2],[32,4]]],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,[[16,4]],0,0,0,0,0,0,0,[[8,1],[16,4]],0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,[[48,4]],0,0,0,0,0,0,0,[[8,1],[48,4]],0,0]],[[0,0,0,0,0,0,0,0,0,[[1,8]],[[2,8]],[[3,8]],[[4,8]],[[5,8]],[[6,8]],[[7,8]],0,[[1,16]],[[2,16]],[[3,16]],[[4,16]],[[5,16]],[[6,16]],[[7,16]],0,[[1,24]],[[2,24]],[[1,8],[2,16]],[[4,16]],[[1,24],[4,16]],[[6,16]],[[1,8],[6,16]],0,[[1,32]],[[2,32]],[[3,32]],[[4,32]],[[5,32]],[[6,32]],[[7,32]],0,[[1,40]],[[2,8]],[[3,8]],[[4,40]],[[1,8],[4,32]],[[2,8],[4,32]],[[3,8],[4,32]],0,[[1,16]],[[2,48]],[[3,16]],[[4,48]],[[1,16],[4,48]],[[2,16],[4,32]],[[3,16],[4,32]],0,[[1,56]],[[2,56]],[[1,8],[2,48]],[[4,56]],[[1,24],[4,48]],[[2,24],[4,32]],[[1,8],[2,16],[4,32]]],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,[[2,32]],[[1,8],[2,32]],0,0,[[6,32]],[[1,8],[6,32]],0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]]
+
 const TODO = false
 
 const BOTH = "Both"
@@ -92,41 +95,39 @@ const SHIP = 6
 const asset_type_name = [ "prov", "coin", "loot", "cart", "sled", "boat", "ship" ]
 
 // battle array
-const ARRAY_AX = 0 // attackers
-const ARRAY_AC = 1
-const ARRAY_AY = 2
-const ARRAY_DX = 3 // defenders
-const ARRAY_DC = 4
-const ARRAY_DY = 5
-const ARRAY_RX = 6 // reserves vs relief sallying
-const ARRAY_RC = 7
-const ARRAY_RY = 8
-const ARRAY_SX = 9 // relief sallying
-const ARRAY_SC = 10
-const ARRAY_SY = 11
+const A1 = 0 // attackers
+const A2 = 1
+const A3 = 2
+const D1 = 3 // defenders
+const D2 = 4
+const D3 = 5
+const SA1 = 6 // relief sally: attackers
+const SA2 = 7
+const SA3 = 8
+const RD1 = 9 // relief sally: reserve defenders
+const RD2 = 10
+const RD3 = 11
 
 const battle_array_name = [
-	"Attacking Right",
-	"Attacking Center",
-	"Attacking Left",
-	"Defending Left",
-	"Defending Center",
-	"Defending Right",
-	"Reserves Left",
-	"Reserves Center",
-	"Reserves Right",
-	"Sallying Left",
-	"Sallying Center",
-	"Sallying Right",
+	"A1", "A2", "A2",
+	"D1", "D2", "D3",
+	"SA1", "SA2", "SA3",
+	"RD1", "RD2", "RD3",
 ]
 
 // battle steps
-const STEP_DEF_ARCHERY = 0
-const STEP_ATK_ARCHERY = 1
-const STEP_DEF_HORSE = 2
-const STEP_ATK_HORSE = 3
-const STEP_DEF_FOOT = 4
-const STEP_ATK_FOOT = 5
+const BATTLE_STEP_DEF_ARCHERY = 0
+const BATTLE_STEP_ATK_ARCHERY = 1
+const BATTLE_STEP_DEF_HORSE = 2
+const BATTLE_STEP_ATK_HORSE = 3
+const BATTLE_STEP_DEF_FOOT = 4
+const BATTLE_STEP_ATK_FOOT = 5
+
+// storm steps
+const STORM_STEP_DEF_ARCHERY = 0
+const STORM_STEP_ATK_ARCHERY = 1
+const STORM_STEP_DEF_MELEE = 2
+const STORM_STEP_ATK_MELEE = 3
 
 const battle_step_name = [
 	"Defending Archery",
@@ -135,6 +136,13 @@ const battle_step_name = [
 	"Attacking Horse",
 	"Defending Foot",
 	"Attacking Foot",
+]
+
+const storm_step_name = [
+	"Defending Archery",
+	"Attacking Archery",
+	"Defending Melee",
+	"Attacking Melee",
 ]
 
 function find_card(name) {
@@ -2896,6 +2904,7 @@ function count_global_capabilities() {
 }
 
 function goto_capability_discard() {
+	console.log("capability_discard", game.active, count_global_capabilities(), count_mustered_lords())
 	if (count_global_capabilities() > count_mustered_lords())
 		game.state = "capability_discard"
 	else
@@ -3939,7 +3948,7 @@ function goto_surrender() {
 	let here = get_lord_locale(game.command)
 	if (count_besieged_lords(here) === 0)
 		game.state = "surrender"
-	else 
+	else
 		build_siegeworks()
 }
 
@@ -4777,7 +4786,6 @@ function start_battle() {
 		reserves: [],
 		routed: [],
 		step: 0,
-		hits: 0,
 		loser: 0,
 	}
 
@@ -4793,6 +4801,9 @@ function start_battle() {
 }
 
 // === BATTLE: BATTLE ARRAY ===
+
+// TODO (option A): order - attacking array, defending array, relief sally, reserve defender
+// TODO (option B): order - attacking array + relief sally, defending array + reserve defender
 
 function has_reserves() {
 	for (let lord of game.battle.reserves)
@@ -4848,21 +4859,22 @@ function goto_attacker_battle_array() {
 states.attacker_battle_array = {
 	prompt() {
 		view.prompt = "Battle Array: Position your lords."
+		let array = game.battle.array
 
 		prompt_array_lord()
 
 		if (game.who !== NOBODY) {
-			if (array[ARRAY_AC] === NOBODY) {
-				gen_action_array(ARRAY_AC)
+			if (array[A2] === NOBODY) {
+				gen_action_array(A2)
 			} else {
-				if (array[ARRAY_AX] === NOBODY)
-					gen_action_array(ARRAY_AX)
-				if (array[ARRAY_AY] === NOBODY)
-					gen_action_array(ARRAY_AY)
+				if (array[A1] === NOBODY)
+					gen_action_array(A1)
+				if (array[A3] === NOBODY)
+					gen_action_array(A3)
 			}
 		}
 
-		if (!has_reserves() || (array[ARRAY_AC] >= 0 && array[ARRAY_AX] >= 0 && array[ARRAY_AY] >= 0))
+		if (!has_reserves() || (array[A1] !== NOBODY && array[A2] !== NOBODY && array[A3] !== NOBODY))
 			view.actions.end_array = 1
 	},
 	battle_lord: action_select_lord,
@@ -4879,45 +4891,44 @@ function goto_defender_battle_array() {
 	game.who = NOBODY
 	let n = count_reserves()
 	if (n === 1) {
-		game.battle.array[ARRAY_DC] = pop_first_reserve()
-		goto_attacker_events()
+		game.battle.array[D2] = pop_first_reserve()
+		goto_relief_sally()
 	}
 	if (n === 0) {
-		goto_attacker_events()
+		goto_relief_sally()
 	}
 }
 
 states.defender_battle_array = {
 	prompt() {
 		view.prompt = "Battle Array: Position your lords."
-
 		let array = game.battle.array
 
 		prompt_array_lord()
 
 		if (game.who !== NOBODY) {
-			if (array[ARRAY_DC] === NOBODY) {
-				gen_action_array(ARRAY_DC)
-			} else if (array[ARRAY_AX] !== NOBODY && array[ARRAY_AY] === NOBODY && array[ARRAY_DX] === NOBODY) {
-				gen_action_array(ARRAY_DX)
-			} else if (array[ARRAY_AX] === NOBODY && array[ARRAY_AY] !== NOBODY && array[ARRAY_DY] === NOBODY) {
-				gen_action_array(ARRAY_DY)
+			if (array[D2] === NOBODY) {
+				gen_action_array(D2)
+			} else if (array[A1] !== NOBODY && array[A3] === NOBODY && array[D1] === NOBODY) {
+				gen_action_array(D1)
+			} else if (array[A1] === NOBODY && array[A3] !== NOBODY && array[D3] === NOBODY) {
+				gen_action_array(D3)
 			} else {
-				if (array[ARRAY_DX] === NOBODY)
-					gen_action_array(ARRAY_DX)
-				if (array[ARRAY_DY] === NOBODY)
-					gen_action_array(ARRAY_DY)
+				if (array[D1] === NOBODY)
+					gen_action_array(D1)
+				if (array[D3] === NOBODY)
+					gen_action_array(D3)
 			}
 		}
 
-		if (!has_reserves() || (array[ARRAY_DC] >= 0 && array[ARRAY_DX] >= 0 && array[ARRAY_DY] >= 0))
+		if (!has_reserves() || (array[D1] !== NOBODY && array[D2] !== NOBODY && array[D3] !== NOBODY))
 			view.actions.end_array = 1
 	},
 	battle_lord: action_select_lord,
 	array: action_array_lord,
 	end_array() {
 		clear_undo()
-		goto_attacker_events()
+		goto_relief_sally()
 	},
 }
 
@@ -4932,16 +4943,17 @@ function is_lord_arrayed(lord) {
 function goto_relief_sally() {
 	set_active_attacker()
 	if (has_besieged_friendly_lord(game.battle.where)) {
-		game.state = "attacker_relief_sally"
+		game.state = "relief_sally"
 		game.who = NOBODY
 	} else {
 		goto_battle_rounds()
 	}
 }
 
-states.attacker_relief_sally = {
+states.relief_sally = {
 	prompt() {
 		view.prompt = "Battle: Relief Sally"
+		let array = game.battle.array
 
 		// NOTE: max 3 lords stronghold so there's always room for all to sally
 
@@ -4949,7 +4961,6 @@ states.attacker_relief_sally = {
 			let here = game.battle.where
 			// RULES: can lower lords sally without lieutenant?
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
-				console.log("relsal", lord, here, get_lord_locale(lord), is_lord_besieged(lord))
 				if (get_lord_locale(lord) === here && is_lord_besieged(lord)) {
 					if (!is_lord_arrayed(lord))
 						gen_action_lord(lord)
@@ -4957,18 +4968,17 @@ states.attacker_relief_sally = {
 			}
 			view.actions.end_sally = 1
 		} else {
-			let array = game.battle.array
-			if (array[ARRAY_SC] === NOBODY) {
-				gen_action_array(ARRAY_SC)
-			} else if (array[ARRAY_DX] !== NOBODY && array[ARRAY_DY] === NOBODY && array[ARRAY_SX] === NOBODY) {
-				gen_action_array(ARRAY_SX)
-			} else if (array[ARRAY_DX] === NOBODY && array[ARRAY_DY] !== NOBODY && array[ARRAY_SY] === NOBODY) {
-				gen_action_array(ARRAY_SY)
+			if (array[SA2] === NOBODY) {
+				gen_action_array(SA2)
+			} else if (array[D1] !== NOBODY && array[D3] === NOBODY && array[SA1] === NOBODY) {
+				gen_action_array(SA1)
+			} else if (array[D1] === NOBODY && array[D3] !== NOBODY && array[SA3] === NOBODY) {
+				gen_action_array(SA3)
 			} else {
-				if (array[ARRAY_SX] === NOBODY)
-					gen_action_array(ARRAY_SX)
-				if (array[ARRAY_SY] === NOBODY)
-					gen_action_array(ARRAY_SY)
+				if (array[SA1] === NOBODY)
+					gen_action_array(SA1)
+				if (array[SA3] === NOBODY)
+					gen_action_array(SA3)
 			}
 		}
 	},
@@ -4986,58 +4996,52 @@ states.attacker_relief_sally = {
 	end_sally() {
 		clear_undo()
 		game.who = NOBODY
-		goto_defender_relief_sally()
+		goto_reserve_defenders()
 	},
 }
 
-function goto_defender_relief_sally() {
+function goto_reserve_defenders() {
 	set_active_defender()
 	let array = game.battle.array
-	if (has_reserves() && (array[ARRAY_SC] !== NOBODY || array[ARRAY_SX] !== NOBODY || array[ARRAY_SY] !== NOBODY))
-		game.state = "defender_relief_sally"
+	if (has_reserves() && (array[SA1] !== NOBODY || array[SA2] !== NOBODY || array[SA3] !== NOBODY))
+		game.state = "reserve_defenders"
 	else
-		goto_battle_rounds()
+		goto_attacker_events()
 }
 
-states.defender_relief_sally = {
+states.reserve_defenders = {
 	prompt() {
 		view.prompt = "Battle: Array reserves against sallying lords."
+		let array = game.battle.array
 
-		// NOTE: max 3 in reserve (3 already deployed on front) so always room for all
-
-		let done = true
-		for (let lord of game.battle.reserves) {
-			if (is_friendly_lord(lord) && !is_lord_arrayed(lord)) {
-				done = false
+		for (let lord of game.battle.reserves)
+			if (is_friendly_lord(lord) && !is_lord_arrayed(lord))
 				if (lord !== game.who)
 					gen_action_battle_lord(lord)
-			}
-		}
 
 		if (game.who !== NOBODY) {
-			let array = game.battle.array
-			if (array[ARRAY_RC] === NOBODY) {
-				gen_action_array(ARRAY_RC)
-			} else if (array[ARRAY_SX] !== NOBODY && array[ARRAY_SY] === NOBODY && array[ARRAY_RX] === NOBODY) {
-				gen_action_array(ARRAY_RX)
-			} else if (array[ARRAY_SX] === NOBODY && array[ARRAY_SY] !== NOBODY && array[ARRAY_RY] === NOBODY) {
-				gen_action_array(ARRAY_RY)
+			if (array[RD2] === NOBODY) {
+				gen_action_array(RD2)
+			} else if (array[SA1] !== NOBODY && array[SA3] === NOBODY && array[RD1] === NOBODY) {
+				gen_action_array(RD1)
+			} else if (array[SA1] === NOBODY && array[SA3] !== NOBODY && array[RD3] === NOBODY) {
+				gen_action_array(RD3)
 			} else {
-				if (array[ARRAY_RX] === NOBODY)
-					gen_action_array(ARRAY_RX)
-				if (array[ARRAY_RY] === NOBODY)
-					gen_action_array(ARRAY_RY)
+				if (array[SA1] !== NOBODY)
+					gen_action_array(RD1)
+				if (array[SA3] !== NOBODY)
+					gen_action_array(RD3)
 			}
 		}
 
-		if (done)
+		if (!has_reserves() || (array[RD1] !== NOBODY && array[RD2] !== NOBODY && array[RD3] !== NOBODY))
 			view.actions.end_array = 1
 	},
 	battle_lord: action_select_lord,
 	array: action_array_lord,
 	end_array() {
 		clear_undo()
-		goto_battle_rounds()
+		goto_attacker_events()
 	},
 }
 
@@ -5052,7 +5056,7 @@ function goto_attacker_events() {
 function goto_defender_events() {
 	set_active_defender()
 	log("TODO defender events")
-	goto_relief_sally()
+	goto_battle_rounds()
 }
 
 // === BATTLE: CONCEDE THE FIELD ===
@@ -5082,7 +5086,7 @@ states.concede = {
 			goto_reposition()
 		} else {
 			set_active_enemy()
-			if (game.active === game.attacker)
+			if (game.active === game.battle.attacker)
 				goto_reposition()
 		}
 	}
@@ -5090,15 +5094,358 @@ states.concede = {
 
 // === BATTLE: REPOSITION ===
 
+// 1 - If all SA routed, RD to reserve
+// 2 - If all empty front D, all RD to front
+// 3 - If any empty front D, reserve to front
+// 4 - If front center empty, side to center
+// 5 - If rear center empty, side to center
+
+// RULES: Repositioning of SA/DR units - advance / center
+
 function goto_reposition() {
 	log("TODO reposition")
+	goto_start_strike()
+}
+
+// === BATTLE: STRIKE ===
+
+const STEP_ARRAY = [
+	[ D1, D2, D3, RD1, RD2, RD3 ],
+	[ A1, A2, A3, SA1, SA2, SA3 ],
+]
+
+// Segment strikers into groups according to flanking situation.
+// S picks group to strike.
+// T picks lord to apply hits.
+// If routed, resume hits on next lord in same group (T's choice).
+// If routed and multiple groups can be next target, S's choice of target.
+// If routed, S or T chooses next lord (in same group
+
+// interrupt for enemy to select flank to attack when center has hits left after center is routed
+
+// RULES: Order of applying mixed archery hits?
+
+/*
+	strike steps:
+	1) calculate hits per lord
+	2) combine flanking attacks and assign to section - center choose
+	3) apply hits to lords - choose lord to take all hits from one group
+		4) roll walls
+		5) assign hits to units
+		6) roll by hit
+		7) if rout, reassign remaining hits (striking player chooses)
+			7a) front left to front center THEN front right
+			7b) front right to front center THEN front left
+			7c) front center to front left OR front right
+			7d) sallying attackers (as one) to any reserve defender THEN any front
+
+	8) goto 3
+*/
+
+function pack_battle_array_front() {
+	let x = 0
+	for (let i = 0; i < 6; ++i)
+		if (game.battle.array[i] >= 0)
+			x |= (1 << i)
+	return x
+}
+
+function pack_battle_array_rear() {
+	let x = 0
+	for (let i = 0; i < 6; ++i)
+		if (game.battle.array[i+6] >= 0)
+			x |= (1 << i)
+	return x
+}
+
+function unpack_group_hits(g, offset) {
+	for (let i = 0; i < 6; ++i) {
+		if ((g >> i) & 1) {
+			if (game.battle.ah1[i+offset] > 0)
+				return true
+			if (game.battle.ah2[i+offset] > 0)
+				return true
+		}
+	}
+	return false
+}
+
+function unpack_group(g, offset) {
+	let list = []
+	for (let i = 0; i < 6; ++i)
+		if ((g >> i) & 1)
+			list.push(i + offset)
+	return list
+}
+
+function unpack_group_list(flist, rlist) {
+	let list = []
+	if (flist) {
+		for (let [sg, hg] of flist) {
+			if (unpack_group_hits(sg, 0))
+				list.push([unpack_group(sg, 0), unpack_group(hg, 0)])
+		}
+	}
+	if (rlist) {
+		for (let [sg, hg] of rlist) {
+			if (unpack_group_hits(sg, 6))
+				list.push([unpack_group(sg, 6), unpack_group(hg, 6)])
+		}
+	}
+	return list
+}
+
+function debug_group(g) {
+	return g.map(p=>battle_array_name[p]).join("+")
+}
+
+function debug_group_list(list) {
+	for (let [sg,hg] of list)
+		console.log(debug_group(sg), "strike", debug_group(hg))
+}
+
+function has_front_strike_choice() {
+	let s = game.battle.step & 1
+	let f = pack_battle_array_front()
+	return GROUPS[s][1][f] !== 0
+}
+
+function has_rear_strike_choice() {
+	let s = game.battle.step & 1
+	let r = pack_battle_array_rear()
+	return GROUPS[s][1][r] !== 0
+}
+
+
+function goto_start_strike() {
+	game.battle.step = 0
 	goto_strike()
 }
 
-function goto_strike() {
-	log("TODO strike")
-	goto_new_round()
+function goto_next_strike() {
+	game.battle.step++
+	if (game.battle.step >= 6)
+		goto_new_round()
+	else
+		goto_strike()
 }
+
+function debug_battle_array(f, r) {
+	for (let row = 0; row < 6; row += 3) {
+		let x = ""
+		for (let col = 0; col < 3; ++col) {
+			let b = row + col
+			if ((f >> b) & 1)
+				x += battle_array_name[b] + "  "
+			else
+				x += "--- "
+		}
+		console.log(x)
+	}
+	for (let row = 3; row >= 0; row -= 3) {
+		let x = ""
+		for (let col = 0; col < 3; ++col) {
+			let b = row + col
+			if ((r >> b) & 1)
+				x += battle_array_name[b+6] + " "
+			else
+				x += "--- "
+		}
+		console.log(x)
+	}
+}
+
+function count_archery_hits(ix, lord) {
+	if (lord_has_capability(lord, AOW_RUSSIAN_LUCHNIKI)) {
+		game.battle.ah1[ix] += get_lord_forces(lord, LIGHT_HORSE)
+		game.battle.ah1[ix] += get_lord_forces(lord, MILITIA)
+	}
+	if (lord_has_capability(lord, AOW_TEUTONIC_BALISTARII)) {
+		game.battle.ah2[ix] += get_lord_forces(lord, MEN_AT_ARMS)
+	}
+	game.battle.ah1[ix] += get_lord_forces(lord, ASIATIC_HORSE)
+}
+
+function count_horse_hits(ix, lord, storm) {
+	if (storm)
+		game.battle.ah1[ix] += get_lord_forces(lord, KNIGHTS) << 1
+	else
+		game.battle.ah1[ix] += get_lord_forces(lord, KNIGHTS) << 2
+	game.battle.ah1[ix] += get_lord_forces(lord, SERGEANTS) << 1
+	game.battle.ah1[ix] += get_lord_forces(lord, LIGHT_HORSE)
+}
+
+function count_foot_hits(ix, lord) {
+	game.battle.ah1[ix] += get_lord_forces(lord, MEN_AT_ARMS) << 1
+	game.battle.ah1[ix] += get_lord_forces(lord, MILITIA)
+	game.battle.ah1[ix] += get_lord_forces(lord, SERFS)
+}
+
+function count_battle_hits(ix, lord, step) {
+	switch (step) {
+	case BATTLE_STEP_DEF_ARCHERY:
+	case BATTLE_STEP_ATK_ARCHERY:
+		count_archery_hits(ix, lord)
+		break
+	case BATTLE_STEP_DEF_HORSE:
+	case BATTLE_STEP_ATK_HORSE:
+		count_horse_hits(ix, lord, false)
+		break
+	case BATTLE_STEP_DEF_FOOT:
+	case BATTLE_STEP_ATK_FOOT:
+		count_foot_hits(ix, lord)
+		break
+	}
+}
+
+function count_storm_hits(ix, lord, step) {
+	switch (step) {
+	case STORM_STEP_DEF_ARCHERY:
+	case STORM_STEP_ATK_ARCHERY:
+		count_archery_hits(ix, lord)
+		break
+	case STORM_STEP_DEF_MELEE:
+	case STORM_STEP_ATK_MELEE:
+		count_horse_hits(ix, lord, false)
+		count_foot_hits(ix, lord)
+		break
+	}
+}
+
+function goto_strike() {
+	let s = game.battle.step & 1
+
+	if (s)
+		set_active_attacker()
+	else
+		set_active_defender()
+
+	// TODO: garrison hits
+	game.battle.ah1 = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+	game.battle.ah2 = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+	for (let p of STEP_ARRAY[s])
+		if (game.battle.array[p] !== NOBODY)
+			count_battle_hits(p, game.battle.array[p], game.battle.step)
+
+	// TODO: select choice
+	// TODO: if SA and no RD
+	// TODO: garrison groups
+	let front = pack_battle_array_front()
+	let rear = pack_battle_array_rear()
+	let front_choice = 0
+	let rear_choice = 0
+
+	game.battle.groups = unpack_group_list(GROUPS[s][front_choice][front], GROUPS[s][rear_choice][rear])
+
+	console.log("STRIKE")
+	console.log("hits", game.battle.ah1)
+	console.log("crossbow hits", game.battle.ah2)
+	debug_battle_array(front, rear)
+	debug_group_list(game.battle.groups)
+
+	goto_select_strike_group()
+}
+
+function goto_select_strike_group() {
+	if (game.battle.groups.length === 0)
+		goto_next_strike()
+	else
+		game.state = "select_strike_group"
+}
+
+states.select_strike_group = {
+	prompt() {
+		view.prompt = `${battle_step_name[game.battle.step]}: Select Striking Lord or Group.`
+		for (let [sg, hg] of game.battle.groups) {
+			for (let p of sg) {
+				let lord = game.battle.array[p]
+				if (game.battle.ah1[p] > 0 || game.battle.ah2[p] > 0)
+					gen_action_battle_lord(lord)
+			}
+		}
+	},
+	battle_lord(lord) {
+		for (let i = 0; i < game.battle.groups.length; ++i) {
+			for (let p of game.battle.groups[i][0])
+				if (game.battle.array[p] === lord)
+					select_strike_group(i)
+		}
+	},
+}
+
+function select_strike_group(i) {
+	game.battle.sg = game.battle.groups[i][0]
+	game.battle.hg = game.battle.groups[i][1]
+	array_remove(game.battle.groups, i)
+
+	// Total hits from striking lords
+	game.battle.h1 = 0
+	game.battle.h2 = 0
+	for (let p of game.battle.sg) {
+		game.battle.h1 += game.battle.ah1[p]
+		game.battle.h2 += game.battle.ah2[p]
+	}
+
+	// Round in favor of crossbow hits
+	if (game.battle.h2 & 1) {
+		game.battle.h1 = (game.battle.h1 >> 1)
+		game.battle.h2 = (game.battle.h2 >> 1) + 1
+	} else {
+		if (game.battle.h1 & 1)
+			game.battle.h1 = (game.battle.h1 >> 1) + 1
+		else
+			game.battle.h1 = (game.battle.h1 >> 1)
+		game.battle.h2 = (game.battle.h2 >> 1)
+	}
+
+	set_active_enemy()
+	goto_select_hit_group()
+	return
+}
+
+function goto_select_hit_group() {
+	if (game.battle.hg.length > 0) {
+		game.state = "select_hit_group"
+	} else {
+		game.who = game.battle.array[game.battle.hg[0]]
+		game.state = "hit_lord"
+	}
+}
+
+function format_hits() {
+	if (game.battle.h2 > 0 && game.battle.h1 > 0)
+		return `${game.battle.h2} crossbow hits and ${game.battle.h1} hits`
+	else if (game.battle.h2 > 0)
+		return `${game.battle.h2} crossbow hits`
+	else
+		return `${game.battle.h1} hits`
+}
+
+states.select_hit_group = {
+	prompt() {
+		view.prompt = `${battle_step_name[game.battle.step]}: Select Lord to take ${format_hits()}.`
+		for (let pos of game.battle.hg)
+			gen_action_battle_lord(game.battle.array[pos])
+	},
+	battle_lord(lord) {
+		game.who = lord
+		game.state = "hit_lord"
+	},
+}
+
+states.hit_lord = {
+	prompt() {
+		view.prompt = `${battle_step_name[game.battle.step]}: Assign ${format_hits()}.`
+		view.actions.pass = 1
+	},
+	pass() {
+		game.who = NOBODY
+		set_active_enemy()
+		goto_select_strike_group()
+	},
+}
+
+// === BATTLE: NEW ROUND ===
 
 function goto_new_round() {
 	// TODO: no unrouted lords
@@ -5106,7 +5453,7 @@ function goto_new_round() {
 		game.battle.loser = game.battle.conceded
 		end_battle()
 	} else {
-		goto_concede_the_field()
+		goto_concede()
 	}
 }
 

@@ -149,34 +149,34 @@ body.Teutons #plan_actions .russian { display: none }
 #battle.defender #array_garrison { top: 172px; left: 8px; }
 #battle.defender #array_attacker_reserves { top: 4px; left: 8px; }
 #battle.defender #array_defender_reserves { bottom: 4px; left: 8px; }
-#battle.defender #array_attacker_x	{ top: 96px; left: 32px; }
-#battle.defender #array_attacker_c	{ top: 96px; left: 162px; }
-#battle.defender #array_attacker_y	{ top: 96px; right: 32px; }
-#battle.defender #array_defender_x	{ top: 220px; left: 32px; }
-#battle.defender #array_defender_c	{ top: 220px; left: 162px; }
-#battle.defender #array_defender_y	{ top: 220px; right: 32px; }
-#battle.defender #array_reserve_x	{ bottom: 60px; left: 4px; }
-#battle.defender #array_reserve_c	{ bottom: 60px; right: 200px; }
-#battle.defender #array_reserve_y	{ bottom: 60px; right: 4px; }
-#battle.defender #array_sally_x		{ bottom: 48px; left: 64px; }
-#battle.defender #array_sally_c		{ bottom: 48px; left: 200px; }
-#battle.defender #array_sally_y		{ bottom: 48px; right: 64px; }
+#battle.defender #array_a1	{ top: 96px; left: 32px; }
+#battle.defender #array_a2	{ top: 96px; left: 162px; }
+#battle.defender #array_a3	{ top: 96px; right: 32px; }
+#battle.defender #array_d1	{ top: 220px; left: 32px; }
+#battle.defender #array_d2	{ top: 220px; left: 162px; }
+#battle.defender #array_d3	{ top: 220px; right: 32px; }
+#battle.defender #array_rd1	{ bottom: 60px; left: 4px; }
+#battle.defender #array_rd2	{ bottom: 60px; right: 200px; }
+#battle.defender #array_rd3	{ bottom: 60px; right: 4px; }
+#battle.defender #array_sa1		{ bottom: 48px; left: 64px; }
+#battle.defender #array_sa2		{ bottom: 48px; left: 200px; }
+#battle.defender #array_sa3		{ bottom: 48px; right: 64px; }
 
 #battle.attacker #array_garrison { bottom: 172px; left: 8px; }
 #battle.attacker #array_attacker_reserves { bottom: 4px; left: 8px; }
 #battle.attacker #array_defender_reserves { top: 4px; left: 8px; }
-#battle.attacker #array_attacker_x	{ bottom: 96px; right: 32px; }
-#battle.attacker #array_attacker_c	{ bottom: 96px; left: 162px; }
-#battle.attacker #array_attacker_y	{ bottom: 96px; left: 32px; }
-#battle.attacker #array_defender_x	{ bottom: 220px; right: 32px; }
-#battle.attacker #array_defender_c	{ bottom: 220px; left: 162px; }
-#battle.attacker #array_defender_y	{ bottom: 220px; left: 32px; }
-#battle.attacker #array_reserve_x	{ top: 60px; right: 4px; }
-#battle.attacker #array_reserve_c	{ top: 60px; left: 200px; }
-#battle.attacker #array_reserve_y	{ top: 60px; left: 4px; }
-#battle.attacker #array_sally_x		{ top: 48px; right: 64px; }
-#battle.attacker #array_sally_c		{ top: 48px; right: 200px; }
-#battle.attacker #array_sally_y		{ top: 48px; left: 64px; }
+#battle.attacker #array_a1	{ bottom: 96px; right: 32px; }
+#battle.attacker #array_a2	{ bottom: 96px; left: 162px; }
+#battle.attacker #array_a3	{ bottom: 96px; left: 32px; }
+#battle.attacker #array_d1	{ bottom: 220px; right: 32px; }
+#battle.attacker #array_d2	{ bottom: 220px; left: 162px; }
+#battle.attacker #array_d3	{ bottom: 220px; left: 32px; }
+#battle.attacker #array_rd1	{ top: 60px; right: 4px; }
+#battle.attacker #array_rd2	{ top: 60px; left: 200px; }
+#battle.attacker #array_rd3	{ top: 60px; left: 4px; }
+#battle.attacker #array_sa1		{ top: 48px; right: 64px; }
+#battle.attacker #array_sa2		{ top: 48px; right: 200px; }
+#battle.attacker #array_sa3		{ top: 48px; left: 64px; }
 
 #battle > div {
 	position: absolute;
@@ -1239,21 +1239,21 @@ body.shift .mustered_vassals {
 <div id="hand" class="hand"></div>
 
 <div id="battle" class="attacker">
-<div class="garrison" id="array_defender_garrison"></div>
+<div class="garrison" id="array_garrison"></div>
 <div class="reserves" id="array_attacker_reserves"></div>
 <div class="reserves" id="array_defender_reserves"></div>
-<div class="array" id="array_attacker_x"></div>
-<div class="array" id="array_attacker_c"></div>
-<div class="array" id="array_attacker_y"></div>
-<div class="array" id="array_defender_x"></div>
-<div class="array" id="array_defender_c"></div>
-<div class="array" id="array_defender_y"></div>
-<div class="array" id="array_reserve_x"></div>
-<div class="array" id="array_reserve_c"></div>
-<div class="array" id="array_reserve_y"></div>
-<div class="array" id="array_sally_x"></div>
-<div class="array" id="array_sally_c"></div>
-<div class="array" id="array_sally_y"></div>
+<div class="array" id="array_a1"></div>
+<div class="array" id="array_a2"></div>
+<div class="array" id="array_a3"></div>
+<div class="array" id="array_d1"></div>
+<div class="array" id="array_d2"></div>
+<div class="array" id="array_d3"></div>
+<div class="array" id="array_rd1"></div>
+<div class="array" id="array_rd2"></div>
+<div class="array" id="array_rd3"></div>
+<div class="array" id="array_sa1"></div>
+<div class="array" id="array_sa2"></div>
+<div class="array" id="array_sa3"></div>
 </div>
 
 </div>
