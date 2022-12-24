@@ -2877,9 +2877,9 @@ states.capability_discard = {
 function end_capability_discard() {
 	set_active_enemy()
 	if (game.active === P2)
-		goto_campaign_plan()
-	else
 		goto_capability_discard()
+	else
+		goto_campaign_plan()
 }
 
 // === CAMPAIGN: PLAN ===
