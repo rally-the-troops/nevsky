@@ -5741,6 +5741,7 @@ function flip_and_discard_half(lord, from_type, to_type) {
 states.plow_and_reap = {
 	prompt() {
 		let from_type, to_type
+		let turn = current_turn()
 		if (turn === 2 || turn === 10) {
 			view.prompt = "Plow and Reap: Flip Carts to Sleds and discard half."
 			from_type = CART
@@ -5762,7 +5763,7 @@ states.plow_and_reap = {
 		}
 		if (done) {
 			view.prompt = "Plow and Reap: All done."
-			view.action.end_plow_and_reap = 1
+			view.actions.end_plow_and_reap = 1
 		}
 	},
 	cart(lord) {
