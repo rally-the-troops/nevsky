@@ -4376,6 +4376,7 @@ function goto_tax()  {
 		logii("Restored mustered forces.")
 		restore_mustered_forces(game.command)
 		push_state("veliky_knyaz")
+		game.who = game.command
 		game.count = 2
 	}
 }
