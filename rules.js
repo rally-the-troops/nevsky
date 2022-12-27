@@ -1,22 +1,21 @@
 "use strict"
 
-// clean up game.who (use only in muster / events, not for command)
-// TODO: remove push_state/pop_state stuff - use explicit substates with common functions instead
-// game.levy/command instead of game.who for levy (like game.command for campaign)
-
-// TEST: legate removal during battle and retreats etc
+// NEXT: choose left/right when center flanking
+// NEXT: hit remainders
+// TODO: SALLY
+// TODO: STORM
+// TODO: Walls
 
 // TODO: Lodya capability during supply!
-
 // TODO: 2nd edition supply rule - no reuse of transports
-// TODO: 2nd edition disband during campaign
 
 // TODO: show besieged lords differently in UI
 // TODO: mark moved/fought units (blue highlight?)
+// TODO: mark command lord different from selected lord?
 
-// TODO: BATTLE
-// TODO: SALLY
-// TODO: STORM
+// clean up game.who (use only in muster / events, not for command)
+// TODO: remove push_state/pop_state stuff - use explicit substates with common functions instead
+// game.levy/command instead of game.who for levy (like game.command for campaign)
 
 const data = require("./data.js")
 
