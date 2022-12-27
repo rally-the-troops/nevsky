@@ -345,22 +345,6 @@ function is_marshal(lord) {
 	if (lord === LORD_ANDREY) return !is_lord_on_map(LORD_ALEKSANDR)
 }
 
-function is_card_in_use(c) {
-	if (set_has(view.hand, c))
-		return true
-	if (set_has(view.events, c))
-		return true
-	if (set_has(view.capabilities, c))
-		return true
-	if (view.pieces.capabilities.includes(c))
-		return true
-	if (c === 18 || c === 19 || c === 20)
-		return true
-	if (c === 39 || c === 40 || c === 41)
-		return true
-	return false
-}
-
 function has_global_capability(cap) {
 	for (let c of view.capabilities)
 		if (data.cards[c].capability === cap)
@@ -1253,26 +1237,15 @@ function update_cards() {
 		let elt = ui.cards[c]
 		elt.classList.toggle("selected", c === view.what)
 		elt.classList.toggle("action", is_card_action(c))
-		elt.classList.toggle("disabled", false)
 	}
 
-	if (Array.isArray(view.show_arts_of_war)) {
+	if (view.show_arts_of_war) {
 		ui.arts_of_war_dialog.classList.remove("hide")
 		ui.arts_of_war_list.replaceChildren()
 		for (let c of view.show_arts_of_war) {
 			let elt = ui.cards[c]
 			ui.arts_of_war_list.appendChild(ui.cards[c])
 		}
-	} else if (view.show_arts_of_war === 1) {
-		ui.arts_of_war_dialog.classList.remove("hide")
-		ui.arts_of_war_list.replaceChildren()
-		for_each_friendly_card(c => {
-			if (!is_card_in_use(c)) {
-				let elt = ui.cards[c]
-				ui.arts_of_war_list.appendChild(elt)
-				elt.classList.toggle("disabled", !is_card_action(c))
-			}
-		})
 	} else {
 		ui.arts_of_war_dialog.classList.add("hide")
 	}

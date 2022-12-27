@@ -9,7 +9,6 @@
 // TODO: Lodya capability during supply!
 
 // TODO: 2nd edition supply rule - no reuse of transports
-// TODO: 2nd edition ravage cost
 // TODO: 2nd edition disband during campaign
 
 // TODO: show besieged lords differently in UI
@@ -55,13 +54,6 @@ exports.scenarios = [
 	"Return of the Prince (Nicolle)",
 	"Crusade on Novgorod",
 	"Pleskau (Quickstart)",
-]
-
-const scenario_remove_no_event_cards = [
-	"Pleskau",
-	"Watland",
-	"Peipus",
-	"Pleskau (Quickstart)"
 ]
 
 const scenario_last_turn = {
@@ -405,6 +397,12 @@ function current_season() {
 
 function current_turn_name() {
 	return TURN_NAME[game.turn >> 1]
+}
+
+function current_deck() {
+	if (game.active === P1)
+		return game.deck1
+	return game.deck2
 }
 
 function is_campaign_phase() {
@@ -815,17 +813,7 @@ function is_marshal(lord) {
 	}
 }
 
-function is_card_in_use(c) {
-	if (set_has(game.hand1, c))
-		return true
-	if (set_has(game.hand2, c))
-		return true
-	if (set_has(game.events, c))
-		return true
-	if (set_has(game.capabilities, c))
-		return true
-	if (game.pieces.capabilities.includes(c))
-		return true
+function is_no_event_card(c) {
 	if (c === 18 || c === 19 || c === 20)
 		return true
 	if (c === 39 || c === 40 || c === 41)
@@ -1158,8 +1146,8 @@ function has_conquered_stronghold(loc) {
 }
 
 function is_friendly_stronghold_locale(loc) {
-	// TODO: use full "is friendly locale" check here, or just color of stronghold?
 	if (is_stronghold(loc) || has_friendly_castle(loc))
+		// TODO: use full "is friendly locale" check here, or just color of stronghold?
 		return is_friendly_locale(loc)
 	return false
 }
@@ -1226,15 +1214,6 @@ function is_friendly_locale(loc) {
 
 function is_not_friendly_locale(loc) {
 	return !is_friendly_locale(loc)
-}
-
-function for_each_friendly_arts_of_war(fn) {
-	if (game.active === P1)
-		for (let i = 0; i < 18; ++i)
-			fn(i)
-	else
-		for (let i = 21; i < 39; ++i)
-			fn(i)
 }
 
 function can_add_transport(who, what) {
@@ -1443,6 +1422,32 @@ function muster_vassal(lord, vassal) {
 	muster_vassal_forces(lord, vassal)
 }
 
+function setup_decks() {
+	for (let c = first_p1_card; c <= last_p1_card; ++c)
+		game.deck1.push(c)
+	for (let c = last_p1_card; c <= last_p1_card_no_event; ++c)
+		game.deck1.push(c)
+
+	for (let c = first_p2_card; c <= last_p2_card; ++c)
+		game.deck2.push(c)
+	for (let c = last_p2_card; c <= last_p2_card_no_event; ++c)
+		game.deck2.push(c)
+}
+
+function draw_card(deck) {
+	let i = random(deck.length)
+	let c = deck[i]
+	set_delete(deck, c)
+	return c
+}
+
+function discard_card(c) {
+	if (c >= first_p1_card && c <= last_p1_card_no_event)
+		set_add(game.deck1, c)
+	else if (c >= first_p2_card && c <= last_p2_card_no_event)
+		set_add(game.deck2, c)
+}
+
 exports.setup = function (seed, scenario, options) {
 	game = {
 		seed,
@@ -1456,6 +1461,8 @@ exports.setup = function (seed, scenario, options) {
 		state: "setup_lords",
 		stack: [],
 
+		deck1: [],
+		deck2: [],
 		hand1: [],
 		hand2: [],
 		plan1: [],
@@ -1540,6 +1547,8 @@ exports.setup = function (seed, scenario, options) {
 			setup_pleskau_quickstart()
 			break
 	}
+
+	setup_decks()
 
 	return game
 }
@@ -1995,6 +2004,7 @@ function deploy_global_capability(c) {
 
 function discard_global_capability(c) {
 	set_delete(game.capabilities, c)
+	discard_card(c)
 
 	if (c === AOW_TEUTONIC_WILLIAM_OF_MODENA) {
 		game.pieces.legate = LEGATE_INDISPOSED
@@ -2024,36 +2034,8 @@ function discard_global_capability(c) {
 // === LEVY: ARTS OF WAR (FIRST TURN) ===
 
 function draw_two_cards() {
-	let remove_no_event_cards = scenario_remove_no_event_cards.includes(game.scenario)
-
-	let deck = []
-	if (game.active === P1) {
-		for (let c = first_p1_card; c <= last_p1_card; ++c)
-			if (!is_card_in_use(c))
-				deck.push(c)
-		if (!remove_no_event_cards)
-			for (let c = last_p1_card; c <= last_p1_card_no_event; ++c)
-				if (!is_card_in_use(c))
-					deck.push(c)
-	} else {
-		for (let c = first_p2_card; c <= last_p2_card; ++c)
-			if (!is_card_in_use(c))
-				deck.push(c)
-		if (!remove_no_event_cards)
-			for (let c = last_p2_card; c <= last_p2_card_no_event; ++c)
-				if (!is_card_in_use(c))
-					deck.push(c)
-	}
-
-	let result = []
-	let i = random(deck.length)
-	result.push(deck[i])
-	array_remove(deck, i)
-
-	i = random(deck.length)
-	result.push(deck[i])
-	array_remove(deck, i)
-	return result
+	let deck = current_deck()
+	return [ draw_card(deck), draw_card(deck) ]
 }
 
 function goto_levy_arts_of_war_first() {
@@ -2109,6 +2091,7 @@ states.levy_arts_of_war_first = {
 	discard() {
 		push_undo()
 		let c = game.what.shift()
+		discard_card(c)
 		logi(`C${c} - discarded`)
 		resume_levy_arts_of_war_first()
 	},
@@ -2162,6 +2145,7 @@ states.levy_arts_of_war = {
 	},
 	play() {
 		let c = game.what.shift()
+		discard_card(c)
 		log(`Played E${c}`)
 		if (data.cards[c].when === "this_levy" || data.cards[c].when === "this_campaign")
 			set_add(game.events, c)
@@ -2178,6 +2162,7 @@ states.levy_arts_of_war = {
 	},
 	discard() {
 		let c = game.what.shift()
+		discard_card(c)
 		log(`Discarded E${c}.`)
 		resume_levy_arts_of_war()
 	},
@@ -2454,6 +2439,18 @@ function lord_has_capability(lord, card_or_list) {
 	return lord_has_capability_card(lord, card_or_list)
 }
 
+function lord_already_has_capability(lord, c) {
+	// compare capabilities by name...
+	let name = data.cards[c].capability
+	let c1 = get_lord_capability(lord, 0)
+	if (c1 >= 0 && data.cards[c1].capability === name)
+		return true
+	let c2 = get_lord_capability(lord, 1)
+	if (c2 >= 0 && data.cards[c2].capability === name)
+		return true
+	return false
+}
+
 function can_add_lord_capability(lord) {
 	if (get_lord_capability(lord, 0) < 0)
 		return true
@@ -2470,7 +2467,15 @@ function add_lord_capability(lord, c) {
 	throw new Error("no empty capability slots!")
 }
 
+function discard_lord_capability_n(lord, n) {
+	let c = get_lord_capability(lord, 0)
+	if (c !== NOTHING)
+		discard_card(c)
+	set_lord_capability(lord, 0, NOTHING)
+}
+
 function discard_lord_capability(lord, c) {
+	discard_card(c)
 	if (get_lord_capability(lord, 0) === c)
 		return set_lord_capability(lord, 0, NOTHING)
 	if (get_lord_capability(lord, 1) === c)
@@ -2480,24 +2485,24 @@ function discard_lord_capability(lord, c) {
 
 states.muster_capability = {
 	prompt() {
+		let deck = current_deck()
 		view.prompt = `Muster: Select a new capability for ${lord_name[game.who]}.`
-		view.show_arts_of_war = 1
-		for_each_friendly_arts_of_war((c) => {
-			if (!is_card_in_use(c)) {
-				if (!data.cards[c].lords || set_has(data.cards[c].lords, game.who)) {
-					if (data.cards[c].this_lord) {
-						if (!lord_has_capability(game.who, c))
-							gen_action_card(c)
-					} else {
-						if (can_deploy_global_capability(c))
-							gen_action_card(c)
-					}
+		view.show_arts_of_war = deck
+		for (let c of deck) {
+			if (is_no_event_card(c))
+				continue
+			if (!data.cards[c].lords || set_has(data.cards[c].lords, game.who)) {
+				if (data.cards[c].this_lord) {
+					if (!lord_already_has_capability(game.who, c))
+						gen_action_card(c)
+				} else {
+					if (can_deploy_global_capability(c))
+						gen_action_card(c)
 				}
 			}
-		})
+		}
 	},
 	card(c) {
-		push_undo()
 		logi(`Capability C${c}`)
 		if (data.cards[c].this_lord) {
 			if (can_add_lord_capability(game.who, c)) {
@@ -2553,8 +2558,15 @@ function end_levy_call_to_arms() {
 function goto_levy_discard_events() {
 
 	// Discard "This Levy" events from play.
-	if (game.events.length > 0)
-		game.events = game.events.filter((c) => data.cards[c].when !== "this_levy")
+	for (let i = 0; i < game.events.length; ) {
+		let c = game.events[i]
+		if (data.cards[c].when === "this_levy") {
+			array_remove(game.events, i)
+			discard_card(c)
+		} else {
+			++i
+		}
+	}
 
 	set_active(P1)
 	goto_capability_discard()
@@ -5111,13 +5123,17 @@ states.concede = {
 
 // === BATTLE: REPOSITION ===
 
-// 1 - If all SA routed, RD to reserve
-// 2 - If all empty front D, all RD to front
-// 3 - If any empty front D, reserve to front
-// 4 - If front center empty, side to center
-// 5 - If rear center empty, side to center
+// If all SA routed, RD to reserve
+// If all empty front D, all RD to front
+// If all empty front A, all SA to A, RD to reserve
 
-// RULES: Repositioning of SA/DR units - advance / center
+// If any empty front D, reserve to D
+// If any empty front A, reserve to A
+// If any empty RD, reserve to RD
+// If any empty A, reserve to A
+
+// If front center empty, side to center
+// If rear center empty, side to center
 
 function goto_reposition() {
 	log("TODO reposition")
@@ -5140,7 +5156,7 @@ const STEP_ARRAY = [
 
 // interrupt for enemy to select flank to attack when center has hits left after center is routed
 
-// RULES: Order of applying mixed archery hits?
+// TODO: Order of applying mixed archery hits?
 
 /*
 	strike steps:
@@ -6565,7 +6581,7 @@ function disband_lord(lord, permanently = false) {
 		set_lord_service(lord, NEVER)
 	} else {
 		log(`Disbanded L${lord}.`)
-		if (is_levy_phase()
+		if (is_levy_phase())
 			set_lord_locale(lord, CALENDAR + turn + data.lords[lord].service)
 		else
 			set_lord_locale(lord, CALENDAR + turn + data.lords[lord].service + 1)
@@ -6577,8 +6593,8 @@ function disband_lord(lord, permanently = false) {
 	// Smerdi - serfs go back to card
 	game.pieces.smerdi += get_lord_forces(lord, SERFS)
 
-	set_lord_capability(lord, 0, NOTHING)
-	set_lord_capability(lord, 1, NOTHING)
+	discard_lord_capability_n(lord, 0)
+	discard_lord_capability_n(lord, 1)
 	game.pieces.assets[lord] = 0
 	game.pieces.forces[lord] = 0
 	game.pieces.routed[lord] = 0
@@ -7017,8 +7033,15 @@ function goto_reset() {
 	}
 
 	// Discard "This Campaign" events from play.
-	if (game.events.length > 0)
-		game.events = game.events.filter((c) => data.cards[c].when !== "this_campaign")
+	for (let i = 0; i < game.events.length; ) {
+		let c = game.events[i]
+		if (data.cards[c].when === "this_campaign") {
+			array_remove(game.events, i)
+			discard_card(c)
+		} else {
+			++i
+		}
+	}
 
 	goto_advance_campaign()
 }
