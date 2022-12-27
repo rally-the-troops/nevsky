@@ -49,6 +49,9 @@ const MEN_AT_ARMS = 4
 const MILITIA = 5
 const SERFS = 6
 
+const force_action_name = [ "knights", "sergeants", "light_horse", "asiatic_horse", "men_at_arms", "militia", "serfs" ]
+const routed_force_action_name = [ "routed_knights", "routed_sergeants", "routed_light_horse", "routed_asiatic_horse", "routed_men_at_arms", "routed_militia", "routed_serfs" ]
+
 // asset types
 const PROV = 0
 const COIN = 1
@@ -68,6 +71,26 @@ const on_click_asset = [
 	(evt) => evt.button === 0 && send_action('sled', evt.target.my_id),
 	(evt) => evt.button === 0 && send_action('boat', evt.target.my_id),
 	(evt) => evt.button === 0 && send_action('ship', evt.target.my_id),
+]
+
+const on_click_force = [
+	(evt) => evt.button === 0 && send_action('knights', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('sergeants', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('light_horse', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('asiatic_horse', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('men_at_arms', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('militia', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('serfs', evt.target.my_id),
+]
+
+const on_click_routed_force = [
+	(evt) => evt.button === 0 && send_action('routed_knights', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('routed_sergeants', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('routed_light_horse', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('routed_asiatic_horse', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('routed_men_at_arms', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('routed_militia', evt.target.my_id),
+	(evt) => evt.button === 0 && send_action('routed_serfs', evt.target.my_id),
 ]
 
 function on_click_veche_coin(evt) {
@@ -176,6 +199,14 @@ function is_battle_lord_action(lord) {
 
 function is_battle_array_action(ix) {
 	return !!(view.actions && view.actions.array && set_has(view.actions.array, ix))
+}
+
+function is_routed_force_action(lord, action) {
+	return !!(view.actions && view.actions[action] && set_has(view.actions[action], lord))
+}
+
+function is_force_action(lord, action) {
+	return !!(view.actions && view.actions[action] && set_has(view.actions[action], lord))
 }
 
 function is_asset_action(lord, action) {
@@ -903,9 +934,19 @@ function layout_calendar() {
 	}
 }
 
-function add_force(parent, type) {
+function add_force(parent, type, lord, routed) {
 	// TODO: reuse pool of elements?
-	build_div(parent, "unit " + force_type_name[type], type)
+	if (routed) {
+		if (is_routed_force_action(lord, routed_force_action_name[type]))
+			build_div(parent, "action unit " + force_type_name[type], lord, on_click_routed_force[type])
+		else
+			build_div(parent, "unit " + force_type_name[type], lord, on_click_routed_force[type])
+	} else {
+		if (is_force_action(lord, force_action_name[type]))
+			build_div(parent, "action unit " + force_type_name[type], lord, on_click_force[type])
+		else
+			build_div(parent, "unit " + force_type_name[type], lord, on_click_force[type])
+	}
 }
 
 function add_asset(parent, type, n, lord) {
@@ -928,12 +969,12 @@ function add_veche_vp(parent) {
 	build_div(parent, "marker square conquered russian")
 }
 
-function update_forces(parent, forces) {
+function update_forces(parent, forces, lord_ix, routed) {
 	parent.replaceChildren()
 	for (let i = 0; i < force_type_count; ++i) {
 		let n = pack4_get(forces, i)
 		for (let k = 0; k < n; ++k) {
-			add_force(parent, i)
+			add_force(parent, i, lord_ix, routed)
 		}
 	}
 }
@@ -984,8 +1025,8 @@ function update_vassals(ready_parent, mustered_parent, lord_ix) {
 function update_lord_mat(ix) {
 	update_assets(ix, ui.assets[ix], view.pieces.assets[ix])
 	update_vassals(ui.ready_vassals[ix], ui.mustered_vassals[ix], ix)
-	update_forces(ui.forces[ix], view.pieces.forces[ix])
-	update_forces(ui.routed[ix], view.pieces.routed[ix])
+	update_forces(ui.forces[ix], view.pieces.forces[ix], ix, false)
+	update_forces(ui.routed[ix], view.pieces.routed[ix], ix, true)
 }
 
 function is_lord_mat_selected(ix) {

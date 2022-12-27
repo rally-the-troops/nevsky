@@ -83,6 +83,10 @@ const MEN_AT_ARMS = 4
 const MILITIA = 5
 const SERFS = 6
 
+const FORCE_TYPE_NAME = [ "knights", "sergeants", "light horse", "asiatic horse", "men-at-arms", "militia", "serfs" ]
+const FORCE_PROTECTION = [ 4, 3, 1, 1, 3, 1, 0 ]
+const FORCE_EVADE = [ 0, 0, 0, 3, 0, 0, 0 ]
+
 // asset types
 const PROV = 0
 const COIN = 1
@@ -92,7 +96,7 @@ const SLED = 4
 const BOAT = 5
 const SHIP = 6
 
-const asset_type_name = [ "prov", "coin", "loot", "cart", "sled", "boat", "ship" ]
+const ASSET_TYPE_NAME = [ "prov", "coin", "loot", "cart", "sled", "boat", "ship" ]
 
 // battle array
 const A1 = 0 // attackers
@@ -3828,7 +3832,7 @@ function list_spoils() {
 	for (let type = 0; type < 7; ++type) {
 		let n = get_spoils(type)
 		if (n > 0)
-			list.push(`${n} ${asset_type_name[type]}`)
+			list.push(`${n} ${ASSET_TYPE_NAME[type]}`)
 	}
 	if (list.length > 0)
 		return list.join(", ")
@@ -5216,18 +5220,17 @@ function has_rear_strike_choice() {
 	return GROUPS[s][1][r] !== 0
 }
 
-
-function goto_start_strike() {
-	game.battle.step = 0
-	goto_strike()
+function format_group(g) {
+	return g.map(p=>lord_name[game.battle.array[p]]).join(", ")
 }
 
-function goto_next_strike() {
-	game.battle.step++
-	if (game.battle.step >= 6)
-		goto_new_round()
+function format_hits() {
+	if (game.battle.h2 > 0 && game.battle.h1 > 0)
+		return `${game.battle.h2} crossbow hits and ${game.battle.h1} hits`
+	else if (game.battle.h2 > 0)
+		return `${game.battle.h2} crossbow hits`
 	else
-		goto_strike()
+		return `${game.battle.h1} hits`
 }
 
 function debug_battle_array(f, r) {
@@ -5312,13 +5315,27 @@ function count_storm_hits(ix, lord, step) {
 	}
 }
 
+function goto_start_strike() {
+	game.battle.step = 0
+	goto_strike()
+}
+
+function goto_next_strike() {
+	game.battle.step++
+	if (game.battle.step >= 6)
+		goto_new_round()
+	else
+		goto_strike()
+}
+
 function goto_strike() {
 	let s = game.battle.step & 1
-
 	if (s)
 		set_active_attacker()
 	else
 		set_active_defender()
+
+	log_h4(battle_step_name[game.battle.step])
 
 	// TODO: garrison hits
 	game.battle.ah1 = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
@@ -5350,6 +5367,7 @@ function goto_select_strike_group() {
 	if (game.battle.groups.length === 0)
 		goto_next_strike()
 	else
+		// TODO: select if 1
 		game.state = "select_strike_group"
 }
 
@@ -5398,51 +5416,152 @@ function select_strike_group(i) {
 		game.battle.h2 = (game.battle.h2 >> 1)
 	}
 
+	log(`${format_group(game.battle.sg)} struck ${format_group(game.battle.hg)} for ${format_hits()}`)
+
 	set_active_enemy()
-	goto_select_hit_group()
+	goto_select_hit_lord()
 	return
 }
 
-function goto_select_hit_group() {
-	if (game.battle.hg.length > 0) {
-		game.state = "select_hit_group"
+function goto_select_hit_lord() {
+	if (game.battle.hg.length > 1) {
+		game.state = "select_hit_lord"
 	} else {
-		game.who = game.battle.array[game.battle.hg[0]]
-		game.state = "hit_lord"
+		select_hit_lord(game.battle.array[game.battle.hg[0]])
 	}
 }
 
-function format_hits() {
-	if (game.battle.h2 > 0 && game.battle.h1 > 0)
-		return `${game.battle.h2} crossbow hits and ${game.battle.h1} hits`
-	else if (game.battle.h2 > 0)
-		return `${game.battle.h2} crossbow hits`
-	else
-		return `${game.battle.h1} hits`
-}
-
-states.select_hit_group = {
+states.select_hit_lord = {
 	prompt() {
 		view.prompt = `${battle_step_name[game.battle.step]}: Select Lord to take ${format_hits()}.`
 		for (let pos of game.battle.hg)
 			gen_action_battle_lord(game.battle.array[pos])
 	},
 	battle_lord(lord) {
-		game.who = lord
-		game.state = "hit_lord"
+		select_hit_lord(lord)
 	},
+}
+
+function select_hit_lord(lord) {
+	// TODO: walls
+	game.who = lord
+	game.state = "hit_lord"
+}
+
+function has_lord_routed(lord) {
+	return game.pieces.forces[lord] === 0
+}
+
+function rout_lord(lord) {
+	log(`L${lord} routed!`)
+	for (let p = 0; p < 12; ++p)
+		if (game.battle.array[p] === lord)
+			game.battle.array[p] = NOBODY
+	set_add(game.battle.routed, lord)
+}
+
+function resume_hit_lord() {
+	if ((game.battle.h1 === 0 && game.battle.h2 === 0) || has_lord_routed(game.who))
+		end_hit_lord()
+}
+
+function rout_unit(lord, type) {
+	add_lord_forces(lord, type, -1)
+	add_lord_routed_forces(lord, type, 1)
+}
+
+function action_hit_lord(lord, type) {
+	let protection = FORCE_PROTECTION[type]
+	let evade = FORCE_EVADE[type]
+
+	// TODO: manual choice
+	let ap = (game.battle.h2 > 0) ? 2 : 0
+
+	if (evade > 0 && !game.battle.storm) {
+		let die = roll_die()
+		if (die <= evade) {
+			log(`${FORCE_TYPE_NAME[type]} evade ${die} <= ${evade}`)
+		} else {
+			log(`${FORCE_TYPE_NAME[type]} evade ${die} > ${evade}`)
+			rout_unit(lord, type)
+		}
+	} else if (protection > 0) {
+		let die = roll_die()
+		if (die <= protection - ap) {
+			log(`${FORCE_TYPE_NAME[type]} protection ${die} <= ${protection - ap}`)
+		} else {
+			log(`${FORCE_TYPE_NAME[type]} protection ${die} > ${protection - ap}`)
+			rout_unit(lord, type)
+		}
+	} else {
+		log(`${FORCE_TYPE_NAME[type]} unprotected`)
+		rout_unit(lord, type)
+	}
+
+	// TODO: manual choice
+	if (game.battle.h2)
+		game.battle.h2--
+	else
+		game.battle.h1--
+
+	if (has_lord_routed(lord)) {
+		rout_lord(lord)
+		// TODO: remaining hits!
+	}
+
+	resume_hit_lord()
 }
 
 states.hit_lord = {
 	prompt() {
-		view.prompt = `${battle_step_name[game.battle.step]}: Assign ${format_hits()}.`
-		view.actions.pass = 1
+		view.prompt = `${battle_step_name[game.battle.step]}: Assign ${format_hits()} to units.`
+		view.who = game.who
+
+		// TODO: h1 or h2
+
+		let lord = game.who
+		if (get_lord_forces(lord, KNIGHTS) > 0)
+			gen_action_knights(lord)
+		if (get_lord_forces(lord, SERGEANTS) > 0)
+			gen_action_sergeants(lord)
+		if (get_lord_forces(lord, LIGHT_HORSE) > 0)
+			gen_action_light_horse(lord)
+		if (get_lord_forces(lord, ASIATIC_HORSE) > 0)
+			gen_action_asiatic_horse(lord)
+		if (get_lord_forces(lord, MEN_AT_ARMS) > 0)
+			gen_action_men_at_arms(lord)
+		if (get_lord_forces(lord, MILITIA) > 0)
+			gen_action_militia(lord)
+		if (get_lord_forces(lord, SERFS) > 0)
+			gen_action_serfs(lord)
 	},
-	pass() {
-		game.who = NOBODY
-		set_active_enemy()
-		goto_select_strike_group()
+	knights(lord) {
+		action_hit_lord(lord, KNIGHTS)
 	},
+	sergeants(lord) {
+		action_hit_lord(lord, SERGEANTS)
+	},
+	light_horse(lord) {
+		action_hit_lord(lord, LIGHT_HORSE)
+	},
+	asiatic_horse(lord) {
+		action_hit_lord(lord, ASIATIC_HORSE)
+	},
+	men_at_arms(lord) {
+		action_hit_lord(lord, MEN_AT_ARMS)
+	},
+	militia(lord) {
+		action_hit_lord(lord, MILITIA)
+	},
+	serfs(lord) {
+		action_hit_lord(lord, SERFS)
+	},
+}
+
+function end_hit_lord() {
+	game.who = NOBODY
+	set_active_enemy()
+	goto_select_strike_group()
 }
 
 // === BATTLE: NEW ROUND ===
@@ -6568,7 +6687,7 @@ function prompt_wastage(lord) {
 
 function action_wastage(lord, type) {
 	push_undo()
-	log(`L${lord} discarded ${asset_type_name[type]}.`)
+	log(`L${lord} discarded ${ASSET_TYPE_NAME[type]}.`)
 	set_lord_moved(lord, 0)
 	add_lord_assets(lord, type, -1)
 }
@@ -6872,6 +6991,62 @@ function gen_action_boat(lord) {
 
 function gen_action_ship(lord) {
 	gen_action("ship", lord)
+}
+
+function gen_action_knights(lord) {
+	gen_action("knights", lord)
+}
+
+function gen_action_sergeants(lord) {
+	gen_action("sergeants", lord)
+}
+
+function gen_action_light_horse(lord) {
+	gen_action("light_horse", lord)
+}
+
+function gen_action_asiatic_horse(lord) {
+	gen_action("asiatic_horse", lord)
+}
+
+function gen_action_men_at_arms(lord) {
+	gen_action("men_at_arms", lord)
+}
+
+function gen_action_militia(lord) {
+	gen_action("militia", lord)
+}
+
+function gen_action_serfs(lord) {
+	gen_action("serfs", lord)
+}
+
+function gen_action_routed_knights(lord) {
+	gen_action("routed_knights", lord)
+}
+
+function gen_action_routed_sergeants(lord) {
+	gen_action("routed_sergeants", lord)
+}
+
+function gen_action_routed_light_horse(lord) {
+	gen_action("routed_light_horse", lord)
+}
+
+function gen_action_routed_asiatic_horse(lord) {
+	gen_action("routed_asiatic_horse", lord)
+}
+
+function gen_action_routed_men_at_arms(lord) {
+	gen_action("routed_men_at_arms", lord)
+}
+
+function gen_action_routed_militia(lord) {
+	gen_action("routed_militia", lord)
+}
+
+function gen_action_routed_serfs(lord) {
+	gen_action("routed_serfs", lord)
 }
 
 exports.view = function (state, current) {
