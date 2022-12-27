@@ -484,23 +484,42 @@ const ui = {
 	turn: document.getElementById("turn"),
 	vp1: document.getElementById("vp1"),
 	vp2: document.getElementById("vp2"),
-	battle_attacker_reserves: document.getElementById("array_attacker_reserves"),
-	battle_defender_reserves: document.getElementById("array_defender_reserves"),
-	battle_garrison: document.getElementById("array_garrison"),
-	battle: document.getElementById("battle"),
-	battle_array: [
-		document.getElementById("array_a1"),
-		document.getElementById("array_a2"),
-		document.getElementById("array_a3"),
-		document.getElementById("array_d1"),
-		document.getElementById("array_d2"),
-		document.getElementById("array_d3"),
-		document.getElementById("array_rd1"),
-		document.getElementById("array_rd2"),
-		document.getElementById("array_rd3"),
-		document.getElementById("array_sa1"),
-		document.getElementById("array_sa2"),
-		document.getElementById("array_sa3"),
+	court1: document.getElementById("court1"),
+	court2: document.getElementById("court2"),
+	battle_attacker_reserves: document.getElementById("mat_attacker_reserves"),
+	battle_defender_reserves: document.getElementById("mat_defender_reserves"),
+	battle_garrison: document.getElementById("mat_garrison"),
+	battle_panel: document.getElementById("battle_panel"),
+	battle_header: document.getElementById("battle_header"),
+	battle_mat: document.getElementById("battle_mat"),
+	battle_mat_array: [
+		document.getElementById("mat_a1"),
+		document.getElementById("mat_a2"),
+		document.getElementById("mat_a3"),
+		document.getElementById("mat_d1"),
+		document.getElementById("mat_d2"),
+		document.getElementById("mat_d3"),
+		document.getElementById("mat_rd1"),
+		document.getElementById("mat_rd2"),
+		document.getElementById("mat_rd3"),
+		document.getElementById("mat_sa1"),
+		document.getElementById("mat_sa2"),
+		document.getElementById("mat_sa3"),
+	],
+	battle_grid: document.getElementById("battle_grid"),
+	battle_grid_array: [
+		document.getElementById("grid_a1"),
+		document.getElementById("grid_a2"),
+		document.getElementById("grid_a3"),
+		document.getElementById("grid_d1"),
+		document.getElementById("grid_d2"),
+		document.getElementById("grid_d3"),
+		document.getElementById("grid_rd1"),
+		document.getElementById("grid_rd2"),
+		document.getElementById("grid_rd3"),
+		document.getElementById("grid_sa1"),
+		document.getElementById("grid_sa2"),
+		document.getElementById("grid_sa3"),
 	],
 }
 
@@ -1031,7 +1050,6 @@ function update_lord(ix) {
 	if (locale < 0) {
 		ui.lord_cylinder[ix].classList.add("hide")
 		ui.lord_service[ix].classList.add("hide")
-		ui.lord_mat[ix].classList.add("hide")
 		ui.lord_mat[ix].classList.remove("action")
 		return
 	}
@@ -1054,13 +1072,11 @@ function update_lord(ix) {
 
 		ui.lord_cylinder[ix].classList.remove("hide")
 		ui.lord_service[ix].classList.remove("hide")
-		ui.lord_mat[ix].classList.remove("hide")
 		update_lord_mat(ix)
 	} else {
 		calendar_layout_cylinder[locale - 100].push(ui.lord_cylinder[ix])
 		ui.lord_cylinder[ix].classList.remove("hide")
 		ui.lord_service[ix].classList.add("hide")
-		ui.lord_mat[ix].classList.add("hide")
 	}
 	ui.lord_buttons[ix].classList.toggle("action", is_lord_action(ix))
 	ui.lord_cylinder[ix].classList.toggle("action", is_lord_action(ix))
@@ -1298,16 +1314,40 @@ function update_battle() {
 
 	for (let i = 0; i < array.length; ++i) {
 		let lord = array[i]
-		ui.battle_array[i].replaceChildren()
+		ui.battle_mat_array[i].replaceChildren()
 		if (lord >= 0)
-			ui.battle_array[i].appendChild(ui.battle_cylinder[lord])
-		ui.battle_array[i].classList.toggle("action", is_battle_array_action(i))
+			ui.battle_mat_array[i].appendChild(ui.battle_cylinder[lord])
+		ui.battle_mat_array[i].classList.toggle("action", is_battle_array_action(i))
+
+		ui.battle_grid_array[i].replaceChildren()
+		if (lord >= 0)
+			ui.battle_grid_array[i].appendChild(ui.lord_mat[lord])
 	}
 
 	for (let lord = 0; lord < 12; ++lord) {
 		ui.battle_cylinder[lord].classList.toggle("action", is_battle_lord_action(lord))
 		ui.battle_cylinder[lord].classList.toggle("selected", view.who === lord)
 	}
+}
+
+function is_lord_in_grid(lord) {
+	if (view.battle)
+		for (let i = 0; i < 12; ++i)
+			if (view.battle.array[i] === lord)
+				return true
+	return false
+}
+
+function update_court() {
+console.log("update court!")
+	ui.court1.replaceChildren()
+	ui.court2.replaceChildren()
+	for (let lord = 0; lord < 6; ++lord)
+		if (!is_lord_in_grid(lord) && is_lord_on_map(lord))
+			ui.court1.appendChild(ui.lord_mat[lord])
+	for (let lord = 6; lord < 12; ++lord)
+		if (!is_lord_in_grid(lord) && is_lord_on_map(lord))
+			ui.court2.appendChild(ui.lord_mat[lord])
 }
 
 function on_update() {
@@ -1325,7 +1365,6 @@ function on_update() {
 		if (view.pieces.locale[ix] < 0) {
 			ui.lord_cylinder[ix].classList.add("hide")
 			ui.lord_service[ix].classList.add("hide")
-			ui.lord_mat[ix].classList.add("hide")
 		} else {
 			ui.lord_cylinder[ix].classList.remove("hide")
 			update_lord(ix)
@@ -1383,14 +1422,21 @@ function on_update() {
 	ui.veche.classList.toggle("action", is_veche_action())
 
 	if (view.battle) {
-		if (view.battle.attacker === player)
-			ui.battle.className = "attacker"
-		else
-			ui.battle.className = "defender"
+		ui.battle_panel.classList.remove("hide")
+		ui.battle_header.textContent = "~ Battle at " + data.locales[view.battle.where].name + " ~"
+		if (view.battle.attacker === player) {
+			ui.battle_mat.className = "attacker"
+			ui.battle_grid.className = "attacker"
+		} else {
+			ui.battle_mat.className = "defender"
+			ui.battle_grid.className = "defender"
+		}
 		update_battle()
 	} else {
-		ui.battle.className = "hide"
+		ui.battle_panel.classList.add("hide")
 	}
+
+	update_court()
 
 	// Misc
 	action_button("left", "Left")
@@ -1472,13 +1518,13 @@ function build_div(parent, className, id, onclick) {
 		e.my_id = id
 		e.addEventListener("mousedown", onclick)
 	}
-	parent.appendChild(e)
+	if (parent)
+		parent.appendChild(e)
 	return e
 }
 
 function build_lord_mat(lord, ix, side, name) {
-	let parent = document.getElementById(side === 'teutonic' ? "court1" : "court2")
-	let mat = build_div(parent, `mat ${side} ${name} hide`)
+	let mat = build_div(null, `mat ${side} ${name}`)
 	let bg = build_div(mat, "background")
 	ui.forces[ix] = build_div(bg, "forces")
 	ui.routed[ix] = build_div(bg, "routed")
@@ -1696,9 +1742,9 @@ function build_map() {
 
 	build_plan()
 
-	for (let i = 0; i < ui.battle_array.length; ++i) {
-		ui.battle_array[i].my_id = i
-		ui.battle_array[i].addEventListener("mousedown", on_click_array)
+	for (let i = 0; i < 12; ++i) {
+		ui.battle_mat_array[i].my_id = i
+		ui.battle_mat_array[i].addEventListener("mousedown", on_click_array)
 	}
 
 	for (let c = 0; c < 21; ++c)

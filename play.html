@@ -55,13 +55,13 @@ body.Russians #court2 { grid-row: 2; }
 /* PANELS */
 
 .panel {
-	user-select: none;
 	max-width: 1275px;
 	margin: 36px auto;
 	//box-shadow: 0px 0px 4px #0008;
 }
 
 .panel_header {
+	user-select: none;
 	font-weight: bold;
 	text-align: center;
 	padding: 3px 1em;
@@ -127,11 +127,62 @@ body.Teutons #plan_actions .russian { display: none }
 	background-size: 93px 130px;
 }
 
-/* BATTLE */
+/* BATTLE GRID WITH LORD MATS */
 
-#battle {
+#battle_panel {
+	background-color: #555;
+}
+
+#battle_header {
+	background-color: #444;
+	color: white;
+}
+
+#battle_grid {
+	display: grid;
+	width: 1200px;
+	gap: 36px;
+	grid-template-columns: 376px 376px 376px;
+	margin: 0 auto;
+	padding-bottom: 36px;
+}
+
+#grid_rd1:empty, #grid_rd2:empty, #grid_rd3:empty, #grid_sa1:empty, #grid_sa2:empty, #grid_sa3:empty { display: none; }
+
+#battle_header { grid-row: 1; grid-column: 1 / 4; }
+
+#battle_grid.defender #grid_a1 { grid-row: 2; grid-column: 1; }
+#battle_grid.defender #grid_a2 { grid-row: 2; grid-column: 2; }
+#battle_grid.defender #grid_a3 { grid-row: 2; grid-column: 3; }
+#battle_grid.defender #grid_bm { grid-row: 3; grid-column: 2; }
+#battle_grid.defender #grid_d1 { grid-row: 4; grid-column: 1; }
+#battle_grid.defender #grid_d2 { grid-row: 4; grid-column: 2; }
+#battle_grid.defender #grid_d3 { grid-row: 4; grid-column: 3; }
+#battle_grid.defender #grid_rd1 { grid-row: 5; grid-column: 1; }
+#battle_grid.defender #grid_rd2 { grid-row: 5; grid-column: 2; }
+#battle_grid.defender #grid_rd3 { grid-row: 5; grid-column: 3; }
+#battle_grid.defender #grid_sa1 { grid-row: 6; grid-column: 1; }
+#battle_grid.defender #grid_sa2 { grid-row: 6; grid-column: 2; }
+#battle_grid.defender #grid_sa3 { grid-row: 6; grid-column: 3; }
+
+#battle_grid.attacker #grid_a1 { grid-row: 6; grid-column: 3; }
+#battle_grid.attacker #grid_a2 { grid-row: 6; grid-column: 2; }
+#battle_grid.attacker #grid_a3 { grid-row: 6; grid-column: 1; }
+#battle_grid.attacker #grid_bm { grid-row: 5; grid-column: 2; }
+#battle_grid.attacker #grid_d1 { grid-row: 4; grid-column: 3; }
+#battle_grid.attacker #grid_d2 { grid-row: 4; grid-column: 2; }
+#battle_grid.attacker #grid_d3 { grid-row: 4; grid-column: 1; }
+#battle_grid.attacker #grid_rd1 { grid-row: 3; grid-column: 3; }
+#battle_grid.attacker #grid_rd2 { grid-row: 3; grid-column: 2; }
+#battle_grid.attacker #grid_rd3 { grid-row: 3; grid-column: 1; }
+#battle_grid.attacker #grid_sa1 { grid-row: 2; grid-column: 3; }
+#battle_grid.attacker #grid_sa2 { grid-row: 2; grid-column: 2; }
+#battle_grid.attacker #grid_sa3 { grid-row: 2; grid-column: 1; }
+
+/* BATTLE MAT WITH LORD CYLINDERS */
+
+#battle_mat {
 	position: relative;
-	margin: 24px auto;
 	width: 372px;
 	height: 372px;
 	background-size: 360px 360px;
@@ -143,42 +194,42 @@ body.Teutons #plan_actions .russian { display: none }
 	border-style: solid;
 }
 
-#battle.defender { background-image: url(images/mat_battle_defender.png); }
-#battle.attacker { background-image: url(images/mat_battle_attacker.png); }
+#battle_mat.defender { background-image: url(images/mat_battle_defender.png); }
+#battle_mat.attacker { background-image: url(images/mat_battle_attacker.png); }
 
-#battle.defender #array_garrison { top: 172px; left: 8px; }
-#battle.defender #array_attacker_reserves { top: 4px; left: 8px; }
-#battle.defender #array_defender_reserves { bottom: 4px; left: 8px; }
-#battle.defender #array_a1	{ top: 96px; left: 32px; }
-#battle.defender #array_a2	{ top: 96px; left: 162px; }
-#battle.defender #array_a3	{ top: 96px; right: 32px; }
-#battle.defender #array_d1	{ top: 220px; left: 32px; }
-#battle.defender #array_d2	{ top: 220px; left: 162px; }
-#battle.defender #array_d3	{ top: 220px; right: 32px; }
-#battle.defender #array_rd1	{ bottom: 60px; left: 4px; }
-#battle.defender #array_rd2	{ bottom: 60px; right: 200px; }
-#battle.defender #array_rd3	{ bottom: 60px; right: 4px; }
-#battle.defender #array_sa1		{ bottom: 48px; left: 64px; }
-#battle.defender #array_sa2		{ bottom: 48px; left: 200px; }
-#battle.defender #array_sa3		{ bottom: 48px; right: 64px; }
+#battle_mat.defender #mat_garrison { top: 172px; left: 8px; }
+#battle_mat.defender #mat_attacker_reserves { top: 4px; left: 8px; }
+#battle_mat.defender #mat_defender_reserves { bottom: 4px; left: 8px; }
+#battle_mat.defender #mat_a1	{ top: 96px; left: 32px; }
+#battle_mat.defender #mat_a2	{ top: 96px; left: 162px; }
+#battle_mat.defender #mat_a3	{ top: 96px; right: 32px; }
+#battle_mat.defender #mat_d1	{ top: 220px; left: 32px; }
+#battle_mat.defender #mat_d2	{ top: 220px; left: 162px; }
+#battle_mat.defender #mat_d3	{ top: 220px; right: 32px; }
+#battle_mat.defender #mat_rd1	{ bottom: 60px; left: 4px; }
+#battle_mat.defender #mat_rd2	{ bottom: 60px; right: 200px; }
+#battle_mat.defender #mat_rd3	{ bottom: 60px; right: 4px; }
+#battle_mat.defender #mat_sa1		{ bottom: 48px; left: 64px; }
+#battle_mat.defender #mat_sa2		{ bottom: 48px; left: 200px; }
+#battle_mat.defender #mat_sa3		{ bottom: 48px; right: 64px; }
 
-#battle.attacker #array_garrison { bottom: 172px; left: 8px; }
-#battle.attacker #array_attacker_reserves { bottom: 4px; left: 8px; }
-#battle.attacker #array_defender_reserves { top: 4px; left: 8px; }
-#battle.attacker #array_a1	{ bottom: 96px; right: 32px; }
-#battle.attacker #array_a2	{ bottom: 96px; left: 162px; }
-#battle.attacker #array_a3	{ bottom: 96px; left: 32px; }
-#battle.attacker #array_d1	{ bottom: 220px; right: 32px; }
-#battle.attacker #array_d2	{ bottom: 220px; left: 162px; }
-#battle.attacker #array_d3	{ bottom: 220px; left: 32px; }
-#battle.attacker #array_rd1	{ top: 60px; right: 4px; }
-#battle.attacker #array_rd2	{ top: 60px; left: 200px; }
-#battle.attacker #array_rd3	{ top: 60px; left: 4px; }
-#battle.attacker #array_sa1		{ top: 48px; right: 64px; }
-#battle.attacker #array_sa2		{ top: 48px; right: 200px; }
-#battle.attacker #array_sa3		{ top: 48px; left: 64px; }
+#battle_mat.attacker #mat_garrison { bottom: 172px; left: 8px; }
+#battle_mat.attacker #mat_attacker_reserves { bottom: 4px; left: 8px; }
+#battle_mat.attacker #mat_defender_reserves { top: 4px; left: 8px; }
+#battle_mat.attacker #mat_a1	{ bottom: 96px; right: 32px; }
+#battle_mat.attacker #mat_a2	{ bottom: 96px; left: 162px; }
+#battle_mat.attacker #mat_a3	{ bottom: 96px; left: 32px; }
+#battle_mat.attacker #mat_d1	{ bottom: 220px; right: 32px; }
+#battle_mat.attacker #mat_d2	{ bottom: 220px; left: 162px; }
+#battle_mat.attacker #mat_d3	{ bottom: 220px; left: 32px; }
+#battle_mat.attacker #mat_rd1	{ top: 60px; right: 4px; }
+#battle_mat.attacker #mat_rd2	{ top: 60px; left: 200px; }
+#battle_mat.attacker #mat_rd3	{ top: 60px; left: 4px; }
+#battle_mat.attacker #mat_sa1		{ top: 48px; right: 64px; }
+#battle_mat.attacker #mat_sa2		{ top: 48px; right: 200px; }
+#battle_mat.attacker #mat_sa3		{ top: 48px; left: 64px; }
 
-#battle > div {
+#battle_mat > div {
 	position: absolute;
 	display: flex;
 	flex-wrap: wrap;
@@ -186,34 +237,34 @@ body.Teutons #plan_actions .russian { display: none }
 	align-items: center;
 }
 
-#battle.defender #array_attacker_reserves { justify-content: end; }
-#battle.defender #array_defender_reserves { justify-content: start; }
-#battle.attacker #array_attacker_reserves { justify-content: start; }
-#battle.attacker #array_defender_reserves { justify-content: end; }
+#battle_mat.defender #mat_attacker_reserves { justify-content: end; }
+#battle_mat.defender #mat_defender_reserves { justify-content: start; }
+#battle_mat.attacker #mat_attacker_reserves { justify-content: start; }
+#battle_mat.attacker #mat_defender_reserves { justify-content: end; }
 
-#battle .reserves {
+#battle_mat .reserves {
 	width: 356px;
 	height: 48px;
 	gap: 8px;
 }
 
-#battle .garrison {
+#battle_mat .garrison {
 	width: 356px;
 	height: 48px;
 	gap: 2px;
 }
 
-#battle .array {
+#battle_mat .mat_array {
 	width: 48px;
 	height: 48px;
 }
 
-#battle .array.action {
+#battle_mat .mat_array.action {
 	border-radius: 50%;
 	box-shadow: 0 0 0 3px white;
 }
 
-#battle .cylinder, #battle .unit {
+#battle_mat .cylinder, #battle_mat .unit {
 	position: static
 }
 
@@ -964,7 +1015,7 @@ body.shift .mustered_vassals {
 /* BACKGROUND COLORS AND BORDERS */
 /* :r !node tools/colors.mjs */
 
-#battle { background-color: #d1c07e; border-color: #f2e19d #b1a05f #b1a05f #f2e19d; box-shadow: 0 0 0 1px #584800, 1px 2px 4px #0008; }
+#battle_mat { background-color: #d1c07e; border-color: #f2e19d #b1a05f #b1a05f #f2e19d; box-shadow: 0 0 0 1px #584800, 1px 2px 4px #0008; }
 .mat .background { background-color: #d1c07e; border-color: #f2e19d #b1a05f #b1a05f #f2e19d; box-shadow: 0 0 0 1px #584800, 1px 2px 4px #0008; }
 .card.teutonic { background-color: #e1e6e8; border-color: #fbffff #c1c5c7 #c1c5c7 #fbffff; box-shadow: 0 0 0 1px #666a6c, 1px 2px 4px #0008; }
 .card.russian { background-color: #e1d6c1; border-color: #fff7e1 #c1b6a1 #c1b6a1 #fff7e1; box-shadow: 0 0 0 1px #665c4a, 1px 2px 4px #0008; }
@@ -1234,27 +1285,46 @@ body.shift .mustered_vassals {
 <div id="plan_actions"></div>
 </div>
 
+<div id="battle_panel" class="panel">
+<div id="battle_header" class="panel_header">Battle</div>
+<div id="battle_grid">
+	<div class="grid_array" id="grid_a1"></div>
+	<div class="grid_array" id="grid_a2"></div>
+	<div class="grid_array" id="grid_a3"></div>
+	<div class="grid_array" id="grid_bm">
+		<div id="battle_mat" class="defender hide">
+			<div class="garrison" id="mat_garrison"></div>
+			<div class="reserves" id="mat_attacker_reserves"></div>
+			<div class="reserves" id="mat_defender_reserves"></div>
+			<div class="mat_array" id="mat_a1"></div>
+			<div class="mat_array" id="mat_a2"></div>
+			<div class="mat_array" id="mat_a3"></div>
+			<div class="mat_array" id="mat_d1"></div>
+			<div class="mat_array" id="mat_d2"></div>
+			<div class="mat_array" id="mat_d3"></div>
+			<div class="mat_array" id="mat_rd1"></div>
+			<div class="mat_array" id="mat_rd2"></div>
+			<div class="mat_array" id="mat_rd3"></div>
+			<div class="mat_array" id="mat_sa1"></div>
+			<div class="mat_array" id="mat_sa2"></div>
+			<div class="mat_array" id="mat_sa3"></div>
+		</div>
+	</div>
+	<div class="grid_array" id="grid_d1"></div>
+	<div class="grid_array" id="grid_d2"></div>
+	<div class="grid_array" id="grid_d3"></div>
+	<div class="grid_array" id="grid_rd1"></div>
+	<div class="grid_array" id="grid_rd2"></div>
+	<div class="grid_array" id="grid_rd3"></div>
+	<div class="grid_array" id="grid_sa1"></div>
+	<div class="grid_array" id="grid_sa2"></div>
+	<div class="grid_array" id="grid_sa3"></div>
+</div>
+</div>
+
 <div id="hand" class="hand"></div>
 
-<div id="battle" class="defender hide">
-<div class="garrison" id="array_garrison"></div>
-<div class="reserves" id="array_attacker_reserves"></div>
-<div class="reserves" id="array_defender_reserves"></div>
-<div class="array" id="array_a1"></div>
-<div class="array" id="array_a2"></div>
-<div class="array" id="array_a3"></div>
-<div class="array" id="array_d1"></div>
-<div class="array" id="array_d2"></div>
-<div class="array" id="array_d3"></div>
-<div class="array" id="array_rd1"></div>
-<div class="array" id="array_rd2"></div>
-<div class="array" id="array_rd3"></div>
-<div class="array" id="array_sa1"></div>
-<div class="array" id="array_sa2"></div>
-<div class="array" id="array_sa3"></div>
-</div>
-
-</div>
+</div> <!-- center -->
 
 <div id="court1" class="court"></div>
 <div id="court2" class="court"></div>
