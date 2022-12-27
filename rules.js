@@ -54,6 +54,7 @@ exports.scenarios = [
 	"Return of the Prince (Nicolle)",
 	"Crusade on Novgorod",
 	"Pleskau (Quickstart)",
+	"Test",
 ]
 
 const scenario_last_turn = {
@@ -64,6 +65,7 @@ const scenario_last_turn = {
 	"Return of the Prince (Nicolle)": 16,
 	"Crusade on Novgorod": 16,
 	"Pleskau (Quickstart)": 2,
+	"Test": 2,
 }
 
 // unit types
@@ -630,6 +632,13 @@ function feed_lord_skip(lord) {
 function feed_lord(lord) {
 	// reuse "moved" flag for hunger
 	set_lord_moved(lord, get_lord_moved(lord) - 1)
+}
+
+function get_lord_array_position(lord) {
+	for (let p = 0; p < 12; ++p)
+		if (game.battle.array[p] === lord)
+			return p
+	return -1
 }
 
 // === GAME STATE HELPERS ===
@@ -1546,6 +1555,10 @@ exports.setup = function (seed, scenario, options) {
 		case "Pleskau (Quickstart)":
 			setup_pleskau_quickstart()
 			break
+		case "Test":
+			setup_pleskau_quickstart()
+			setup_test()
+			break
 	}
 
 	setup_decks()
@@ -1751,6 +1764,20 @@ function setup_pleskau_quickstart() {
 	game.plan2 = [ LORD_GAVRILO, LORD_VLADISLAV, LORD_DOMASH, LORD_GAVRILO, LORD_DOMASH, LORD_DOMASH ]
 
 	// goto_command_activation()
+}
+
+function setup_test() {
+	set_lord_locale(LORD_HERMANN, LOC_ODENPAH)
+	set_lord_locale(LORD_KNUD_ABEL, LOC_ODENPAH)
+	set_lord_locale(LORD_YAROSLAV, LOC_ODENPAH)
+	set_lord_locale(LORD_RUDOLF, LOC_ODENPAH)
+
+	set_lord_locale(LORD_GAVRILO, LOC_IZBORSK)
+	set_lord_locale(LORD_VLADISLAV, LOC_IZBORSK)
+	set_lord_locale(LORD_DOMASH, LOC_IZBORSK)
+
+	game.plan1 = [ LORD_HERMANN, LORD_HERMANN, LORD_HERMANN, LORD_YAROSLAV, LORD_RUDOLF, LORD_KNUD_ABEL ]
+	game.plan2 = [ LORD_GAVRILO, LORD_VLADISLAV, LORD_DOMASH, LORD_GAVRILO, LORD_DOMASH, LORD_DOMASH ]
 }
 
 states.setup_lords = {
@@ -4859,11 +4886,29 @@ function pop_first_reserve() {
 	return NOBODY
 }
 
-function prompt_array_lord() {
-	for (let lord of game.battle.reserves)
-		if (is_friendly_lord(lord))
-			if (lord !== game.who)
-				gen_action_battle_lord(lord)
+function prompt_array_lord(X1, X2, X3) {
+	let array = game.battle.array
+
+	if (array[X1] === NOBODY || array[X2] === NOBODY || array[X3] === NOBODY) {
+		for (let lord of game.battle.reserves)
+			if (is_friendly_lord(lord))
+				if (lord !== game.who)
+					gen_action_battle_lord(lord)
+	}
+
+	if (game.who !== NOBODY) {
+		if (array[X2] === NOBODY) {
+			gen_action_array(X2)
+		} else {
+			if (array[X1] === NOBODY)
+				gen_action_array(X1)
+			if (array[X3] === NOBODY)
+				gen_action_array(X3)
+		}
+	}
+
+	if (has_reserves() || (array[X1] !== NOBODY && array[X2] !== NOBODY && array[X3] !== NOBODY))
+		view.actions.end_array = 1
 }
 
 function action_array_lord(pos) {
@@ -4887,24 +4932,8 @@ function goto_attacker_battle_array() {
 
 states.attacker_battle_array = {
 	prompt() {
-		view.prompt = "Battle Array: Position your lords."
-		let array = game.battle.array
-
-		prompt_array_lord()
-
-		if (game.who !== NOBODY) {
-			if (array[A2] === NOBODY) {
-				gen_action_array(A2)
-			} else {
-				if (array[A1] === NOBODY)
-					gen_action_array(A1)
-				if (array[A3] === NOBODY)
-					gen_action_array(A3)
-			}
-		}
-
-		if (!has_reserves() || (array[A1] !== NOBODY && array[A2] !== NOBODY && array[A3] !== NOBODY))
-			view.actions.end_array = 1
+		view.prompt = "Battle Array: Position your attacking lords."
+		prompt_array_lord(A1, A2, A3)
 	},
 	battle_lord: action_select_lord,
 	array: action_array_lord,
@@ -4930,28 +4959,8 @@ function goto_defender_battle_array() {
 
 states.defender_battle_array = {
 	prompt() {
-		view.prompt = "Battle Array: Position your lords."
-		let array = game.battle.array
-
-		prompt_array_lord()
-
-		if (game.who !== NOBODY) {
-			if (array[D2] === NOBODY) {
-				gen_action_array(D2)
-			} else if (array[A1] !== NOBODY && array[A3] === NOBODY && array[D1] === NOBODY) {
-				gen_action_array(D1)
-			} else if (array[A1] === NOBODY && array[A3] !== NOBODY && array[D3] === NOBODY) {
-				gen_action_array(D3)
-			} else {
-				if (array[D1] === NOBODY)
-					gen_action_array(D1)
-				if (array[D3] === NOBODY)
-					gen_action_array(D3)
-			}
-		}
-
-		if (!has_reserves() || (array[D1] !== NOBODY && array[D2] !== NOBODY && array[D3] !== NOBODY))
-			view.actions.end_array = 1
+		view.prompt = "Battle Array: Position your defending lords."
+		prompt_array_lord(D1, D2, D3)
 	},
 	battle_lord: action_select_lord,
 	array: action_array_lord,
@@ -5135,9 +5144,192 @@ states.concede = {
 // If front center empty, side to center
 // If rear center empty, side to center
 
+function send_to_reserve(pos) {
+	if (game.battle.array[pos] !== NOBODY) {
+		set_add(game.battle.reserves, game.battle.array[pos])
+		game.battle.array[pos] = NOBODY
+	}
+}
+
+function slide_array(from, to) {
+	game.battle.array[to] = game.battle.array[from]
+	game.battle.array[from] = NOBODY
+}
+
 function goto_reposition() {
-	log("TODO reposition")
-	goto_start_strike()
+	let array = game.battle.array
+
+	// TODO: strict order of these three relief sally reassessment steps
+
+	// If no SA left, RD to reserve (sally ends)
+	if (array[SA1] === NOBODY && array[SA2] === NOBODY && array[SA3] === NOBODY) {
+		send_to_reserve(RD1)
+		send_to_reserve(RD2)
+		send_to_reserve(RD3)
+	}
+
+	// If no front D left, RD to front
+	if (array[D1] === NOBODY && array[D2] === NOBODY && array[D3] === NOBODY) {
+		slide_array(RD1, D1)
+		slide_array(RD2, D2)
+		slide_array(RD3, D3)
+	}
+
+	// If no front A left, SA to front
+	if (array[A1] === NOBODY && array[A2] === NOBODY && array[A3] === NOBODY) {
+		slide_array(SA1, A1)
+		slide_array(SA2, A2)
+		slide_array(SA3, A3)
+	}
+
+	set_active_attacker()
+	goto_reposition_advance()
+}
+
+function goto_reposition_advance() {
+	if (can_reposition_advance())
+		game.state = "reposition_advance"
+	else
+		end_reposition_advance()
+}
+
+function end_reposition_advance() {
+	game.who = NOBODY
+	set_active_enemy()
+	if (game.active === game.battle.attacker)
+		goto_reposition_center()
+	else
+		goto_reposition_advance()
+}
+
+function goto_reposition_center() {
+	if (can_reposition_center())
+		game.state = "reposition_center"
+	else
+		end_reposition_center()
+}
+
+function end_reposition_center() {
+	game.who = NOBODY
+	set_active_enemy()
+	if (game.active === game.battle.attacker)
+		goto_start_strike()
+	else
+		goto_reposition_center()
+}
+
+function can_reposition_advance() {
+	if (has_reserves()) {
+		let array = game.battle.array
+		if (game.active === game.battle.attacker) {
+			if (array[A1] === NOBODY || array[A2] === NOBODY || array[A3] === NOBODY)
+				return true
+			// TODO: sally more lords from castle?
+		} else {
+			if (array[D1] === NOBODY || array[D2] === NOBODY || array[D3] === NOBODY)
+				return true
+			if (array[SA1] !== NOBODY || array[SA2] !== NOBODY || array[SA2] !== NOBODY)
+				if (array[RD1] === NOBODY || array[RD2] === NOBODY || array[RD3] === NOBODY)
+					return true
+		}
+	}
+	return false
+}
+
+states.reposition_advance = {
+	prompt() {
+		view.prompt = "Reposition: Advance from Reserve."
+		let array = game.battle.array
+
+		for (let lord of game.battle.reserves)
+			if (is_friendly_lord(lord) && lord !== game.who)
+				gen_action_lord(lord)
+
+		if (game.who !== NOBODY) {
+			if (game.active === game.battle.attacker) {
+				if (array[A1] === NOBODY) gen_action_array(A1)
+				if (array[A2] === NOBODY) gen_action_array(A2)
+				if (array[A3] === NOBODY) gen_action_array(A3)
+			} else {
+				if (array[D1] === NOBODY) gen_action_array(D1)
+				if (array[D2] === NOBODY) gen_action_array(D2)
+				if (array[D3] === NOBODY) gen_action_array(D3)
+				if (array[SA1] !== NOBODY || array[SA2] !== NOBODY || array[SA2] !== NOBODY) {
+					if (array[RD1] === NOBODY) gen_action_array(RD1)
+					if (array[RD2] === NOBODY) gen_action_array(RD2)
+					if (array[RD3] === NOBODY) gen_action_array(RD3)
+				}
+			}
+		}
+	},
+	lord(lord) {
+		game.who = lord
+	},
+	array(pos) {
+		game.battle.array[pos] = lord
+		game.who = NULL
+		goto_reposition_advance()
+	},
+}
+
+function can_reposition_center() {
+	let array = game.battle.array
+	if (game.active === game.battle.attacker) {
+		if (array[A2] === NOBODY && (array[A1] !== NOBODY || array[A3] !== NOBODY))
+			return true
+		if (array[SA2] === NOBODY && (array[SA1] !== NOBODY || array[SA3] !== NOBODY))
+			return true
+	} else {
+		if (array[D2] === NOBODY && (array[D1] !== NOBODY || array[D3] !== NOBODY))
+			return true
+		if (array[RD2] === NOBODY && (array[RD1] !== NOBODY || array[RD3] !== NOBODY))
+			return true
+	}
+	return false
+}
+
+states.reposition_center = {
+	prompt() {
+		view.prompt = "Reposition: Slide to Center."
+		let array = game.battle.array
+
+		if (game.active === game.battle.attacker) {
+			if (array[A2] === NOBODY) {
+				if (array[A1] !== NOBODY) gen_action_battle_lord(game.battle.array[A1])
+				if (array[A3] !== NOBODY) gen_action_battle_lord(game.battle.array[A3])
+			}
+			if (array[SA2] === NOBODY) {
+				if (array[SA1] !== NOBODY) gen_action_battle_lord(game.battle.array[SA1])
+				if (array[SA3] !== NOBODY) gen_action_battle_lord(game.battle.array[SA3])
+			}
+		} else {
+			if (array[D2] === NOBODY) {
+				if (array[D1] !== NOBODY) gen_action_battle_lord(game.battle.array[D1])
+				if (array[D3] !== NOBODY) gen_action_battle_lord(game.battle.array[D3])
+			}
+			if (array[RD2] === NOBODY) {
+				if (array[RD1] !== NOBODY) gen_action_battle_lord(game.battle.array[RD1])
+				if (array[RD3] !== NOBODY) gen_action_battle_lord(game.battle.array[RD3])
+			}
+		}
+
+		if (game.who !== NOBODY) {
+			let from = get_lord_array_position(game.who)
+			if (from === A1 || from === A3) gen_action_array(A2)
+			if (from === D1 || from === D3) gen_action_array(D2)
+			if (from === SA1 || from === SA3) gen_action_array(SA2)
+			if (from === RD1 || from === RD3) gen_action_array(RD2)
+		}
+	},
+	battle_lord(lord) {
+		game.who = lord
+	},
+	array(pos) {
+		let from = get_lord_array_position(game.who)
+		slide_array(from, pos)
+		game.who = NOBODY
+		goto_reposition_center()
+	},
 }
 
 // === BATTLE: STRIKE ===
@@ -5422,8 +5614,10 @@ function goto_strike() {
 function goto_select_strike_group() {
 	if (game.battle.groups.length === 0)
 		goto_next_strike()
+	/* TODO auto select is too abrupt, maybe option?
 	else if (game.battle.groups.length === 1)
 		select_strike_group(0)
+	*/
 	else
 		game.state = "select_strike_group"
 }
@@ -5509,30 +5703,25 @@ function select_hit_lord(lord) {
 function rout_lord(lord) {
 	log(`L${lord} routed!`)
 
-	for (let p = 0; p < 12; ++p) {
-		if (game.battle.array[p] === lord) {
+	let p = get_lord_array_position(lord)
 
-			// remove from battle array
-			game.battle.array[p] = NOBODY
+	// remove from battle array
+	game.battle.array[p] = NOBODY
 
-			// remove from current hit group
-			array_remove_item(game.battle.hg, p)
+	// remove from current hit group
+	array_remove_item(game.battle.hg, p)
 
-			for (let i = 0; i < game.battle.groups;) {
-				let hg = game.battle.groups[i][1]
+	for (let i = 0; i < game.battle.groups;) {
+		let hg = game.battle.groups[i][1]
 
-				// remove from other hit groups
-				array_remove_item(hg, p)
+		// remove from other hit groups
+		array_remove_item(hg, p)
 
-				// remove strike groups with no remaining targets
-				if (hg.length === 0)
-					array_remove(game.battle.groups, i)
-				else
-					++i
-			}
-
-			break
-		}
+		// remove strike groups with no remaining targets
+		if (hg.length === 0)
+			array_remove(game.battle.groups, i)
+		else
+			++i
 	}
 
 	set_add(game.battle.routed, lord)
@@ -6046,7 +6235,7 @@ function action_losses(lord, type) {
 	let evade = FORCE_EVADE[type]
 
 	let target = Math.max(protection, evade)
-	if (game.active !== game.battle.conceded)
+	if (game.active === game.battle.loser && game.active !== game.battle.conceded)
 		target = 1
 
 	let die = roll_die()
