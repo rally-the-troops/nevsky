@@ -227,6 +227,17 @@ body.Teutons #plan_actions .russian { display: none }
 .defender #battle_mat { background-image: url(images/mat_battle_defender.png); }
 .attacker #battle_mat { background-image: url(images/mat_battle_attacker.png); }
 
+#mat_pursuit { position: absolute; }
+.defender #mat_pursuit { top: 150px; left: 139px; }
+.attacker #mat_pursuit { top: 175px; left: 139px; }
+
+.defender #mat_pursuit.rotate, .attacker #mat_pursuit:not(.rotate)
+{
+	transform: rotate(180deg);
+	border-color: #a68c61 #e7cb9e #e7cb9e #a68c61;
+	box-shadow: 0 0 0 1px #4e370a, -1px -2px 4px #0008;
+}
+
 .defender #mat_garrison { top: 172px; left: 8px; }
 .defender #mat_attacker_reserves { top: 4px; left: 8px; }
 .defender #mat_defender_reserves { bottom: 4px; left: 8px; }
@@ -266,7 +277,7 @@ body.Teutons #plan_actions .russian { display: none }
 .attacker #mat_defender_reserves { justify-content: end; }
 */
 
-#battle_mat > div {
+#battle_mat .mat_array {
 	position: absolute;
 	display: flex;
 	flex-wrap: wrap;
@@ -274,21 +285,21 @@ body.Teutons #plan_actions .russian { display: none }
 	align-items: center;
 }
 
-#battle_mat .reserves {
+#battle_mat .mat_array {
+	width: 48px;
+	height: 48px;
+}
+
+#battle_mat .mat_array.reserves {
 	width: 356px;
 	height: 48px;
 	gap: 8px;
 }
 
-#battle_mat .garrison {
+#battle_mat .mat_array.garrison {
 	width: 356px;
 	height: 48px;
 	gap: 2px;
-}
-
-#battle_mat .mat_array {
-	width: 48px;
-	height: 48px;
 }
 
 #battle_mat .mat_array.action {
@@ -578,12 +589,6 @@ body.shift .mustered_vassals {
 	height: 51px;
 	background-size: 51px 51px;
 	border-radius: 50%;
-}
-
-.marker.pursuit.rot180 {
-	transform: rotate(180deg);
-	border-color: #a68c61 #e7cb9e #e7cb9e #a68c61;
-	box-shadow: 0 0 0 1px #4e370a, -1px -2px 4px #0008;
 }
 
 .marker.turn.levy { background-image: url(images/marker_levy.png) }
@@ -1321,28 +1326,29 @@ body.shift .mustered_vassals {
 <div id="battle_panel" class="panel hide">
 <div id="battle_header" class="panel_header">Battle</div>
 <div id="battle_grid">
+	<div class="grid_array" id="grid_bm">
+		<div id="battle_mat">
+			<div id="mat_pursuit" class="marker rectangle pursuit russian hide"></div>
+			<div id="mat_attacker_reserves" class="mat_array reserves"></div>
+			<div id="mat_garrison" class="mat_array garrison"></div>
+			<div id="mat_defender_reserves" class="mat_array reserves"></div>
+			<div id="mat_a1" class="mat_array"></div>
+			<div id="mat_a2" class="mat_array"></div>
+			<div id="mat_a3" class="mat_array"></div>
+			<div id="mat_d1" class="mat_array"></div>
+			<div id="mat_d2" class="mat_array"></div>
+			<div id="mat_d3" class="mat_array"></div>
+			<div id="mat_rd1" class="mat_array"></div>
+			<div id="mat_rd2" class="mat_array"></div>
+			<div id="mat_rd3" class="mat_array"></div>
+			<div id="mat_sa1" class="mat_array"></div>
+			<div id="mat_sa2" class="mat_array"></div>
+			<div id="mat_sa3" class="mat_array"></div>
+		</div>
+	</div>
 	<div class="grid_array att" id="grid_a1"></div>
 	<div class="grid_array att" id="grid_a2"></div>
 	<div class="grid_array att" id="grid_a3"></div>
-	<div class="grid_array" id="grid_bm">
-		<div id="battle_mat">
-			<div class="reserves" id="mat_attacker_reserves"></div>
-			<div class="mat_array" id="mat_a1"></div>
-			<div class="mat_array" id="mat_a2"></div>
-			<div class="mat_array" id="mat_a3"></div>
-			<div class="garrison" id="mat_garrison"></div>
-			<div class="mat_array" id="mat_d1"></div>
-			<div class="mat_array" id="mat_d2"></div>
-			<div class="mat_array" id="mat_d3"></div>
-			<div class="mat_array" id="mat_rd1"></div>
-			<div class="mat_array" id="mat_rd2"></div>
-			<div class="mat_array" id="mat_rd3"></div>
-			<div class="mat_array" id="mat_sa1"></div>
-			<div class="mat_array" id="mat_sa2"></div>
-			<div class="mat_array" id="mat_sa3"></div>
-			<div class="reserves" id="mat_defender_reserves"></div>
-		</div>
-	</div>
 	<div class="grid_array def" id="grid_d1"></div>
 	<div class="grid_array def" id="grid_d2"></div>
 	<div class="grid_array def" id="grid_d3"></div>

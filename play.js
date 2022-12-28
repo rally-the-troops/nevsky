@@ -491,6 +491,7 @@ const ui = {
 	battle_garrison: document.getElementById("mat_garrison"),
 	battle_panel: document.getElementById("battle_panel"),
 	battle_header: document.getElementById("battle_header"),
+	pursuit: document.getElementById("mat_pursuit"),
 	battle_mat: document.getElementById("battle_mat"),
 	battle_mat_array: [
 		document.getElementById("mat_a1"),
@@ -1302,6 +1303,21 @@ function update_cards() {
 
 function update_battle() {
 	let array = view.battle.array
+
+	// Pursuit marker points "up" towards the conceding side
+	if (view.battle.conceded === "Russians") {
+		if (view.battle.attacker === "Russians")
+			ui.pursuit.className = "marker rectangle pursuit teutonic"
+		else
+			ui.pursuit.className = "marker rectangle pursuit teutonic rotate"
+	} else if (view.battle.conceded === "Teutons") {
+		if (view.battle.attacker === "Teutons")
+			ui.pursuit.className = "marker rectangle pursuit russian"
+		else
+			ui.pursuit.className = "marker rectangle pursuit russian rotate"
+	} else {
+		ui.pursuit.className = "hide"
+	}
 
 	ui.battle_attacker_reserves.replaceChildren()
 	ui.battle_defender_reserves.replaceChildren()
