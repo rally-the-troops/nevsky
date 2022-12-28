@@ -1425,10 +1425,8 @@ function on_update() {
 		ui.battle_panel.classList.remove("hide")
 		ui.battle_header.textContent = "~ Battle at " + data.locales[view.battle.where].name + " ~"
 		if (view.battle.attacker === player) {
-			ui.battle_mat.className = "attacker"
 			ui.battle_grid.className = "attacker"
 		} else {
-			ui.battle_mat.className = "defender"
 			ui.battle_grid.className = "defender"
 		}
 		update_battle()
