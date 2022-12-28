@@ -4906,7 +4906,7 @@ function prompt_array_lord(X1, X2, X3) {
 		}
 	}
 
-	if (has_reserves() || (array[X1] !== NOBODY && array[X2] !== NOBODY && array[X3] !== NOBODY))
+	if (!has_reserves() || (array[X1] !== NOBODY && array[X2] !== NOBODY && array[X3] !== NOBODY))
 		view.actions.end_array = 1
 }
 
@@ -5176,6 +5176,7 @@ function goto_reposition() {
 
 	// If no front A left, SA to front
 	if (array[A1] === NOBODY && array[A2] === NOBODY && array[A3] === NOBODY) {
+		// TODO: turn into regular sally (walls)
 		slide_array(SA1, A1)
 		slide_array(SA2, A2)
 		slide_array(SA3, A3)
@@ -5591,15 +5592,48 @@ function goto_strike() {
 		if (game.battle.array[p] !== NOBODY)
 			count_battle_hits(p, game.battle.array[p], game.battle.step)
 
-	// TODO: select choice
-	// TODO: if SA and no RD
-	// TODO: garrison groups
+	// skip step if no strikes
+	let sum = 0
+	for (let x of game.battle.ah1)
+		sum += x
+	for (let x of game.battle.ah2)
+		sum += x
+	if (sum === 0) {
+		log("No hits.")
+		goto_next_strike()
+		return
+	}
+
+	// TODO: skip choice if garrison?
+
+	if (has_front_strike_choice())
+		game.battle.fc = -1
+	else
+		game.battle.fc = 0
+	if (has_rear_strike_choice())
+		game.battle.rc = -1
+	else
+		game.battle.rc = 0
+
+	goto_strike_choice()
+}
+
+function goto_strike_choice() {
+	if (game.battle.fc === -1 || game.battle.rc === -1)
+		game.state = "strike_choice"
+	else
+		end_strike_choice()
+}
+
+function end_strike_choice() {
+	let s = game.battle.step & 1
 	let front = pack_battle_array_front()
 	let rear = pack_battle_array_rear()
-	let front_choice = 0
-	let rear_choice = 0
 
-	game.battle.groups = unpack_group_list(GROUPS[s][front_choice][front], GROUPS[s][rear_choice][rear])
+	// TODO: if SA and no RD
+	// TODO: garrison groups
+
+	game.battle.groups = unpack_group_list(GROUPS[s][game.battle.fc][front], GROUPS[s][game.battle.rc][rear])
 
 	console.log("STRIKE")
 	console.log("hits", game.battle.ah1)
@@ -5608,6 +5642,48 @@ function goto_strike() {
 	debug_group_list(game.battle.groups)
 
 	goto_select_strike_group()
+}
+
+function prompt_strike_choice(X1, X2, X3, Y2) {
+	if (game.battle.array[X2] === NOBODY && game.battle.array[Y2] !== NOBODY) {
+		if (game.battle.array[X1] !== NOBODY)
+			gen_action_battle_lord(game.battle.array[X1])
+		if (game.battle.array[X3] !== NOBODY)
+			gen_action_battle_lord(game.battle.array[X3])
+	}
+}
+
+states.strike_choice = {
+	prompt() {
+		view.prompt = `${battle_step_name[game.battle.step]}: Strike left or right?`
+		if (game.battle.fc === -1) {
+			if (game.active === game.battle.attacker)
+				prompt_strike_choice(D1, D2, D3, A2)
+			else
+				prompt_strike_choice(A1, A2, A3, D2)
+		}
+		if (game.battle.rc === -1) {
+			if (game.active === game.battle.attacker)
+				prompt_strike_choice(RD1, RD2, RD3, SA2)
+			else
+				prompt_strike_choice(SA1, SA2, SA3, RD2)
+		}
+	},
+	battle_lord(lord) {
+		this.array(get_lord_array_position(lord))
+	},
+	array(pos) {
+		console.log("STRIKE CHOICE", pos)
+		if (pos === A1 || pos === D1)
+			game.battle.fc = 0
+		if (pos === A3 || pos === D3)
+			game.battle.fc = 1
+		if (pos === SA1 || pos === RD1)
+			game.battle.rc = 0
+		if (pos === SA3 || pos === RD3)
+			game.battle.rc = 1
+		goto_strike_choice()
+	},
 }
 
 function goto_select_strike_group() {
@@ -6198,6 +6274,8 @@ states.battle_remove = {
 }
 
 // === ENDING THE BATTLE: LOSSES ===
+
+// TODO: disband vassal service markers once enough forces are lost?
 
 function goto_battle_losses() {
 	set_active_loser() // loser first, to save time
@@ -6906,6 +6984,10 @@ function goto_remove_markers() {
 function goto_end_campaign() {
 	log_h1("End Campaign")
 	set_active(P1)
+
+	if (game.scenario === "Crusade on Novgorod" && game.turn === 16)
+		log("TODO: Grow - Teutons then Rus remove 1/2 enemy's ravage")
+
 	goto_game_end()
 }
 
