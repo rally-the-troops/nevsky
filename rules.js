@@ -1,14 +1,15 @@
 "use strict"
 
-// NEXT: hit remainders
-// TODO: SALLY
 // TODO: STORM
-// TODO: Walls
+
+// TODO: SA without RD
+// TODO: disband vassals?
+// TODO: choose crossbow/normal hit application order
+// TODO: hit remainders
 
 // TODO: Lodya capability during supply!
 // TODO: 2nd edition supply rule - no reuse of transports
 
-// TODO: show besieged lords differently in UI
 // TODO: mark moved/fought units (blue highlight?)
 // TODO: mark command lord different from selected lord?
 
@@ -3176,6 +3177,7 @@ function goto_command_activation() {
 		log_h2(`L${game.command} - Pass`)
 		goto_command_activation()
 	} else {
+		log_h2(`L${game.command} at %${get_lord_locale(game.command)}`)
 		goto_actions()
 	}
 }
@@ -3191,8 +3193,6 @@ function is_first_march() {
 }
 
 function goto_actions() {
-	log_h2(`L${game.command}`)
-
 	game.actions = data.lords[game.command].command
 
 	game.flags.first_action = 1
@@ -4110,9 +4110,7 @@ function can_action_sally() {
 }
 
 function goto_sally() {
-	log("TODO: Sally")
-	spend_action(1)
-	resume_actions()
+	start_sally()
 }
 
 // === ACTION: SUPPLY ===
@@ -4832,15 +4830,12 @@ function goto_battle() {
 		march_with_group_3()
 }
 
-function start_battle() {
-	let here = get_lord_locale(game.command)
-
-	log_h3(`Battle at %${here}`)
-
-	// TODO: array <= 3 attacking lords automatically
-
+function init_battle(here, is_storm, is_sally) {
 	game.battle = {
 		where: here,
+		storm: is_storm,
+		sally: is_sally,
+		relief: 0,
 		attacker: game.active,
 		conceded: 0,
 		array: [
@@ -4855,6 +4850,16 @@ function start_battle() {
 		step: 0,
 		loser: 0,
 	}
+}
+
+function start_battle() {
+	let here = get_lord_locale(game.command)
+
+	log_h3(`Battle at %${here}`)
+
+	// TODO: array <= 3 attacking lords automatically
+
+	init_battle(here, 0, 0)
 
 	for (let lord = first_lord; lord <= last_lord; ++lord) {
 		if (get_lord_locale(lord) === here && !is_lord_besieged(lord)) {
@@ -4865,6 +4870,25 @@ function start_battle() {
 	}
 
 	goto_relief_sally()
+}
+
+function start_sally() {
+	let here = get_lord_locale(game.command)
+
+	log_h3(`Sally at %${here}`)
+
+	init_battle(here, 0, 1)
+
+	// NOTE: All besieged lords sally in Nevsky
+	for (let lord = first_lord; lord <= last_lord; ++lord) {
+		if (get_lord_locale(lord) === here) {
+			set_lord_moved(lord, 1)
+			if (lord !== game.command)
+				set_add(game.battle.reserves, lord)
+		}
+	}
+
+	goto_array_attacker()
 }
 
 // === BATTLE: RELIEF SALLY ===
@@ -4904,6 +4928,7 @@ states.relief_sally = {
 	lord(lord) {
 		push_undo()
 		set_add(game.battle.reserves, lord)
+		game.battle.relief = 1
 	},
 	end_sally() {
 		goto_array_attacker()
@@ -4971,22 +4996,33 @@ states.array_attacker = {
 
 		let done = true
 
-		// Select front Lord
-		if (array[A1] === NOBODY || array[A2] === NOBODY || array[A3] === NOBODY) {
-			for (let lord of game.battle.reserves) {
-				if (lord !== game.who && is_friendly_lord(lord) && is_lord_unbesieged(lord)) {
-					gen_action_battle_lord(lord)
-					done = false
+		if (game.battle.sally) {
+			if (array[A1] === NOBODY || array[A2] === NOBODY || array[A3] === NOBODY) {
+				for (let lord of game.battle.reserves) {
+					if (lord !== game.who && is_friendly_lord(lord)) {
+						gen_action_battle_lord(lord)
+						done = false
+					}
 				}
 			}
-		}
+		} else {
+			// Select front Lord
+			if (array[A1] === NOBODY || array[A2] === NOBODY || array[A3] === NOBODY) {
+				for (let lord of game.battle.reserves) {
+					if (lord !== game.who && is_friendly_lord(lord) && is_lord_unbesieged(lord)) {
+						gen_action_battle_lord(lord)
+						done = false
+					}
+				}
+			}
 
-		// Select sallying Lord
-		if (array[SA1] === NOBODY || array[SA2] === NOBODY || array[SA3] === NOBODY) {
-			for (let lord of game.battle.reserves) {
-				if (lord !== game.who && is_friendly_lord(lord) && is_lord_besieged(lord)) {
-					gen_action_battle_lord(lord)
-					done = false
+			// Select sallying Lord
+			if (array[SA1] === NOBODY || array[SA2] === NOBODY || array[SA3] === NOBODY) {
+				for (let lord of game.battle.reserves) {
+					if (lord !== game.who && is_friendly_lord(lord) && is_lord_besieged(lord)) {
+						gen_action_battle_lord(lord)
+						done = false
+					}
 				}
 			}
 		}
@@ -4996,7 +5032,7 @@ states.array_attacker = {
 
 		if (game.who !== NOBODY) {
 			// Place front Lord
-			if (is_lord_unbesieged(game.who)) {
+			if (game.battle.sally || is_lord_unbesieged(game.who)) {
 				// A2 is already filled by command lord!
 				if (array[A1] === NOBODY)
 					gen_action_array(A1)
@@ -5149,15 +5185,7 @@ states.concede = {
 
 // If all SA routed, RD to reserve
 // If all empty front D, all RD to front
-// If all empty front A, all SA to A, RD to reserve
-
-// If any empty front D, reserve to D
-// If any empty front A, reserve to A
-// If any empty RD, reserve to RD
-// If any empty A, reserve to A
-
-// If front center empty, side to center
-// If rear center empty, side to center
+// If all empty front A, all SA to A, RD to reserve (resume as if sally)
 
 function send_to_reserve(pos) {
 	if (game.battle.array[pos] !== NOBODY) {
@@ -5176,7 +5204,7 @@ function goto_reposition() {
 
 	// TODO: strict order of these three relief sally reassessment steps
 
-	// If no SA left, RD to reserve (sally ends)
+	// If no SA left, RD to reserve (relief sally ended)
 	if (array[SA1] === NOBODY && array[SA2] === NOBODY && array[SA3] === NOBODY) {
 		send_to_reserve(RD1)
 		send_to_reserve(RD2)
@@ -5192,7 +5220,8 @@ function goto_reposition() {
 
 	// If no front A left, SA to front
 	if (array[A1] === NOBODY && array[A2] === NOBODY && array[A3] === NOBODY) {
-		// TODO: turn into regular sally (walls)
+		// Become a regular sally situation (siegeworks still count for defender)
+		game.battle.sally = 1
 		slide_array(SA1, A1)
 		slide_array(SA2, A2)
 		slide_array(SA3, A3)
@@ -5571,7 +5600,7 @@ function goto_start_strike() {
 function goto_next_strike() {
 	game.battle.step++
 	if (game.battle.step >= 6)
-		goto_new_round()
+		end_battle_round()
 	else
 		goto_strike()
 }
@@ -5766,12 +5795,11 @@ function select_strike_group(i) {
 
 	log(`${format_group(game.battle.sg)} struck ${format_group(game.battle.hg)} for ${format_hits()}`)
 
-	set_active_enemy()
 	goto_select_hit_lord()
-	return
 }
 
 function goto_select_hit_lord() {
+	set_active_enemy()
 	if (game.battle.hg.length === 0)
 		end_hit_lord()
 	else if (game.battle.hg.length === 1)
@@ -5791,8 +5819,58 @@ states.select_hit_lord = {
 	},
 }
 
+function roll_for_protection(prot, n) {
+	let result = 0
+	for (let i = 0; i < n; ++i) {
+		let die = roll_die()
+		if (die <= prot) {
+			logi("${die} canceled")
+		} else {
+			logi("${die} hit")
+			result ++
+		}
+	}
+	return result
+}
+
+function roll_for_walls() {
+	let here = game.battle.where
+	let prot = 0
+	if (is_bishopric(here) || is_castle(here) || has_walls(here))
+		prot = 4
+	else if (is_city(here) || is_fort(here) || here === LOC_NOVGOROD)
+		prot = 3
+	if (prot > 0) {
+		log("Rolled for ${prot} walls:")
+		game.battle.ah1 = roll_for_protection(prot, game.battle.ah1)
+		game.battle.ah2 = roll_for_protection(prot, game.battle.ah2)
+	}
+}
+
+function roll_for_siegeworks() {
+	let prot = count_siege_markers(game.battle.where)
+	if (prot > 0) {
+		log("Rolled for ${prot} siegeworks:")
+		game.battle.ah1 = roll_for_protection(prot, game.battle.ah1)
+		game.battle.ah2 = roll_for_protection(prot, game.battle.ah2)
+	}
+}
+
 function select_hit_lord(lord) {
-	// TODO: walls
+	if (game.storm) {
+		if (game.active === game.battle.attacker)
+			roll_for_walls()
+		else
+			roll_for_siegeworks()
+	} else if (game.sally) {
+		if (game.active !== game.battle.attacker)
+			roll_for_siegeworks()
+	} else {
+		let s = game.battle.sg[0]
+		if (s === SA1 || s === SA2 || s === SA3)
+			roll_for_siegeworks()
+	}
+
 	game.who = lord
 	game.state = "hit_lord"
 }
@@ -5884,6 +5962,8 @@ states.hit_lord = {
 
 		// TODO: h1 or h2
 
+		// TODO: Storm - attacker must apply to armored first
+
 		let lord = game.who
 		if (get_lord_forces(lord, KNIGHTS) > 0)
 			gen_action_knights(lord)
@@ -5931,7 +6011,7 @@ function end_hit_lord() {
 
 // === BATTLE: NEW ROUND ===
 
-function goto_new_round() {
+function end_battle_round() {
 	if (game.battle.conceded) {
 		game.battle.loser = game.battle.conceded
 		end_battle()
@@ -5980,6 +6060,11 @@ function end_battle() {
 
 	log_br()
 	log(`${game.battle.loser} lost battle.`)
+
+	if ((game.battle.sally || game.battle.relief) && game.battle.attacker === game.battle.loser) {
+		log("Raid removed siege markers.")
+		remove_all_but_one_siege_markers(game.battle.where)
+	}
 
 	set_active_loser()
 	goto_battle_withdraw()
@@ -6283,6 +6368,7 @@ states.battle_remove = {
 		transfer_assets_except_ships(lord)
 		disband_lord(lord, true)
 		remove_legate_if_endangered(game.battle.where)
+		lift_sieges()
 	},
 	end_remove() {
 		push_undo()
@@ -6403,6 +6489,7 @@ states.battle_losses_remove = {
 		set_delete(game.battle.retreated, lord)
 		disband_lord(lord, true)
 		resume_battle_losses_remove()
+		lift_sieges()
 	},
 }
 
@@ -6512,14 +6599,14 @@ states.battle_service = {
 function goto_battle_aftermath() {
 	set_active(game.battle.attacker)
 
-	game.battle = 0
-
 	// Events
 	if (game.events.length > 0)
 		game.events = game.events.filter((c) => data.cards[c].when !== "hold")
 
 	// Recovery
 	spend_all_actions()
+
+	game.battle = 0
 
 	// Siege/Conquest
 	march_with_group_3()
@@ -7001,8 +7088,10 @@ function goto_end_campaign() {
 	log_h1("End Campaign")
 	set_active(P1)
 
-	if (game.scenario === "Crusade on Novgorod" && game.turn === 16)
-		log("TODO: Grow - Teutons then Rus remove 1/2 enemy's ravage")
+	if (game.scenario === "Crusade on Novgorod") {
+		if (game.turn === 8 || game.turn === 16)
+			log("TODO: Grow - Teutons then Rus remove 1/2 enemy's ravage")
+	}
 
 	goto_game_end()
 }
