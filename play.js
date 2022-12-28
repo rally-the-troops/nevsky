@@ -482,21 +482,30 @@ const ui = {
 	smerdi: document.getElementById("smerdi"),
 	legate: document.getElementById("legate"),
 	veche: document.getElementById("veche"),
-	plan_dialog: document.getElementById("plan"),
-	plan_list: document.getElementById("plan_list"),
+
+	plan_panel: document.getElementById("plan_panel"),
+	plan: document.getElementById("plan"),
 	plan_actions: document.getElementById("plan_actions"),
-	plan_list_cards: [],
+	plan_cards: [],
 	plan_action_cards: [],
-	arts_of_war_dialog: document.getElementById("arts_of_war"),
-	arts_of_war_list: document.getElementById("arts_of_war_list"),
+
+	arts_of_war_panel: document.getElementById("arts_of_war_panel"),
+	arts_of_war: document.getElementById("arts_of_war"),
+
+	events_panel: document.getElementById("events_panel"),
 	events: document.getElementById("events"),
+
+	hand_panel: document.getElementById("hand_panel"),
+	hand: document.getElementById("hand"),
+
 	capabilities1: document.getElementById("capabilities1"),
 	capabilities2: document.getElementById("capabilities2"),
-	hand: document.getElementById("hand"),
 	command: document.getElementById("command"),
 	turn: document.getElementById("turn"),
 	vp1: document.getElementById("vp1"),
 	vp2: document.getElementById("vp2"),
+	court1_header: document.getElementById("court1_header"),
+	court2_header: document.getElementById("court2_header"),
 	court1: document.getElementById("court1"),
 	court2: document.getElementById("court2"),
 	battle_attacker_reserves: document.getElementById("mat_attacker_reserves"),
@@ -1218,52 +1227,60 @@ function update_locale(loc) {
 
 function update_plan() {
 	if (view.plan) {
-		ui.plan_dialog.classList.remove("hide")
+		let is_planning = view.actions && view.actions.plan
+
+		ui.plan_panel.classList.remove("hide")
 		for (let i = 0; i < 6; ++i) {
 			if (i < view.plan.length) {
 				let lord = view.plan[i]
 				if (lord < 0) {
 					if (player === "Teutons")
-						ui.plan_list_cards[i].className = "card teutonic cc_pass"
+						ui.plan_cards[i].className = "card teutonic cc_pass"
 					else
-						ui.plan_list_cards[i].className = "card russian cc_pass"
+						ui.plan_cards[i].className = "card russian cc_pass"
 				} else {
 					if (lord < 6)
-						ui.plan_list_cards[i].className = "card teutonic cc_lord_" + lord
+						ui.plan_cards[i].className = "card teutonic cc_lord_" + lord
 					else
-						ui.plan_list_cards[i].className = "card russian cc_lord_" + lord
+						ui.plan_cards[i].className = "card russian cc_lord_" + lord
 				}
-			} else if (i < max_plan_length()) {
+			} else if (is_planning && i < max_plan_length()) {
 				if (player === "Teutons")
-					ui.plan_list_cards[i].className = "card teutonic cc_back"
+					ui.plan_cards[i].className = "card teutonic cc_back"
 				else
-					ui.plan_list_cards[i].className = "card russian cc_back"
+					ui.plan_cards[i].className = "card russian cc_back"
 			} else {
-				ui.plan_list_cards[i].className = "hide"
+				ui.plan_cards[i].className = "hide"
 			}
 		}
-		for (let lord = 0; lord < 12; ++lord) {
-			if (is_plan_action(lord)) {
-				ui.plan_action_cards[lord].classList.add("action")
-				ui.plan_action_cards[lord].classList.remove("disabled")
-			} else {
-				ui.plan_action_cards[lord].classList.remove("action")
-				ui.plan_action_cards[lord].classList.add("disabled")
+
+		if (is_planning) {
+			ui.plan_actions.classList.remove("hide")
+			for (let lord = 0; lord < 12; ++lord) {
+				if (is_plan_action(lord)) {
+					ui.plan_action_cards[lord].classList.add("action")
+					ui.plan_action_cards[lord].classList.remove("disabled")
+				} else {
+					ui.plan_action_cards[lord].classList.remove("action")
+					ui.plan_action_cards[lord].classList.add("disabled")
+				}
 			}
-		}
-		if (is_plan_action(-1)) {
-			ui.plan_action_pass_p1.classList.add("action")
-			ui.plan_action_pass_p1.classList.remove("disabled")
-			ui.plan_action_pass_p2.classList.add("action")
-			ui.plan_action_pass_p2.classList.remove("disabled")
+			if (is_plan_action(-1)) {
+				ui.plan_action_pass_p1.classList.add("action")
+				ui.plan_action_pass_p1.classList.remove("disabled")
+				ui.plan_action_pass_p2.classList.add("action")
+				ui.plan_action_pass_p2.classList.remove("disabled")
+			} else {
+				ui.plan_action_pass_p1.classList.remove("action")
+				ui.plan_action_pass_p1.classList.add("disabled")
+				ui.plan_action_pass_p2.classList.remove("action")
+				ui.plan_action_pass_p2.classList.add("disabled")
+			}
 		} else {
-			ui.plan_action_pass_p1.classList.remove("action")
-			ui.plan_action_pass_p1.classList.add("disabled")
-			ui.plan_action_pass_p2.classList.remove("action")
-			ui.plan_action_pass_p2.classList.add("disabled")
+			ui.plan_actions.classList.add("hide")
 		}
 	} else {
-		ui.plan_dialog.classList.add("hide")
+		ui.plan_panel.classList.add("hide")
 	}
 }
 
@@ -1274,20 +1291,37 @@ function update_cards() {
 		elt.classList.toggle("action", is_card_action(c))
 	}
 
-	if (view.show_arts_of_war) {
-		ui.arts_of_war_dialog.classList.remove("hide")
-		ui.arts_of_war_list.replaceChildren()
-		for (let c of view.show_arts_of_war) {
+	if (view.arts_of_war) {
+		ui.arts_of_war_panel.classList.remove("hide")
+		ui.arts_of_war.replaceChildren()
+		for (let c of view.arts_of_war) {
 			let elt = ui.cards[c]
-			ui.arts_of_war_list.appendChild(ui.cards[c])
+			console.log("showin'", c, ui.cards[c])
+			ui.arts_of_war.appendChild(ui.cards[c])
 		}
 	} else {
-		ui.arts_of_war_dialog.classList.add("hide")
+		ui.arts_of_war_panel.classList.add("hide")
 	}
 
-	ui.events.replaceChildren()
-	for (let c of view.events)
-		ui.events.appendChild(ui.cards[c])
+	if (view.events.length > 0) {
+		ui.events_panel.classList.remove("hide")
+		ui.events.replaceChildren()
+		for (let c of view.events)
+			ui.events.appendChild(ui.cards[c])
+	} else {
+		ui.events_panel.classList.add("hide")
+	}
+
+	if (view.hand.length > 0) {
+		ui.hand_panel.classList.remove("hide")
+		ui.hand.replaceChildren()
+		if (view.hand) {
+			for (let c of view.hand)
+				ui.hand.appendChild(ui.cards[c])
+		}
+	} else {
+		ui.hand_panel.classList.add("hide")
+	}
 
 	ui.capabilities1.replaceChildren()
 	for_each_teutonic_card(c => {
@@ -1300,12 +1334,6 @@ function update_cards() {
 		if (view.capabilities.includes(c))
 			ui.capabilities2.appendChild(ui.cards[c])
 	})
-
-	ui.hand.replaceChildren()
-	if (view.hand) {
-		for (let c of view.hand)
-			ui.hand.appendChild(ui.cards[c])
-	}
 
 	for (let ix = 0; ix < data.lords.length; ++ix) {
 		let side = ix < 6 ? "teutonic" : "russian"
@@ -1373,15 +1401,20 @@ function is_lord_in_grid(lord) {
 }
 
 function update_court() {
-console.log("update court!")
-	ui.court1.replaceChildren()
-	ui.court2.replaceChildren()
+	let tcourt_hdr = (player === "Teutons") ? ui.court1_header : ui.court2_header
+	let rcourt_hdr = (player === "Teutons") ? ui.court2_header : ui.court1_header
+	tcourt_hdr.textContent = "Teutonic Lords"
+	rcourt_hdr.textContent = "Russian Lords"
+	let tcourt = (player === "Teutons") ? ui.court1 : ui.court2
+	let rcourt = (player === "Teutons") ? ui.court2 : ui.court1
+	tcourt.replaceChildren()
+	rcourt.replaceChildren()
 	for (let lord = 0; lord < 6; ++lord)
 		if (!is_lord_in_grid(lord) && is_lord_on_map(lord))
-			ui.court1.appendChild(ui.lord_mat[lord])
+			tcourt.appendChild(ui.lord_mat[lord])
 	for (let lord = 6; lord < 12; ++lord)
 		if (!is_lord_in_grid(lord) && is_lord_on_map(lord))
-			ui.court2.appendChild(ui.lord_mat[lord])
+			rcourt.appendChild(ui.lord_mat[lord])
 }
 
 function on_update() {
@@ -1581,8 +1614,8 @@ function build_plan() {
 	for (let i = 0; i < 6; ++i) {
 		elt = document.createElement("div")
 		elt.className = "hide"
-		ui.plan_list_cards.push(elt)
-		ui.plan_list.appendChild(elt)
+		ui.plan_cards.push(elt)
+		ui.plan.appendChild(elt)
 	}
 	for (let lord = 0; lord < 12; ++lord) {
 		let side = lord < 6 ? "teutonic" : "russian"

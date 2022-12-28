@@ -1459,6 +1459,7 @@ function draw_card(deck) {
 	let i = random(deck.length)
 	let c = deck[i]
 	set_delete(deck, c)
+	console.log("deck", c, deck)
 	return c
 }
 
@@ -1544,6 +1545,8 @@ exports.setup = function (seed, scenario, options) {
 
 	log_h1(scenario)
 
+	setup_decks()
+
 	switch (scenario) {
 		default:
 		case "Pleskau":
@@ -1572,8 +1575,6 @@ exports.setup = function (seed, scenario, options) {
 			setup_test()
 			break
 	}
-
-	setup_decks()
 
 	return game
 }
@@ -1751,22 +1752,30 @@ function setup_pleskau_quickstart() {
 	add_lord_assets(LORD_KNUD_ABEL, BOAT, 1)
 
 	muster_vassal(LORD_HERMANN, data.lords[LORD_HERMANN].vassals[0])
+	set_delete(game.deck1, T4)
 	set_lord_capability(LORD_HERMANN, 0, T4)
+	set_delete(game.deck1, T14)
 	set_lord_capability(LORD_HERMANN, 1, T14)
 
+	set_delete(game.deck1, T3)
 	set_lord_capability(LORD_YAROSLAV, 0, T3)
 
+	set_delete(game.deck1, T13)
 	set_add(game.capabilities, T13)
 	game.pieces.legate = LOC_DORPAT
 
+	set_delete(game.deck2, R8)
 	set_add(game.capabilities, R8)
 	muster_lord(LORD_DOMASH, LOC_NOVGOROD)
 	add_lord_assets(LORD_DOMASH, BOAT, 2)
 	add_lord_assets(LORD_DOMASH, CART, 2)
 
 	muster_vassal(LORD_GAVRILO, data.lords[LORD_GAVRILO].vassals[0])
+	set_delete(game.deck2, R2)
 	set_lord_capability(LORD_GAVRILO, 0, R2)
+	set_delete(game.deck2, R6)
 	set_lord_capability(LORD_GAVRILO, 1, R6)
+
 
 	game.pieces.veche_coin += 1
 
@@ -2092,7 +2101,7 @@ function resume_levy_arts_of_war_first() {
 states.levy_arts_of_war_first = {
 	prompt() {
 		let c = game.what[0]
-		view.show_arts_of_war = game.what
+		view.arts_of_war = game.what
 		view.what = c
 		if (data.cards[c].this_lord) {
 			view.prompt = `Arts of War: Assign ${data.cards[c].capability} to a Lord.`
@@ -2163,7 +2172,7 @@ function resume_levy_arts_of_war() {
 states.levy_arts_of_war = {
 	prompt() {
 		let c = game.what[0]
-		view.show_arts_of_war = [ c ]
+		view.arts_of_war = [ c ]
 		view.what = c
 		switch (data.cards[c].when) {
 			case "this_levy":
@@ -2526,7 +2535,7 @@ states.muster_capability = {
 	prompt() {
 		let deck = current_deck()
 		view.prompt = `Muster: Select a new capability for ${lord_name[game.who]}.`
-		view.show_arts_of_war = deck
+		view.arts_of_war = deck
 		for (let c of deck) {
 			if (is_no_event_card(c))
 				continue
@@ -3060,6 +3069,7 @@ states.campaign_plan = {
 		view.prompt = "Plan: Designate Lieutenants and build a Plan."
 		view.plan = plan
 		view.who = upper
+		view.actions.plan = []
 
 		if (plan.length < max_plan_length()) {
 			view.actions.end_plan = 0
@@ -7716,12 +7726,19 @@ exports.view = function (state, current) {
 
 		command: game.command,
 		hand: null,
+		plan: null,
 	}
 
-	if (current === P1)
+	if (current === P1) {
 		view.hand = game.hand1
-	if (current === P2)
+		view.plan = game.plan1
+		// view.arts_of_war = game.deck1
+	}
+	if (current === P2) {
 		view.hand = game.hand2
+		view.plan = game.plan2
+		// view.arts_of_war = game.deck2
+	}
 
 	if (game.state === "game_over") {
 		view.prompt = game.victory

@@ -43,83 +43,56 @@ header.your_turn { background-color: orange; }
 	font-variant-numeric: tabular-nums;
 }
 
-main { display: grid; grid-template-columns: 1fr; }
-
-#center { grid-row: 1; }
-#court1 { grid-row: 2; }
-#court2 { grid-row: 3; }
-
-body.Russians #court1 { grid-row: 3; }
-body.Russians #court2 { grid-row: 2; }
-
 /* PANELS */
 
 .panel {
 	max-width: 1275px;
 	margin: 36px auto;
 	//box-shadow: 0px 0px 4px #0008;
+	background-color: #555;
 }
 
 .panel_header {
+	background-color: #444;
+	color: white;
 	user-select: none;
 	font-weight: bold;
 	text-align: center;
 	padding: 3px 1em;
 }
 
-/* ARTS OF WAR */
-
-#arts_of_war {
-	background-color: #555;
-}
-
-#arts_of_war_header {
-	background-color: #444;
-	color: white;
-}
-
-#arts_of_war_list {
-	min-height: 260px;
+.panel_body {
 	display: flex;
 	justify-content: center;
 	flex-wrap: wrap;
 	padding: 18px;
-	gap: 12px;
+	gap: 18px;
+}
+
+.court {
+	gap: 24px;
+}
+
+/* ARTS OF WAR */
+
+#arts_of_war_list {
+	min-height: 260px;
 }
 
 /* PLAN */
 
 #plan {
-	background-color: #555;
-}
-
-#plan_header {
-	background-color: #444;
-	color: white;
-}
-
-#plan_list {
 	min-height: 260px;
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
-	gap: 12px 6px;
-	padding: 18px 0;
 }
 
 #plan_actions {
 	background-color: #444;
 	min-height: 130px;
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
-	padding: 18px;
-	gap: 12px;
-	flex-wrap: wrap;
 }
 
-body.Russians #plan_actions .teutonic { display: none }
-body.Teutons #plan_actions .russian { display: none }
+#plan_actions.hide {
+	display: none
+}
 
 #plan_actions .card {
 	width: 93px;
@@ -127,16 +100,10 @@ body.Teutons #plan_actions .russian { display: none }
 	background-size: 93px 130px;
 }
 
+body.Russians #plan_actions .teutonic { display: none }
+body.Teutons #plan_actions .russian { display: none }
+
 /* BATTLE GRID WITH LORD MATS */
-
-#battle_panel {
-	background-color: #555;
-}
-
-#battle_header {
-	background-color: #444;
-	color: white;
-}
 
 #battle_grid {
 	display: grid;
@@ -312,15 +279,6 @@ body.Teutons #plan_actions .russian { display: none }
 }
 
 /* MATS */
-
-.court {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
-	margin: 36px auto;
-	padding: 18px 0;
-	gap: 12px;
-}
 
 .mat {
 	position: relative;
@@ -503,21 +461,6 @@ body.shift .mustered_vassals {
 #capabilities2 {
 	margin-right: 24px;
 	justify-content: end;
-}
-
-/* EVENTS: THIS LEVY / THIS CAMPAIGN */
-
-#events {
-	display: flex;
-	max-width: 1275px;
-	margin: 0 auto;
-	flex-wrap: wrap;
-	gap: 12px;
-	justify-content: center;
-}
-
-#events:empty {
-	display: none;
 }
 
 /* ASSETS */
@@ -1287,8 +1230,6 @@ body.shift .mustered_vassals {
 
 <main>
 
-<div id="center">
-
 <div id="mapwrap">
 <div id="map">
 
@@ -1319,17 +1260,21 @@ body.shift .mustered_vassals {
 <div id="capabilities2"></div>
 </div>
 
-<div id="events"></div>
-
-<div id="arts_of_war" class="panel hide">
-<div id="arts_of_war_header" class="panel_header">~ Arts of War ~</div>
-<div id="arts_of_war_list"></div>
+<div id="arts_of_war_panel" class="panel hide">
+<div id="arts_of_war_header" class="panel_header">Arts of War</div>
+<div id="arts_of_war" class="panel_body"></div>
 </div>
 
-<div id="plan" class="panel hide">
-<div id="plan_header" class="panel_header">~ Plan ~</div>
-<div id="plan_list"></div>
-<div id="plan_actions"></div>
+<div id="events_panel" class="panel hide">
+<div id="events_header" class="panel_header">Events</div>
+<div id="events" class="panel_body"></div>
+</div>
+</div>
+
+<div id="hand_panel" class="panel hide">
+<div id="hand_header" class="panel_header">Hand</div>
+<div id="hand" class="panel_body"></div>
+</div>
 </div>
 
 <div id="battle_panel" class="panel hide">
@@ -1370,12 +1315,21 @@ body.shift .mustered_vassals {
 </div>
 </div>
 
-<div id="hand" class="hand"></div>
+<div class="panel">
+<div id="court1_header" class="panel_header">Lords</div>
+<div id="court1" class="panel_body court"></div>
+</div>
 
-</div> <!-- center -->
+<div id="plan_panel" class="panel hide">
+<div id="plan_header" class="panel_header">Plan</div>
+<div id="plan" class="panel_body"></div>
+<div id="plan_actions" class="panel_body"></div>
+</div>
 
-<div id="court1" class="court"></div>
-<div id="court2" class="court"></div>
+<div class="panel">
+<div id="court2_header" class="panel_header">Lords</div>
+<div id="court2" class="panel_body court"></div>
+</div>
 
 </main>
 
