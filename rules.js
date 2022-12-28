@@ -1078,6 +1078,10 @@ function add_ravaged_marker(loc) {
 	set_add(game.pieces.ravaged, loc)
 }
 
+function remove_ravaged_marker(loc) {
+	set_delete(game.pieces.ravaged, loc)
+}
+
 function count_siege_markers(loc) {
 	return map_get(game.pieces.sieges, loc, 0)
 }
@@ -7082,15 +7086,73 @@ function goto_remove_markers() {
 	goto_command_activation()
 }
 
+// === END CAMPAIGN: GROWTH ===
+
+function count_enemy_ravaged() {
+	let n = 0
+	for (let loc of game.pieces.ravaged)
+		if (is_friendly_territory(loc))
+			++n
+	return n
+}
+
+function goto_growth() {
+	game.count = count_enemy_ravaged() >> 1
+	if (game.active === TEUTONS)
+		log_h3("Teutonic Growth")
+	else
+		log_h3("Russian Growth")
+	if (game.count === 0) {
+		logi("Nothing")
+		end_growth()
+	} else {
+		game.state = "growth"
+	}
+}
+
+function end_growth() {
+	set_active_enemy()
+	if (game.active === P2)
+		goto_growth()
+	else
+		goto_game_end()
+}
+
+states.growth = {
+	prompt() {
+		view.prompt = `Growth: Remove ${game.count} enemy ravaged markers.`
+		if (game.count > 0) {
+			for (let loc of game.pieces.ravaged)
+				if (is_friendly_territory(loc))
+					gen_action_locale(loc)
+		} else {
+			view.actions.end_growth = 1
+		}
+	},
+	locale(loc) {
+		push_undo()
+		logi(`%${loc}`)
+		remove_ravaged_marker(loc)
+		game.count--
+	},
+	end_growth() {
+		clear_undo()
+		end_growth()
+	},
+}
+
 // === END CAMPAIGN: GAME END ===
 
 function goto_end_campaign() {
 	log_h1("End Campaign")
-	set_active(P1)
 
 	if (game.scenario === "Crusade on Novgorod") {
-		if (game.turn === 8 || game.turn === 16)
-			log("TODO: Grow - Teutons then Rus remove 1/2 enemy's ravage")
+		if (game.turn === 8 || game.turn === 16) {
+			set_active(P1)
+			log_h2("Growth")
+			goto_growth()
+			return
+		}
 	}
 
 	goto_game_end()
