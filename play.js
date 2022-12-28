@@ -1522,7 +1522,7 @@ function on_update() {
 	action_button("end_avoid_battle", "End avoid battle")
 	action_button("end_call_to_arms", "End call to arms")
 	action_button("end_disband", "End disband")
-	action_button("end_disband", "End disband")
+	action_button("end_discard", "End discard")
 	action_button("end_feed", "End feed")
 	action_button("end_growth", "End growth")
 	action_button("end_levy", "End levy")
