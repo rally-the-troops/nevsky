@@ -15,6 +15,7 @@
 // clean up game.who (use only in muster / events, not for command)
 // TODO: remove push_state/pop_state stuff - use explicit substates with common functions instead
 // game.levy/command instead of game.who for levy (like game.command for campaign)
+// TODO: optimize lift_sieges (only check specific locales based on where the check is)
 
 const data = require("./data.js")
 
@@ -1089,7 +1090,15 @@ function add_siege_marker(loc) {
 }
 
 function remove_siege_marker(loc) {
-	map_set(game.pieces.sieges, loc, map_get(game.pieces.sieges, loc, 0) - 1)
+	let n = map_get(game.pieces.sieges, loc, 0)
+	if (n > 1)
+		map_set(game.pieces.sieges, loc, n - 1)
+	else
+		map_delete(game.pieces.sieges, loc)
+}
+
+function remove_all_but_one_siege_markers(loc) {
+	map_set(game.pieces.sieges, loc, 1)
 }
 
 function remove_all_siege_markers(loc) {
@@ -3388,13 +3397,23 @@ function toggle_legate_selected() {
 		game.pieces.legate_selected = 1
 }
 
-function lift_siege(from) {
-	if (has_siege_marker(from)) {
-		log(`Lifted siege at %${from}.`)
-		remove_all_siege_markers(from)
+function lift_sieges() {
+	for (let i = 0; i < game.pieces.sieges; i += 2) {
+		let loc = game.pieces.sieges[i]
+		if (is_enemy_stronghold(loc)) {
+			if (!has_friendly_lord(loc)) {
+				log(`Lifted siege at %${from}.`)
+				remove_all_siege_markers(from)
+			}
+		} else if (is_friendly_stronghold(loc)) {
+			if (!has_enemy_lord(loc)) {
+				log(`Lifted siege at %${from}.`)
+				remove_all_siege_markers(from)
+			}
+		}
 	}
-	for (let lord = first_lord; lord <= last_lord; ++lord)
-		if (get_lord_locale(lord) === from && is_lord_besieged(lord))
+	for (let lord = 0; lord < lord_count; ++lord)
+		if (is_lord_besieged(lord) && !has_siege_marker(get_lord_locale(lord)))
 			set_lord_besieged(lord, 0)
 }
 
@@ -3539,8 +3558,7 @@ function march_with_group_2() {
 	if (game.pieces.legate_selected)
 		game.pieces.legate = to
 
-	if (is_besieged_enemy_stronghold(from) && !has_friendly_lord(from))
-		lift_siege(from)
+	lift_sieges()
 
 	remove_legate_if_endangered(from)
 
@@ -3571,11 +3589,6 @@ function march_with_group_3() {
 	}
 
 	remove_legate_if_endangered(here)
-
-	if (is_besieged_friendly_stronghold(here)) {
-	// TODO if (is_besieged_enemy_stronghold(from) && !has_friendly_lord(from))
-		lift_siege(here)
-	}
 
 	if (is_unbesieged_enemy_stronghold(here)) {
 		add_siege_marker(here)
@@ -4613,9 +4626,7 @@ states.sail = {
 		if (game.pieces.legate_selected)
 			game.pieces.legate = to
 
-		if (is_enemy_stronghold(from))
-		// TODO if (is_besieged_enemy_stronghold(from) && !has_friendly_lord(from))
-			lift_siege(from)
+		lift_sieges()
 
 		remove_legate_if_endangered(from)
 
@@ -5976,10 +5987,6 @@ function end_battle() {
 
 // === ENDING THE BATTLE: WITHDRAW ===
 
-function lord_has_no_forces(lord) {
-	return game.pieces.forces[lord] === 0
-}
-
 function withdrawal_capacity_needed(here) {
 	let n_upper = 0
 	let n_other = 0
@@ -6017,7 +6024,7 @@ states.battle_withdraw = {
 
 		view.prompt = "Battle: You may withdraw losing lords into stronghold."
 
-		// TODO: Sally must withdraw!
+		// NOTE: Sallying lords are still flagged "besieged" and are thus already withdrawn!
 
 		if (capacity >= 1) {
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
@@ -6031,7 +6038,6 @@ states.battle_withdraw = {
 				}
 			}
 		}
-
 
 		view.actions.end_withdraw = 1
 	},
@@ -6100,7 +6106,6 @@ function can_retreat() {
 
 function goto_retreat() {
 	let here = game.march.to
-	console.log("goto_retreat", here, count_unbesieged_friendly_lords(here), can_retreat())
 	if (count_unbesieged_friendly_lords(here) > 0 && can_retreat()) {
 		game.battle.retreated = []
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
@@ -6113,10 +6118,7 @@ function goto_retreat() {
 }
 
 function end_retreat() {
-	let from = game.battle.where
-	if (is_enemy_stronghold(from) && !has_friendly_lord(from))
-		lift_siege(from)
-
+	lift_sieges()
 	goto_battle_remove()
 }
 
@@ -6886,8 +6888,7 @@ function disband_lord(lord, permanently = false) {
 	for (let v of data.lords[lord].vassals)
 		game.pieces.vassals[v] = VASSAL_UNAVAILABLE
 
-	if (is_besieged_enemy_stronghold(here) && !has_friendly_lord(here))
-		lift_siege(here)
+	lift_sieges()
 }
 
 states.disband = {
