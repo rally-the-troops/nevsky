@@ -343,6 +343,10 @@ body.Teutons #plan_actions .russian { display: none }
 	z-index: 4;
 }
 
+.mat.besieged .background {
+	filter: grayscale(50%)
+}
+
 .mat.selected .background {
 	box-shadow: 0 0 0 1px #584800, 0 0 0 3px yellow;
 }
@@ -933,6 +937,11 @@ body.shift .mustered_vassals {
 
 .cylinder:not(.lieutenant) {
 	filter: drop-shadow(0px 2px 4px #0004);
+}
+
+#map .cylinder.besieged {
+	filter: grayscale(50%);
+	transform: translateY(8px)
 }
 
 .cylinder.action {

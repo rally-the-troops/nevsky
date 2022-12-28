@@ -180,9 +180,22 @@ function pack1_get(word, n) {
 	return (word >>> n) & 1
 }
 
+function pack2_get(word, n) {
+	n = n << 1
+	return (word >>> n) & 3
+}
+
 function pack4_get(word, n) {
 	n = n << 2
 	return (word >>> n) & 15
+}
+
+function is_lord_besieged(lord) {
+	return pack1_get(view.pieces.besieged, lord)
+}
+
+function is_lord_moved(lord) {
+	return pack2_get(view.pieces.moved, lord) > 0
 }
 
 function is_veche_action() {
@@ -1079,6 +1092,8 @@ function update_lord(ix) {
 		ui.lord_cylinder[ix].classList.remove("hide")
 		ui.lord_service[ix].classList.add("hide")
 	}
+	ui.lord_cylinder[ix].classList.toggle("besieged", is_lord_besieged(ix))
+	ui.lord_cylinder[ix].classList.toggle("moved", is_lord_moved(ix))
 	ui.lord_buttons[ix].classList.toggle("action", is_lord_action(ix))
 	ui.lord_cylinder[ix].classList.toggle("action", is_lord_action(ix))
 	ui.lord_service[ix].classList.toggle("action", is_service_action(ix))
@@ -1093,6 +1108,9 @@ function update_lord(ix) {
 	else
 		ui.lord_cylinder[ix].classList.toggle("selected", is_cylinder_selected(ix))
 	ui.lord_mat[ix].classList.toggle("selected", is_lord_mat_selected(ix))
+
+	ui.lord_mat[ix].classList.toggle("besieged", is_lord_besieged(ix))
+	ui.lord_mat[ix].classList.toggle("moved", is_lord_moved(ix))
 }
 
 function update_legate() {

@@ -1,6 +1,5 @@
 "use strict"
 
-// NEXT: choose left/right when center flanking
 // NEXT: hit remainders
 // TODO: SALLY
 // TODO: STORM
@@ -3393,10 +3392,10 @@ function lift_siege(from) {
 	if (has_siege_marker(from)) {
 		log(`Lifted siege at %${from}.`)
 		remove_all_siege_markers(from)
-		for (let lord = first_lord; lord <= last_lord; ++lord)
-			if (get_lord_locale(lord) === from && is_lord_besieged(lord))
-				set_lord_besieged(lord, 0)
 	}
+	for (let lord = first_lord; lord <= last_lord; ++lord)
+		if (get_lord_locale(lord) === from && is_lord_besieged(lord))
+			set_lord_besieged(lord, 0)
 }
 
 function group_has_teutonic_converts() {
@@ -3574,6 +3573,7 @@ function march_with_group_3() {
 	remove_legate_if_endangered(here)
 
 	if (is_besieged_friendly_stronghold(here)) {
+	// TODO if (is_besieged_enemy_stronghold(from) && !has_friendly_lord(from))
 		lift_siege(here)
 	}
 
@@ -4614,6 +4614,7 @@ states.sail = {
 			game.pieces.legate = to
 
 		if (is_enemy_stronghold(from))
+		// TODO if (is_besieged_enemy_stronghold(from) && !has_friendly_lord(from))
 			lift_siege(from)
 
 		remove_legate_if_endangered(from)
@@ -6112,6 +6113,10 @@ function goto_retreat() {
 }
 
 function end_retreat() {
+	let from = game.battle.where
+	if (is_enemy_stronghold(from) && !has_friendly_lord(from))
+		lift_siege(from)
+
 	goto_battle_remove()
 }
 
