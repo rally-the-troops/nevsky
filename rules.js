@@ -6169,7 +6169,11 @@ function rout_lord(lord) {
 }
 
 function resume_hit_lord() {
-	if ((game.battle.h1 === 0 && game.battle.h2 === 0) || !has_unrouted_units(game.who))
+	if (
+		(game.battle.h1 === 0 && game.battle.h2 === 0) ||
+		(game.who === -1 && game.battle.garrison.knights + game.battle.garrison.men_at_arms === 0) ||
+		!has_unrouted_units(game.who)
+	)
 		end_hit_lord()
 }
 

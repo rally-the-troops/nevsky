@@ -1312,7 +1312,7 @@ function update_cards() {
 		ui.events_panel.classList.add("hide")
 	}
 
-	if (view.hand.length > 0) {
+	if (view.hand && view.hand.length > 0) {
 		ui.hand_panel.classList.remove("hide")
 		ui.hand.replaceChildren()
 		if (view.hand) {
