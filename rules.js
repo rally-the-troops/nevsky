@@ -217,6 +217,8 @@ const R16 = find_card("R16")
 const R17 = find_card("R17")
 const R18 = find_card("R18")
 
+const GARRISON = -1
+
 const LORD_ANDREAS = find_lord("Andreas")
 const LORD_HEINRICH = find_lord("Heinrich")
 const LORD_HERMANN = find_lord("Hermann")
@@ -4928,7 +4930,7 @@ function start_sally() {
 }
 
 function init_garrison(knights, men_at_arms) {
-	game.battle.garrison = { knights, men_at_arms, h1: 0, h2: 0 }
+	game.battle.garrison = { knights, men_at_arms }
 }
 
 function start_storm() {
@@ -5658,7 +5660,7 @@ function has_no_unrouted_forces() {
 		if (is_friendly_locale(lord))
 			return false
 	if (game.battle.storm && game.active !== game.battle.attacker)
-		if (game.battle.garrison.knights + game.battle.garrison.men_at_arms > 0)
+		if (game.battle.garrison)
 			return false
 	return true
 }
@@ -5826,7 +5828,6 @@ function goto_strike() {
 
 function goto_strike_storm() {
 	let s = game.battle.step & 1
-	let has_garrison = game.battle.garrison.knights > 0 || game.battle.garrison.men_at_arms > 0
 
 	log_h4(storm_step_name[game.battle.step])
 
@@ -5851,7 +5852,7 @@ function goto_strike_storm() {
 	}
 
 	if (game.active === game.battle.attacker) {
-		if (has_garrison) {
+		if (game.battle.garrison) {
 			if (game.battle.array[D2] === NOBODY)
 				log(`L${game.battle.array[A2]} struck Garrison for ${format_hits()}`)
 			else
@@ -5864,7 +5865,7 @@ function goto_strike_storm() {
 		set_active_enemy()
 		select_hit_lord(game.battle.array[D2])
 	} else {
-		if (has_garrison) {
+		if (game.battle.garrison) {
 			if (game.battle.array[D2] === NOBODY)
 				log(`Garrison struck L${game.battle.array[A2]} for ${format_hits()}`)
 			else
@@ -5902,8 +5903,6 @@ function goto_strike_battle() {
 		return
 	}
 
-	// TODO: skip choice if garrison?
-
 	if (has_front_strike_choice())
 		game.battle.fc = -1
 	else
@@ -5929,7 +5928,6 @@ function end_strike_choice() {
 	let rear = pack_battle_array_rear()
 
 	// TODO: if SA and no RD
-	// TODO: garrison groups
 
 	game.battle.groups = unpack_group_list(GROUPS[s][game.battle.fc][front], GROUPS[s][game.battle.rc][rear])
 
@@ -6171,20 +6169,22 @@ function rout_lord(lord) {
 function resume_hit_lord() {
 	if (
 		(game.battle.h1 === 0 && game.battle.h2 === 0) ||
-		(game.who === -1 && game.battle.garrison.knights + game.battle.garrison.men_at_arms === 0) ||
-		!has_unrouted_units(game.who)
+		(game.who === GARRISON && game.battle.garrison) ||
+		(game.who !== GARRISON && !has_unrouted_units(game.who))
 	)
 		end_hit_lord()
 }
 
 function rout_unit(lord, type) {
-	if (lord < 0) {
+	if (lord === GARRISON) {
 		if (type === KNIGHTS)
 			game.battle.garrison.knights--
 		if (type === MEN_AT_ARMS)
 			game.battle.garrison.men_at_arms--
-		if (game.battle.garrison.knights + game.battle.garrison.men_at_arms === 0)
+		if (game.battle.garrison.knights + game.battle.garrison.men_at_arms === 0) {
 			log("Garrison routed.")
+			game.battle.garrison = 0
+		}
 	} else {
 		add_lord_forces(lord, type, -1)
 		add_lord_routed_forces(lord, type, 1)
@@ -6298,11 +6298,11 @@ states.hit_lord = {
 					prompt_hit_unarmored_forces(game.who)
 			} else {
 				// Storm - defender must apply hits to garrison first
-				if (game.battle.garrison.knights > 0 || game.battle.garrison.men_at_arms > 0) {
+				if (game.battle.garrison) {
 					if (game.battle.garrison.knights > 0)
-						gen_action_knights(-1)
+						gen_action_knights(GARRISON)
 					if (game.battle.garrison.men_at_arms > 0)
-						gen_action_men_at_arms(-1)
+						gen_action_men_at_arms(GARRISON)
 				} else {
 					prompt_hit_forces(game.who)
 				}
