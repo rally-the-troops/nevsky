@@ -1470,6 +1470,18 @@ function discard_card(c) {
 		set_add(game.deck2, c)
 }
 
+function discard_events(when) {
+	for (let i = 0; i < game.events.length; ) {
+		let c = game.events[i]
+		if (data.cards[c].when === when) {
+			array_remove(game.events, i)
+			discard_card(c)
+		} else {
+			++i
+		}
+	}
+}
+
 exports.setup = function (seed, scenario, options) {
 	game = {
 		seed,
@@ -2606,15 +2618,7 @@ function end_levy_call_to_arms() {
 function goto_levy_discard_events() {
 
 	// Discard "This Levy" events from play.
-	for (let i = 0; i < game.events.length; ) {
-		let c = game.events[i]
-		if (data.cards[c].when === "this_levy") {
-			array_remove(game.events, i)
-			discard_card(c)
-		} else {
-			++i
-		}
-	}
+	discard_events("this_levy")
 
 	set_active(P1)
 	goto_capability_discard()
@@ -7480,15 +7484,7 @@ function goto_reset() {
 	}
 
 	// Discard "This Campaign" events from play.
-	for (let i = 0; i < game.events.length; ) {
-		let c = game.events[i]
-		if (data.cards[c].when === "this_campaign") {
-			array_remove(game.events, i)
-			discard_card(c)
-		} else {
-			++i
-		}
-	}
+	discard_events("this_campaign")
 
 	goto_advance_campaign()
 }
