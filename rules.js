@@ -5841,8 +5841,17 @@ function goto_strike_storm() {
 		count_garrison_hits(game.battle.step)
 	}
 
-	game.battle.h1 = game.battle.ah1[0] + game.battle.ah1[1]
-	game.battle.h2 = game.battle.ah2[0] + game.battle.ah2[1]
+	game.battle.h1 = game.battle.ah1[0]
+	game.battle.h2 = game.battle.ah2[0]
+
+	// Max 6 hits per lord in melee (12 since we count half-hits).
+	if (game.battle.step >= 2) {
+		if (game.battle.h1 > 12)
+			game.battle.h1 = 12
+	}
+
+	game.battle.h1 += game.battle.ah1[1]
+	game.battle.h2 += game.battle.ah2[1]
 	round_hits()
 
 	if (game.battle.h1 + game.battle.h2 === 0) {
