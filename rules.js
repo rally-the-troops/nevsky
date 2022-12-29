@@ -1,25 +1,22 @@
 "use strict"
 
 // TODO: SA without RD
-// TODO: choose crossbow/normal hit application order
 // TODO: hit remainders
-
-// TODO: check all push/clear_undo
+// TODO: choose crossbow/normal hit application order
 
 // TODO: Lodya capability during supply!
 // TODO: 2nd edition supply rule - no reuse of transports
 
-// TODO: mark moved/fought units (blue highlight?)
-// TODO: mark command lord different from selected lord?
-
 // TODO - precompute possible supply lines for faster rejections
 
+// TODO: show command lord different from selected lord (inactive player)
 // TODO: show siegeworks + walls on battle mat for protection indication?
 
-// clean up game.who (use only in muster / events, not for command)
-// TODO: remove push_state/pop_state stuff - use explicit substates with common functions instead
-// game.levy/command instead of game.who for levy (like game.command for campaign)
-// TODO: optimize lift_sieges (only check specific locales based on where the check is)
+// Check all push/clear_undo
+// Remove push_state/pop_state stuff - use explicit substates with common functions instead
+// Optimize lift_sieges (only check specific locales based on where the check is)
+// Use game.levy or game.command instead of game.who for levy (like game.command for campaign)
+// Clean up game.who (use only in muster / events, not for command)
 
 const data = require("./data.js")
 
@@ -3627,15 +3624,6 @@ function march_with_group_3() {
 		return
 	}
 
-	siege_conquer_locale(here)
-
-	game.march = 0
-
-	resume_actions()
-	update_supply()
-}
-
-function siege_conquer_locale(here) {
 	remove_legate_if_endangered(here)
 
 	if (is_unbesieged_enemy_stronghold(here)) {
@@ -3647,6 +3635,11 @@ function siege_conquer_locale(here) {
 	if (is_trade_route(here)) {
 		conquer_trade_route(here)
 	}
+
+	game.march = 0
+
+	resume_actions()
+	update_supply()
 }
 
 // === ACTION: MARCH - AVOID BATTLE ===
@@ -6131,9 +6124,9 @@ function roll_for_siegeworks() {
 function select_hit_lord(lord) {
 	if (game.battle.storm) {
 		if (game.active === game.battle.attacker)
-			roll_for_walls()
-		else
 			roll_for_siegeworks()
+		else
+			roll_for_walls()
 	} else if (game.battle.sally) {
 		if (game.active !== game.battle.attacker)
 			roll_for_siegeworks()
@@ -6194,12 +6187,16 @@ function rout_unit(lord, type) {
 	}
 }
 
+function is_armored_force(type) {
+	return type === KNIGHTS || type === SERGEANTS || type === MEN_AT_ARMS
+}
+
 function action_hit_lord(lord, type) {
 	let protection = FORCE_PROTECTION[type]
 	let evade = FORCE_EVADE[type]
 
 	// TODO: manual choice of hit type
-	let ap = (game.battle.h2 > 0) ? 2 : 0
+	let ap = (is_armored_force(type) && game.battle.h2 > 0) ? 2 : 0
 
 	if (evade > 0 && !game.battle.storm) {
 		let die = roll_die()
@@ -6437,9 +6434,10 @@ function award_spoils(n) {
 function goto_sack() {
 	let here = game.battle.where
 
-	log("Sacked %${here}.")
+	log(`Sacked %${here}.`)
 
 	remove_all_siege_markers(game.battle.where)
+	add_conquered_marker(game.battle.where)
 
 	if (here === LOC_NOVGOROD)
 		award_spoils(3)
@@ -7044,10 +7042,6 @@ states.battle_service = {
 function goto_battle_aftermath() {
 	set_active(game.battle.attacker)
 
-	let here = game.battle.where
-	let storm = game.battle.storm
-	game.battle = 0
-
 	// Events
 	discard_events("hold")
 
@@ -7059,12 +7053,14 @@ function goto_battle_aftermath() {
 
 	// Siege/Conquest
 	if (game.march) {
+		game.battle = 0
 		march_with_group_3()
 	} else if (game.battle.storm) {
-		siege_conquer_locale(here)
+		game.battle = 0
 		resume_actions()
 	} else {
-		siege_conquer_locale(here)
+		remove_legate_if_endangered(game.battle.where)
+		game.battle = 0
 		resume_actions()
 	}
 }
