@@ -510,7 +510,7 @@ const ui = {
 	court2: document.getElementById("court2"),
 	battle_attacker_reserves: document.getElementById("mat_attacker_reserves"),
 	battle_defender_reserves: document.getElementById("mat_defender_reserves"),
-	battle_garrison: document.getElementById("mat_garrison"),
+	garrison: document.getElementById("mat_garrison"),
 	battle_panel: document.getElementById("battle_panel"),
 	battle_header: document.getElementById("battle_header"),
 	pursuit: document.getElementById("mat_pursuit"),
@@ -1389,6 +1389,14 @@ function update_battle() {
 	for (let lord = 0; lord < 12; ++lord) {
 		ui.battle_cylinder[lord].classList.toggle("action", is_battle_lord_action(lord))
 		ui.battle_cylinder[lord].classList.toggle("selected", view.who === lord)
+	}
+
+	ui.garrison.replaceChildren()
+	if (view.battle.garrison) {
+		for (let i = 0; i < view.battle.garrison.knights; ++i)
+			add_force(parent, KNIGHTS, -1, 0)
+		for (let i = 0; i < view.battle.garrison.men_at_arms; ++i)
+			add_force(parent, MEN_AT_ARMS, -1, 0)
 	}
 }
 
