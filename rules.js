@@ -2128,7 +2128,10 @@ states.levy_arts_of_war_first = {
 		let c = game.what[0]
 		view.arts_of_war = game.what
 		view.what = c
-		if (data.cards[c].this_lord) {
+		if (is_no_event_card(c)) {
+			view.prompt = `Arts of War: No Capability.`
+			view.actions.discard = 1
+		} else if (data.cards[c].this_lord) {
 			view.prompt = `Arts of War: Assign ${data.cards[c].capability} to a Lord.`
 			let discard = true
 			for (let lord of data.cards[c].lords) {
@@ -2139,12 +2142,9 @@ states.levy_arts_of_war_first = {
 			}
 			if (discard)
 				view.actions.discard = 1
-		} else if (data.cards[c].capability) {
+		} else {
 			view.prompt = `Arts of War: Deploy ${data.cards[c].capability}.`
 			view.actions.deploy = 1
-		} else {
-			view.prompt = `Arts of War: No Capability.`
-			view.actions.discard = 1
 		}
 	},
 	lord(lord) {
@@ -6178,7 +6178,7 @@ function rout_lord(lord) {
 function resume_hit_lord() {
 	if (
 		(game.battle.h1 === 0 && game.battle.h2 === 0) ||
-		(game.who === GARRISON && game.battle.garrison) ||
+		(game.who === GARRISON && !game.battle.garrison) ||
 		(game.who !== GARRISON && !has_unrouted_units(game.who))
 	)
 		end_hit_lord()
@@ -7713,9 +7713,9 @@ function goto_plow_and_reap() {
 }
 
 function flip_and_discard_half(lord, from_type, to_type) {
-	add_lord_assets(lord, get_lord_assets(lord, from_type, to_type))
+	add_lord_assets(lord, to_type, get_lord_assets(lord, from_type))
 	set_lord_assets(lord, from_type, 0)
-	set_lord_assets(lord, to_type, Math.ceil(get_lord_assets(lord, to_type)))
+	set_lord_assets(lord, to_type, Math.ceil(get_lord_assets(lord, to_type) / 2))
 }
 
 states.plow_and_reap = {
