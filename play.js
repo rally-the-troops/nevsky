@@ -1394,9 +1394,9 @@ function update_battle() {
 	ui.garrison.replaceChildren()
 	if (view.battle.garrison) {
 		for (let i = 0; i < view.battle.garrison.knights; ++i)
-			add_force(parent, KNIGHTS, -1, 0)
+			add_force(ui.garrison, KNIGHTS, -1, 0)
 		for (let i = 0; i < view.battle.garrison.men_at_arms; ++i)
-			add_force(parent, MEN_AT_ARMS, -1, 0)
+			add_force(ui.garrison, MEN_AT_ARMS, -1, 0)
 	}
 }
 
@@ -1496,7 +1496,7 @@ function on_update() {
 
 	ui.veche.classList.toggle("action", is_veche_action())
 
-	if (view.battle) {
+	if (view.battle && view.battle.array) {
 		ui.battle_panel.classList.remove("hide")
 		ui.battle_header.textContent = "~ Battle at " + data.locales[view.battle.where].name + " ~"
 		if (view.battle.attacker === player) {

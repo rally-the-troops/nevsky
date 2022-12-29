@@ -69,7 +69,12 @@ header.your_turn { background-color: orange; }
 	gap: 18px;
 }
 
-.court {
+.court_panel {
+	max-width: fit-content;
+	min-width: min(1275px, 100%);
+}
+
+.court_body {
 	gap: 24px;
 }
 
@@ -301,7 +306,7 @@ body.Teutons #plan_actions .russian { display: none }
 	z-index: 4;
 }
 
-.mat.besieged .background {
+.court_body .mat.besieged .background {
 	filter: grayscale(50%)
 }
 
@@ -1315,9 +1320,9 @@ body.shift .mustered_vassals {
 </div>
 </div>
 
-<div class="panel">
+<div class="panel court_panel">
 <div id="court1_header" class="panel_header">Lords</div>
-<div id="court1" class="panel_body court"></div>
+<div id="court1" class="panel_body court_body"></div>
 </div>
 
 <div id="plan_panel" class="panel hide">
@@ -1326,9 +1331,9 @@ body.shift .mustered_vassals {
 <div id="plan_actions" class="panel_body"></div>
 </div>
 
-<div class="panel">
+<div class="panel court_panel">
 <div id="court2_header" class="panel_header">Lords</div>
-<div id="court2" class="panel_body court"></div>
+<div id="court2" class="panel_body court_body"></div>
 </div>
 
 </main>

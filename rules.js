@@ -4,6 +4,8 @@
 // TODO: choose crossbow/normal hit application order
 // TODO: hit remainders
 
+// TODO: check all push/clear_undo
+
 // TODO: Lodya capability during supply!
 // TODO: 2nd edition supply rule - no reuse of transports
 
@@ -39,6 +41,9 @@ const WASTAGE_DISCARD = true // wastage, discard in one go
 // option ACTIVE_FEED_FIRST // active card feeds first (instead of P1 always first)
 // option DELAY_PAY_IF_NO_FEED_OR_DISBAND
 // option SERVICE_BEFORE_SPOILS
+
+const DIE_HIT = "01234567"
+const DIE_MISS = "01234567"
 
 let game = null
 let view = null
@@ -1040,11 +1045,19 @@ function is_trade_route(loc) {
 }
 
 function is_fort(loc) {
-	return data.locales[loc].type === "fort"
+	return data.locales[loc].type === "fort" && !has_castle_marker(loc)
 }
 
 function is_town(loc) {
-	return data.locales[loc].type === "town"
+	return data.locales[loc].type === "town" && !has_castle_marker(loc)
+}
+
+function is_castle(loc) {
+	return data.locales[loc].type === "castle" || has_castle_marker(loc)
+}
+
+function is_bishopric(loc) {
+	return data.locales[loc].type === "bishopric"
 }
 
 function is_city(loc) {
@@ -1146,7 +1159,7 @@ function has_friendly_castle(loc) {
 	return set_has(game.pieces.castles2, loc)
 }
 
-function has_castle(loc) {
+function has_castle_marker(loc) {
 	return (
 		set_has(game.pieces.castles1, loc) ||
 		set_has(game.pieces.castles2, loc)
@@ -2981,7 +2994,11 @@ function count_global_capabilities() {
 }
 
 function goto_capability_discard() {
-	console.log("capability_discard", game.active, count_global_capabilities(), count_mustered_lords())
+
+	// Start of Campaign phase
+	if (check_campaign_victory())
+		return
+
 	if (count_global_capabilities() > count_mustered_lords())
 		game.state = "capability_discard"
 	else
@@ -3177,6 +3194,9 @@ function goto_command_activation() {
 		goto_end_campaign()
 		return
 	}
+
+	if (check_campaign_victory())
+		return
 
 	if (game.plan2.length > game.plan1.length) {
 		set_active(P2)
@@ -3417,17 +3437,17 @@ function toggle_legate_selected() {
 }
 
 function lift_sieges() {
-	for (let i = 0; i < game.pieces.sieges; i += 2) {
+	for (let i = 0; i < game.pieces.sieges.length; i += 2) {
 		let loc = game.pieces.sieges[i]
 		if (is_enemy_stronghold(loc)) {
 			if (!has_friendly_lord(loc)) {
-				log(`Lifted siege at %${from}.`)
-				remove_all_siege_markers(from)
+				log(`Lifted siege at %${loc}.`)
+				remove_all_siege_markers(loc)
 			}
 		} else if (is_friendly_stronghold(loc)) {
 			if (!has_enemy_lord(loc)) {
-				log(`Lifted siege at %${from}.`)
-				remove_all_siege_markers(from)
+				log(`Lifted siege at %${loc}.`)
+				remove_all_siege_markers(loc)
 			}
 		}
 	}
@@ -3640,7 +3660,7 @@ function count_besieged_lords(loc) {
 }
 
 function stronghold_strength(loc) {
-	if (has_castle(loc))
+	if (has_castle_marker(loc))
 		return 2
 	return data.locales[loc].stronghold
 }
@@ -4116,12 +4136,11 @@ function end_siege() {
 function can_action_storm() {
 	if (game.actions < 1)
 		return false
-	return false
+	return is_besieged_enemy_stronghold(get_lord_locale(game.command))
 }
 
 function goto_storm() {
-	log("TODO: Storm")
-	spend_action(1)
+	start_storm()
 }
 
 // === ACTION: SALLY ===
@@ -4678,7 +4697,7 @@ function can_action_stonemasons() {
 			return false
 		if (count_castles() >= 2)
 			return false
-		if (has_castle(here))
+		if (has_castle_marker(here))
 			return false
 		if (has_siege_marker(here))
 			return false
@@ -4879,7 +4898,7 @@ function init_battle(here, is_storm, is_sally) {
 function start_battle() {
 	let here = get_lord_locale(game.command)
 
-	log_h3(`Battle at %${here}`)
+	log_h2(`Battle at %${here}`)
 
 	// TODO: array <= 3 attacking lords automatically
 
@@ -4899,7 +4918,7 @@ function start_battle() {
 function start_sally() {
 	let here = get_lord_locale(game.command)
 
-	log_h3(`Sally at %${here}`)
+	log_h2(`Sally at %${here}`)
 
 	init_battle(here, 0, 1)
 
@@ -4922,7 +4941,7 @@ function init_garrison(knights, men_at_arms) {
 function start_storm() {
 	let here = get_lord_locale(game.command)
 
-	log_h3(`Storm at %${here}`)
+	log_h2(`Storm at %${here}`)
 
 	init_battle(here, 1, 0)
 
@@ -5250,11 +5269,13 @@ function goto_battle_rounds() {
 function goto_concede() {
 	// No concede during first round of Storm
 	if (game.battle.storm) {
+		log_h3(`Storm Round ${game.battle.round} / ${count_siege_markers(game.battle.where)}`)
 		if (game.battle.round === 1)
-			goto_reposition_storm()
+			goto_start_strike()
 		else
 			game.state = "concede_storm"
 	} else {
+		log_h3("Battle Round")
 		game.state = "concede_battle"
 	}
 }
@@ -5313,11 +5334,6 @@ function slide_array(from, to) {
 
 function goto_reposition_battle() {
 	let array = game.battle.array
-
-	if (game.battle.storm) {
-		goto_reposition_storm()
-		return
-	}
 
 	// TODO: strict order of these three relief sally reassessment steps
 
@@ -5521,9 +5537,9 @@ states.reposition_storm = {
 		view.prompt = "Reposition: You may switch positions between Front and any Reserve Lord."
 		for (let lord of game.battle.reserves)
 			if (is_friendly_lord(lord) && lord !== game.who)
-				gen_action_lord(lord)
+				gen_action_battle_lord(lord)
 	},
-	lord(lord) {
+	battle_lord(lord) {
 		log(`Swapped in L${lord}.`)
 		set_delete(game.battle.reserves, lord)
 		if (game.active === game.battle.attacker) {
@@ -5538,6 +5554,12 @@ states.reposition_storm = {
 }
 
 // === BATTLE: STRIKE ===
+
+function format_strike_step() {
+	if (game.battle.storm)
+		return storm_step_name[game.battle.step]
+	return battle_step_name[game.battle.step]
+}
 
 const STEP_ARRAY = [
 	[ D1, D2, D3, RD1, RD2, RD3 ],
@@ -5634,13 +5656,16 @@ function debug_group_list(list) {
 		console.log(debug_group(sg), "strike", debug_group(hg))
 }
 
-function has_no_unrouted_lords() {
+function has_no_unrouted_forces() {
 	// All unrouted lords are either in battle array or in reserves
 	for (let p = 0; p < 12; ++p)
 		if (is_friendly_lord(game.battle.array[p]))
 			return false
 	for (let lord of game.battle.reserves)
 		if (is_friendly_locale(lord))
+			return false
+	if (game.battle.storm && game.active !== game.battle.attacker)
+		if (game.battle.garrison.knights + game.battle.garrison.men_at_arms > 0)
 			return false
 	return true
 }
@@ -5706,8 +5731,8 @@ function count_archery_hits(ix, lord) {
 	game.battle.ah1[ix] += get_lord_forces(lord, ASIATIC_HORSE)
 }
 
-function count_horse_hits(ix, lord, storm) {
-	if (storm)
+function count_horse_hits(ix, lord) {
+	if (game.battle.storm)
 		game.battle.ah1[ix] += get_lord_forces(lord, KNIGHTS) << 1
 	else
 		game.battle.ah1[ix] += get_lord_forces(lord, KNIGHTS) << 2
@@ -5729,7 +5754,7 @@ function count_battle_hits(ix, lord, step) {
 		break
 	case BATTLE_STEP_DEF_HORSE:
 	case BATTLE_STEP_ATK_HORSE:
-		count_horse_hits(ix, lord, false)
+		count_horse_hits(ix, lord)
 		break
 	case BATTLE_STEP_DEF_FOOT:
 	case BATTLE_STEP_ATK_FOOT:
@@ -5746,7 +5771,7 @@ function count_storm_hits(ix, lord, step) {
 		break
 	case STORM_STEP_DEF_MELEE:
 	case STORM_STEP_ATK_MELEE:
-		count_horse_hits(ix, lord, false)
+		count_horse_hits(ix, lord)
 		count_foot_hits(ix, lord)
 		break
 	}
@@ -5770,8 +5795,9 @@ function goto_start_strike() {
 }
 
 function goto_next_strike() {
+	let end = game.battle.storm ? 4 : 6
 	game.battle.step++
-	if (game.battle.step >= 6)
+	if (game.battle.step >= end)
 		end_battle_round()
 	else
 		goto_strike()
@@ -5780,10 +5806,10 @@ function goto_next_strike() {
 function goto_strike() {
 	function is_battle_over() {
 		set_active_attacker()
-		if (has_no_unrouted_lords())
+		if (has_no_unrouted_forces())
 			return true
 		set_active_defender()
-		if (has_no_unrouted_lords())
+		if (has_no_unrouted_forces())
 			return true
 		return false
 	}
@@ -5807,6 +5833,7 @@ function goto_strike() {
 
 function goto_strike_storm() {
 	let s = game.battle.step & 1
+	let has_garrison = game.battle.garrison.knights > 0 || game.battle.garrison.men_at_arms > 0
 
 	log_h4(storm_step_name[game.battle.step])
 
@@ -5815,7 +5842,8 @@ function goto_strike_storm() {
 	if (s) {
 		count_storm_hits(0, game.battle.array[A2], game.battle.step)
 	} else {
-		count_storm_hits(0, game.battle.array[D2], game.battle.step)
+		if (game.battle.array[D2] !== NOBODY)
+			count_storm_hits(0, game.battle.array[D2], game.battle.step)
 		count_garrison_hits(game.battle.step)
 	}
 
@@ -5823,23 +5851,38 @@ function goto_strike_storm() {
 	game.battle.h2 = game.battle.ah2[0] + game.battle.ah2[1]
 	round_hits()
 
-	set_active_enemy()
+	if (game.battle.h1 + game.battle.h2 === 0) {
+		log("No hits.")
+		goto_next_strike()
+		return
+	}
+
 	if (game.active === game.battle.attacker) {
-		if (game.battle.garrison.knights > 0 || game.battle.garrison.men_at_arms > 0)
-			log(`Garrison and L${game.battle.array[A2]} struck L${game.battle.array[D2]} for ${format_hits()}`)
-		else
+		if (has_garrison) {
+			if (game.battle.array[D2] === NOBODY)
+				log(`L${game.battle.array[A2]} struck Garrison for ${format_hits()}`)
+			else
+				log(`L${game.battle.array[A2]} struck L${game.battle.array[D2]} and Garrison for ${format_hits()}`)
+		} else {
 			log(`L${game.battle.array[A2]} struck L${game.battle.array[D2]} for ${format_hits()}`)
+		}
 		game.battle.sg = [ A2 ]
 		game.battle.hg = [ D2 ]
-		select_hit_lord(game.battle.array[A2])
+		set_active_enemy()
+		select_hit_lord(game.battle.array[D2])
 	} else {
-		if (game.battle.garrison.knights > 0 || game.battle.garrison.men_at_arms > 0)
-			log(`L${game.battle.array[D2]} struck Garrison and L${game.battle.array[A2]} for ${format_hits()}`)
-		else
+		if (has_garrison) {
+			if (game.battle.array[D2] === NOBODY)
+				log(`Garrison struck L${game.battle.array[A2]} for ${format_hits()}`)
+			else
+				log(`L${game.battle.array[D2]} and Garrison struck L${game.battle.array[A2]} for ${format_hits()}`)
+		} else {
 			log(`L${game.battle.array[D2]} struck L${game.battle.array[A2]} for ${format_hits()}`)
+		}
 		game.battle.sg = [ D2 ]
 		game.battle.hg = [ A2 ]
-		select_hit_lord(game.battle.array[D2])
+		set_active_enemy()
+		select_hit_lord(game.battle.array[A2])
 	}
 }
 
@@ -5917,7 +5960,7 @@ function prompt_strike_choice(X1, X2, X3, Y2) {
 
 states.strike_choice = {
 	prompt() {
-		view.prompt = `${battle_step_name[game.battle.step]}: Strike left or right?`
+		view.prompt = `${format_strike_step()}: Strike left or right?`
 		if (game.battle.fc === -1) {
 			if (game.active === game.battle.attacker)
 				prompt_strike_choice(D1, D2, D3, A2)
@@ -5961,7 +6004,7 @@ function goto_select_strike_group() {
 
 states.select_strike_group = {
 	prompt() {
-		view.prompt = `${battle_step_name[game.battle.step]}: Select Striking Lord or Group.`
+		view.prompt = `${format_strike_step()}: Select Striking Lord or Group.`
 		for (let [sg, hg] of game.battle.groups) {
 			for (let p of sg) {
 				let lord = game.battle.array[p]
@@ -6031,7 +6074,7 @@ function goto_select_hit_lord() {
 
 states.select_hit_lord = {
 	prompt() {
-		view.prompt = `${battle_step_name[game.battle.step]}: Select Lord to take ${format_hits()}.`
+		view.prompt = `${format_strike_step()}: Select Lord to take ${format_hits()}.`
 		for (let pos of game.battle.hg)
 			gen_action_battle_lord(game.battle.array[pos])
 	},
@@ -6041,17 +6084,23 @@ states.select_hit_lord = {
 }
 
 function roll_for_protection(name, prot, n) {
-	let result = 0
-	for (let i = 0; i < n; ++i) {
-		let die = roll_die()
-		if (die <= prot) {
-			logi("${name} ${die} canceled")
-		} else {
-			logi("${name} ${die}")
-			result ++
+	let total = 0
+	if (n > 0) {
+		let rolls = []
+		for (let i = 0; i < n; ++i) {
+			let die = roll_die()
+			if (die <= prot) {
+				rolls.push(DIE_HIT[die])
+			} else {
+				rolls.push(DIE_MISS[die])
+				total++
+			}
 		}
+		log(name)
+		logi(rolls.join(", "))
+		logi("Total " + total)
 	}
-	return result
+	return total
 }
 
 function roll_for_walls() {
@@ -6062,28 +6111,30 @@ function roll_for_walls() {
 	else if (is_city(here) || is_fort(here) || here === LOC_NOVGOROD)
 		prot = 3
 	if (prot > 0) {
-		log("Walls 1-${prot}:")
-		game.battle.ah2 = roll_for_protection("crossbow", prot, game.battle.ah2)
-		game.battle.ah1 = roll_for_protection("hit", prot, game.battle.ah1)
+		game.battle.h2 = roll_for_protection(`Walls 1-${prot} vs crossbow:`, prot, game.battle.h2)
+		game.battle.h1 = roll_for_protection(`Walls 1-${prot}:`, prot, game.battle.h1)
+	} else {
+		log("No walls.")
 	}
 }
 
 function roll_for_siegeworks() {
 	let prot = count_siege_markers(game.battle.where)
 	if (prot > 0) {
-		log("Siegeworks 1-${prot}:")
-		game.battle.ah2 = roll_for_protection("crossbow", prot, game.battle.ah2)
-		game.battle.ah1 = roll_for_protection("hit", prot, game.battle.ah1)
+		game.battle.h2 = roll_for_protection(`Siegeworks 1-${prot} vs crossbow:`, prot, game.battle.h2)
+		game.battle.h1 = roll_for_protection(`Siegeworks 1-${prot}:`, prot, game.battle.h1)
+	} else {
+		log("No siegeworks.")
 	}
 }
 
 function select_hit_lord(lord) {
-	if (game.storm) {
+	if (game.battle.storm) {
 		if (game.active === game.battle.attacker)
 			roll_for_walls()
 		else
 			roll_for_siegeworks()
-	} else if (game.sally) {
+	} else if (game.battle.sally) {
 		if (game.active !== game.battle.attacker)
 			roll_for_siegeworks()
 	} else {
@@ -6094,6 +6145,7 @@ function select_hit_lord(lord) {
 
 	game.who = lord
 	game.state = "hit_lord"
+	resume_hit_lord()
 }
 
 function rout_lord(lord) {
@@ -6129,8 +6181,17 @@ function resume_hit_lord() {
 }
 
 function rout_unit(lord, type) {
-	add_lord_forces(lord, type, -1)
-	add_lord_routed_forces(lord, type, 1)
+	if (lord < 0) {
+		if (type === KNIGHTS)
+			game.battle.garrison.knights--
+		if (type === MEN_AT_ARMS)
+			game.battle.garrison.men_at_arms--
+		if (game.battle.garrison.knights + game.battle.garrison.men_at_arms === 0)
+			log("Garrison routed.")
+	} else {
+		add_lord_forces(lord, type, -1)
+		add_lord_routed_forces(lord, type, 1)
+	}
 }
 
 function action_hit_lord(lord, type) {
@@ -6143,17 +6204,17 @@ function action_hit_lord(lord, type) {
 	if (evade > 0 && !game.battle.storm) {
 		let die = roll_die()
 		if (die <= evade) {
-			log(`${FORCE_TYPE_NAME[type]} evade ${die} <= ${evade}`)
+			log(`${FORCE_TYPE_NAME[type]} ${die} <= ${evade}`)
 		} else {
-			log(`${FORCE_TYPE_NAME[type]} evade ${die} > ${evade}`)
+			log(`${FORCE_TYPE_NAME[type]} ${die} > ${evade}`)
 			rout_unit(lord, type)
 		}
 	} else if (protection > 0) {
 		let die = roll_die()
 		if (die <= protection - ap) {
-			log(`${FORCE_TYPE_NAME[type]} protection ${die} <= ${protection - ap}`)
+			log(`${FORCE_TYPE_NAME[type]} ${die} <= ${protection - ap}`)
 		} else {
-			log(`${FORCE_TYPE_NAME[type]} protection ${die} > ${protection - ap}`)
+			log(`${FORCE_TYPE_NAME[type]} ${die} > ${protection - ap}`)
 			rout_unit(lord, type)
 		}
 	} else {
@@ -6223,7 +6284,7 @@ function prompt_hit_forces(lord) {
 
 states.hit_lord = {
 	prompt() {
-		view.prompt = `${battle_step_name[game.battle.step]}: Assign ${format_hits()} to units.`
+		view.prompt = `${format_strike_step()}: Assign ${format_hits()} to units.`
 		view.who = game.who
 
 		// TODO: h1 or h2 choice
@@ -6276,7 +6337,10 @@ states.hit_lord = {
 function end_hit_lord() {
 	game.who = NOBODY
 	set_active_enemy()
-	goto_select_strike_group()
+	if (game.battle.storm)
+		goto_next_strike()
+	else
+		goto_select_strike_group()
 }
 
 // === BATTLE: NEW ROUND ===
@@ -6289,14 +6353,14 @@ function end_battle_round() {
 	}
 
 	set_active_attacker()
-	if (has_no_unrouted_lords()) {
+	if (has_no_unrouted_forces()) {
 		game.battle.loser = game.active
 		end_battle()
 		return
 	}
 
 	set_active_defender()
-	if (has_no_unrouted_lords()) {
+	if (has_no_unrouted_forces()) {
 		game.battle.loser = game.active
 		end_battle()
 		return
@@ -6336,6 +6400,11 @@ function end_battle() {
 	//	spoils
 	//	service
 
+	// Ending the Storm
+	//	sack
+	//	losses
+	//	spoils
+
 	log_br()
 	log(`${game.battle.loser} lost battle.`)
 
@@ -6344,26 +6413,71 @@ function end_battle() {
 		remove_all_but_one_siege_markers(game.battle.where)
 	}
 
+	game.battle.array = 0
+
 	set_active_loser()
-	if (game.battle.storm && game.battle.attacker !== game.battle.loser)
-		goto_sack()
-	else
+	if (game.battle.storm) {
+		if (game.battle.attacker !== game.battle.loser)
+			goto_sack()
+		else
+			goto_battle_losses()
+	} else {
 		goto_battle_withdraw()
+	}
 }
 
 // === ENDING THE BATTLE: SACK ===
 
+function award_spoils(n) {
+	add_spoils(LOOT, n)
+	add_spoils(PROV, n)
+	add_spoils(COIN, n)
+}
+
 function goto_sack() {
-	log("TODO: Sack")
+	let here = game.battle.where
+
+	log("Sacked %${here}.")
 
 	remove_all_siege_markers(game.battle.where)
 
+	if (here === LOC_NOVGOROD)
+		award_spoils(3)
+	else if (is_city(here))
+		award_spoils(2)
+	else if (is_fort(here))
+		award_spoils(1)
+	else if (is_bishopric(here))
+		award_spoils(2)
+	else if (is_castle(here))
+		award_spoils(1)
+
 	game.state = "sack"
-	// transfer_assets_except_ships()
+	resume_sack()
 }
 
-function end_sack() {
+function resume_sack() {
+	let here = game.battle.where
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (get_lord_locale(lord) === here)
+			return
 	goto_battle_losses()
+}
+
+states.sack = {
+	prompt() {
+		let here = game.battle.where
+		view.prompt = `Sack: Remove all Lords at ${data.locales[here].name}.`
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+			if (get_lord_locale(lord) === here)
+				gen_action_lord(lord)
+	},
+	lord(lord) {
+		log(`Disbanded L${lord}.`)
+		transfer_assets_except_ships(lord)
+		disband_lord(lord, true)
+		resume_sack()
+	},
 }
 
 // === ENDING THE BATTLE: WITHDRAW ===
@@ -6477,16 +6591,24 @@ function can_retreat_to(to) {
 }
 
 function can_retreat() {
-	if (game.active === game.battle.attacker)
-		return can_retreat_to(game.march.from)
-	for (let [to, way] of data.locales[game.march.to].ways)
-		if (way !== game.march.approach && can_retreat_to(to))
-			return true
+	if (game.march) {
+		// Battle after March
+		if (game.active === game.battle.attacker)
+			return can_retreat_to(game.march.from)
+		for (let [to, way] of data.locales[game.battle.where].ways)
+			if (way !== game.march.approach && can_retreat_to(to))
+				return true
+	} else {
+		// Battle after Sally
+		for (let [to, way] of data.locales[game.battle.where].ways)
+			if (can_retreat_to(to))
+				return true
+	}
 	return false
 }
 
 function goto_retreat() {
-	let here = game.march.to
+	let here = game.battle.where
 	if (count_unbesieged_friendly_lords(here) > 0 && can_retreat()) {
 		game.battle.retreated = []
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
@@ -6507,28 +6629,48 @@ states.retreat = {
 	prompt() {
 		view.prompt = "Battle: Retreat losing lords."
 		view.group = game.battle.retreated
-		if (game.active === game.battle.attacker) {
-			gen_action_locale(game.march.from)
+		if (game.march) {
+			// after March
+			if (game.active === game.battle.attacker) {
+				gen_action_locale(game.march.from)
+			} else {
+				for (let [to, way] of data.locales[game.battle.where].ways)
+				if (way !== game.march.approach && can_retreat_to(to))
+					gen_action_locale(to)
+			}
 		} else {
-			for (let [to, way] of data.locales[game.march.to].ways)
-			if (way !== game.march.approach && can_retreat_to(to))
+			// after Sally
+			for (let [to, way] of data.locales[game.battle.where].ways)
+			if (can_retreat_to(to))
 				gen_action_locale(to)
 		}
 	},
 	locale(to) {
 		push_undo()
-		if (game.active === game.battle.attacker) {
-			game.march.retreat_to = to
-			game.march.retreat_way = game.march.approach
-			retreat_1()
+		if (game.march) {
+			if (game.active === game.battle.attacker) {
+				game.battle.retreat_to = to
+				game.battle.retreat_way = game.march.approach
+				retreat_1()
+			} else {
+				let ways = list_ways(game.battle.where, to)
+				if (ways.length > 2) {
+					game.battle.retreat_to = to
+					game.state = "retreat_way"
+				} else {
+					game.battle.retreat_to = to
+					game.battle.retreat_way = ways[1]
+					retreat_1()
+				}
+			}
 		} else {
-			let ways = list_ways(game.march.to, to)
+			let ways = list_ways(game.battle.where, to)
 			if (ways.length > 2) {
-				game.march.retreat_to = to
+				game.battle.retreat_to = to
 				game.state = "retreat_way"
 			} else {
-				game.march.retreat_to = to
-				game.march.retreat_way = ways[1]
+				game.battle.retreat_to = to
+				game.battle.retreat_way = ways[1]
 				retreat_1()
 			}
 		}
@@ -6539,14 +6681,14 @@ states.retreat_way = {
 	prompt() {
 		view.prompt = `Retreat: Select way.`
 		view.group = game.battle.retreated
-		let from = game.march.to
-		let to = game.march.retreat_to
+		let from = game.battle.where
+		let to = game.battle.retreat_to
 		let ways = list_ways(from, to)
 		for (let i = 1; i < ways.length; ++i)
 			gen_action_way(ways[i])
 	},
 	way(way) {
-		game.march.retreat_way = way
+		game.battle.retreat_way = way
 		retreat_1()
 	},
 }
@@ -6558,7 +6700,7 @@ function retreat_1() {
 			transfer_assets_except_ships(lord)
 		retreat_2()
 	} else {
-		let way = game.march.retreat_way
+		let way = game.battle.retreat_way
 		let transport = count_retreat_transport(data.ways[way].type)
 		let prov = count_retreat_assets(PROV)
 		let loot = count_retreat_assets(LOOT)
@@ -6571,8 +6713,8 @@ function retreat_1() {
 
 states.retreat_laden = {
 	prompt() {
-		let to = game.march.retreat_to
-		let way = game.march.retreat_way
+		let to = game.battle.retreat_to
+		let way = game.battle.retreat_way
 		let transport = count_retreat_transport(data.ways[way].type)
 		let prov = count_retreat_assets(PROV)
 		let loot = count_retreat_assets(LOOT)
@@ -6612,9 +6754,9 @@ states.retreat_laden = {
 }
 
 function retreat_2() {
-	let from = game.march.to
-	let to = game.march.retreat_to
-	let way = game.march.retreat_way
+	let from = game.battle.where
+	let to = game.battle.retreat_to
+	let way = game.battle.retreat_way
 
 	if (data.ways[way].name)
 		log(`Retreated via ${data.ways[way].name} to %${to}.`)
@@ -6626,8 +6768,8 @@ function retreat_2() {
 		set_lord_moved(lord, 1)
 	}
 
-	game.march.retreat_to = 0
-	game.march.retreat_way = 0
+	game.battle.retreat_to = 0
+	game.battle.retreat_way = 0
 	end_retreat()
 }
 
@@ -6911,6 +7053,9 @@ function goto_battle_aftermath() {
 
 	// Recovery
 	spend_all_actions()
+
+	if (check_campaign_victory())
+		return
 
 	// Siege/Conquest
 	if (game.march) {
@@ -7308,6 +7453,7 @@ states.disband = {
 		this.lord(lord)
 	},
 	lord(lord) {
+		push_undo()
 		if (can_ransom_besieged_lord(lord))
 			goto_ransom_besieged_lord(lord)
 		else
@@ -7320,6 +7466,10 @@ states.disband = {
 
 function end_disband() {
 	clear_undo()
+
+	if (check_campaign_victory())
+		return
+
 	set_active_enemy()
 	if (game.active === P2) {
 		if (FEED_PAY_DISBAND)
@@ -7451,6 +7601,32 @@ states.growth = {
 
 // === END CAMPAIGN: GAME END ===
 
+function check_campaign_victory_p1() {
+	for (let lord = first_p2_lord; lord <= last_p2_lord; ++lord)
+		if (is_lord_on_map(lord))
+			return false
+	return true
+}
+
+function check_campaign_victory_p2() {
+	for (let lord = first_p1_lord; lord <= last_p1_lord; ++lord)
+		if (is_lord_on_map(lord))
+			return false
+	return true
+}
+
+function check_campaign_victory() {
+	if (check_campaign_victory_p1()) {
+		goto_game_over(P1, `${P1} won a Campaign Victory!`)
+		return true
+	}
+	if (check_campaign_victory_p2()) {
+		goto_game_over(P2, `${P2} won a Campaign Victory!`)
+		return true
+	}
+	return false
+}
+
 function goto_end_campaign() {
 	log_h1("End Campaign")
 
@@ -7498,9 +7674,9 @@ function goto_game_end() {
 		let vp1 = count_vp1()
 		let vp2 = count_vp2()
 		if (vp1 > vp2)
-			goto_game_over(P1, `${P1} wins with ${vp1} VP.`)
+			goto_game_over(P1, `${P1} won with ${vp1} VP.`)
 		else if (vp2 > vp1)
-			goto_game_over(P2, `${P2} wins with ${vp2} VP.`)
+			goto_game_over(P2, `${P2} won with ${vp2} VP.`)
 		else
 			goto_game_over("Draw", "The game ended in a draw.")
 	} else {
@@ -7802,7 +7978,7 @@ function goto_game_over(result, victory) {
 	game.active = "None"
 	game.result = result
 	game.victory = victory
-	log_br()
+	log_h1("Game Over")
 	log(game.victory)
 	return true
 }
@@ -8054,7 +8230,7 @@ exports.view = function (state, current) {
 
 exports.action = function (state, current, action, arg) {
 	load_state(state)
-	Object.seal(game) // XXX: don't allow adding properties
+	// Object.seal(game) // XXX: don't allow adding properties
 	let S = states[game.state]
 	if (S && action in S) {
 		S[action](arg, current)
