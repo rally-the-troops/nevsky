@@ -141,7 +141,7 @@ function print_strikes(grp) {
 	console.log("")
 }
 
-function list_hit_groups(array, flanking, strikers, step) {
+function list_hit_groups_OLD(array, flanking, strikers, step) {
 	function is_flanking_target(target, pos) {
 		return array[OPPOSE[pos]] === 0 && flanking[pos].includes(OPPOSE[target])
 	}
@@ -188,7 +188,100 @@ function list_hit_groups(array, flanking, strikers, step) {
 	return result
 }
 
-function run_step(bits, array, i, output_a, output_b) {
+function list_hit_groups_INF(array, flanking, strikers, step) {
+	function is_flanking_all_strikers(def, strikers) {
+		for (let str of strikers)
+			if (!flanking[def].includes(str))
+				return false
+		return true
+	}
+	function list_flanking_2(target, strikers, list) {
+		let result = [ target ]
+		for (let pos of list) {
+			if (array[pos]) {
+				if (is_flanking_all_strikers(pos, strikers))
+					result.push(pos)
+			}
+		}
+		return result
+	}
+	function list_flanking_1(target, strikers) {
+		switch (target) {
+		case A1: return list_flanking_2(target, strikers, [ A2, A3 ])
+		case A2: return list_flanking_2(target, strikers, [ A1, A3 ])
+		case A3: return list_flanking_2(target, strikers, [ A1, A2 ])
+		case D1: return list_flanking_2(target, strikers, [ D2, D3 ])
+		case D2: return list_flanking_2(target, strikers, [ D1, D3 ])
+		case D3: return list_flanking_2(target, strikers, [ D1, D2 ])
+		}
+	}
+
+	let result = []
+	let sg, hg
+	for (let pos of step) {
+		if (strikers[pos].length > 0) {
+			sg = pack_group(strikers[pos])
+			hg = pack_group(list_flanking_1(pos, strikers[pos]))
+			result.push([sg,hg])
+		}
+	}
+	return result
+}
+
+function list_hit_groups(array, flanking, strikers, step) {
+	function is_target_flanked(target) {
+		for (let pos of flanking[target])
+			if (pos !== OPPOSE[target])
+				return true
+		return false
+	}
+	function is_flanking_all_strikers(def, strikers) {
+		for (let str of strikers)
+			if (!flanking[def].includes(str))
+				return false
+		return true
+	}
+	function list_flanking_2(target, strikers, list) {
+		let result = [ target ]
+		if (!is_target_flanked(target))
+			for (let pos of list) {
+				if (array[pos]) {
+					if (is_flanking_all_strikers(pos, strikers))
+						result.push(pos)
+				}
+			}
+		return result
+	}
+	function list_flanking_1(target, strikers) {
+		switch (target) {
+		case A1: return list_flanking_2(target, strikers, [ A2, A3 ])
+		case A2: return list_flanking_2(target, strikers, [ A1, A3 ])
+		case A3: return list_flanking_2(target, strikers, [ A1, A2 ])
+		case D1: return list_flanking_2(target, strikers, [ D2, D3 ])
+		case D2: return list_flanking_2(target, strikers, [ D1, D3 ])
+		case D3: return list_flanking_2(target, strikers, [ D1, D2 ])
+		}
+	}
+
+	let result = []
+	let sg, hg
+	for (let pos of step) {
+		if (strikers[pos].length > 0) {
+			sg = pack_group(strikers[pos])
+			hg = pack_group(list_flanking_1(pos, strikers[pos]))
+			result.push([sg,hg])
+		}
+	}
+	return result
+}
+
+function show_group_list(list) {
+	for (let [sg, hg] of list) {
+		console.log(show_group(sg) + " strike " + show_group(hg))
+	}
+}
+
+function run_step(bits, array, i, output_a, output_b, do_show) {
 	let a, b, strikers, flanking
 
 	flanking = list_flanking_groups(array)
@@ -200,10 +293,21 @@ function run_step(bits, array, i, output_a, output_b) {
 	b = list_hit_groups(array, flanking, strikers, receive_steps[i])
 
 	output_a[bits] = a.length > 0 ? a : 0
-	if (JSON.stringify(a) !== JSON.stringify(b))
+	if (do_show) {
+		show_group_list(a)
+	}
+
+	if (JSON.stringify(a) !== JSON.stringify(b)) {
 		output_b[bits] = b.length > 0 ? b : 0
-	else
+		if (do_show) {
+			console.log("-OR-")
+			show_group_list(b)
+		}
+	} else {
 		output_b[bits] = 0
+	}
+
+	console.log()
 }
 
 let group_defending_a = []
@@ -212,28 +316,36 @@ let group_attacking_a = []
 let group_attacking_b = []
 
 function run(bits, array, step) {
-	run_step(bits, array, 0, group_defending_a, group_defending_b)
-	run_step(bits, array, 1, group_attacking_a, group_attacking_b)
+	console.log("<tr>")
+	console.log("<td>")
+	show_array(array)
+
+	console.log("<td>")
+	run_step(bits, array, 0, group_defending_a, group_defending_b, true)
+	console.log("<td>")
+	run_step(bits, array, 1, group_attacking_a, group_attacking_b, true)
 }
 
 function runall() {
 	for (let x = 0; x < 64; ++x) {
-		run(x, [
-			(x>>0)&1,
-			(x>>1)&1,
-			(x>>2)&1,
-			(x>>3)&1,
-			(x>>4)&1,
-			(x>>5)&1,
-		])
+		//if ((x & 7) && (x & 56)) run(x, [ (x>>5)&1, (x>>4)&1, (x>>3)&1, (x>>2)&1, (x>>1)&1, (x>>0)&1 ])
+		run(x, [ (x>>0)&1, (x>>1)&1, (x>>2)&1, (x>>3)&1, (x>>4)&1, (x>>5)&1 ])
 	}
 }
 
+//run(0, [1,0,1, 0,1,0])
+//run(0, [0,1,1, 1,0,0])
+//run(0, [1,0,0, 0,1,1])
+//run(0, [1,1,0, 1,0,1])
+
+console.log("<!DOCTYPE html>")
+console.log("<style>td{white-space:pre;font-family:monospace;padding:3em;border:1px solid black}</style>")
+console.log("<table>")
 runall()
+console.log("</table>")
 
 let GROUPS = [
 	[ group_defending_a, group_defending_b ],
 	[ group_attacking_a, group_attacking_b ],
 ]
-
 console.log("const GROUPS = " + JSON.stringify(GROUPS))
