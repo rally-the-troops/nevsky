@@ -827,6 +827,10 @@ function is_marshal(lord) {
 	}
 }
 
+function is_armored_force(type) {
+	return type === KNIGHTS || type === SERGEANTS || type === MEN_AT_ARMS
+}
+
 function is_no_event_card(c) {
 	if (c === 18 || c === 19 || c === 20)
 		return true
@@ -5871,8 +5875,6 @@ function goto_strike_storm() {
 		}
 		game.battle.sg = [ A2 ]
 		game.battle.hg = [ D2 ]
-		set_active_enemy()
-		select_hit_lord(game.battle.array[D2])
 	} else {
 		if (game.battle.garrison) {
 			if (game.battle.array[D2] === NOBODY)
@@ -5884,9 +5886,9 @@ function goto_strike_storm() {
 		}
 		game.battle.sg = [ D2 ]
 		game.battle.hg = [ A2 ]
-		set_active_enemy()
-		select_hit_lord(game.battle.array[A2])
 	}
+
+	goto_apply_hits()
 }
 
 function goto_strike_battle() {
@@ -5941,8 +5943,6 @@ function end_strike_choice() {
 	game.battle.groups = unpack_group_list(GROUPS[s][game.battle.fc][front], GROUPS[s][game.battle.rc][rear])
 
 	console.log("STRIKE")
-	console.log("hits", game.battle.ah1)
-	console.log("crossbow hits", game.battle.ah2)
 	debug_battle_array(front, rear)
 	debug_group_list(game.battle.groups)
 
@@ -6059,48 +6059,67 @@ function select_strike_group(i) {
 
 	log(`${format_group(game.battle.sg)} struck ${format_group(game.battle.hg)} for ${format_hits()}`)
 
-	goto_select_hit_lord()
+	goto_apply_hits()
 }
 
-function goto_select_hit_lord() {
-	set_active_enemy()
-	if (game.battle.hg.length === 0)
-		end_hit_lord()
-	else if (game.battle.hg.length === 1)
-		select_hit_lord(game.battle.array[game.battle.hg[0]])
-	else
-		game.state = "select_hit_lord"
-}
+// === BATTLE: APPLY HITS / PROTECTION / ROLL WALLS ===
 
-states.select_hit_lord = {
-	prompt() {
-		view.prompt = `${format_strike_step()}: Select Lord to take ${format_hits()}.`
-		for (let pos of game.battle.hg)
-			gen_action_battle_lord(game.battle.array[pos])
-	},
-	battle_lord(lord) {
-		select_hit_lord(lord)
-	},
-}
-
-function roll_for_protection(name, prot, n) {
-	let total = 0
-	if (n > 0) {
-		let rolls = []
-		for (let i = 0; i < n; ++i) {
-			let die = roll_die()
-			if (die <= prot) {
-				rolls.push(DIE_HIT[die])
-			} else {
-				rolls.push(DIE_MISS[die])
-				total++
-			}
-		}
-		log(name)
-		logi(rolls.join(", "))
-		logi("Total " + total)
+function has_unrouted_forces_in_hit_group() {
+	if (game.battle.storm && game.active !== game.battle.attacker)
+		if (game.battle.garrison)
+			return true
+	for (let p of game.battle.hg) {
+		let lord = game.battle.array[p]
+		console.log("lord1", lord, has_unrouted_units(lord), game.pieces.forces[lord])
+		if (has_unrouted_units(lord))
+			return true
 	}
-	return total
+	return false
+}
+
+function goto_apply_hits() {
+	set_active_enemy()
+
+	if (game.battle.hg.length === 0)
+		end_apply_hits()
+
+	if (game.battle.storm) {
+		if (game.active === game.battle.attacker)
+			roll_for_siegeworks()
+		else
+			roll_for_walls()
+	} else if (game.battle.sally) {
+		if (game.active !== game.battle.attacker)
+			roll_for_siegeworks()
+	} else {
+		let s = game.battle.sg[0]
+		if (s === SA1 || s === SA2 || s === SA3)
+			roll_for_siegeworks()
+	}
+
+	resume_apply_hits()
+}
+
+function resume_apply_hits() {
+	if (game.battle.h1 + game.battle.h2 === 0) {
+		end_apply_hits()
+	} else if (!has_unrouted_forces_in_hit_group()) {
+		console.log("wha?", game.battle.hg, has_unrouted_forces_in_hit_group())
+		log("TODO: remaining hits!")
+		// TODO: calculate new hit group for the current striking group, and resume or end if no valid targets
+		end_apply_hits()
+	} else {
+		game.state = "apply_hits"
+	}
+}
+
+function end_apply_hits() {
+	console.log("end_apply_hits")
+	set_active_enemy()
+	if (game.battle.storm)
+		goto_next_strike()
+	else
+		goto_select_strike_group()
 }
 
 function roll_for_walls() {
@@ -6128,25 +6147,27 @@ function roll_for_siegeworks() {
 	}
 }
 
-function select_hit_lord(lord) {
-	if (game.battle.storm) {
-		if (game.active === game.battle.attacker)
-			roll_for_siegeworks()
-		else
-			roll_for_walls()
-	} else if (game.battle.sally) {
-		if (game.active !== game.battle.attacker)
-			roll_for_siegeworks()
-	} else {
-		let s = game.battle.sg[0]
-		if (s === SA1 || s === SA2 || s === SA3)
-			roll_for_siegeworks()
+function roll_for_protection(name, prot, n) {
+	let total = 0
+	if (n > 0) {
+		let rolls = []
+		for (let i = 0; i < n; ++i) {
+			let die = roll_die()
+			if (die <= prot) {
+				rolls.push(DIE_HIT[die])
+			} else {
+				rolls.push(DIE_MISS[die])
+				total++
+			}
+		}
+		log(name)
+		logi(rolls.join(", "))
+		logi("Total " + total)
 	}
-
-	game.who = lord
-	game.state = "hit_lord"
-	resume_hit_lord()
+	return total
 }
+
+// === BATTLE: ASSIGN HITS TO UNITS / ROLL BY HIT / ROUT ===
 
 function rout_lord(lord) {
 	log(`L${lord} routed!`)
@@ -6155,6 +6176,8 @@ function rout_lord(lord) {
 
 	// remove from battle array
 	game.battle.array[p] = NOBODY
+
+	// FIXME cleanup TODO, removing from which groups
 
 	// remove from current hit group
 	array_remove_item(game.battle.hg, p)
@@ -6175,15 +6198,6 @@ function rout_lord(lord) {
 	set_add(game.battle.routed, lord)
 }
 
-function resume_hit_lord() {
-	if (
-		(game.battle.h1 === 0 && game.battle.h2 === 0) ||
-		(game.who === GARRISON && !game.battle.garrison) ||
-		(game.who !== GARRISON && !has_unrouted_units(game.who))
-	)
-		end_hit_lord()
-}
-
 function rout_unit(lord, type) {
 	if (lord === GARRISON) {
 		if (type === KNIGHTS)
@@ -6200,11 +6214,7 @@ function rout_unit(lord, type) {
 	}
 }
 
-function is_armored_force(type) {
-	return type === KNIGHTS || type === SERGEANTS || type === MEN_AT_ARMS
-}
-
-function action_hit_lord(lord, type) {
+function action_apply_hits(lord, type) {
 	let protection = FORCE_PROTECTION[type]
 	let evade = FORCE_EVADE[type]
 
@@ -6238,73 +6248,78 @@ function action_hit_lord(lord, type) {
 	else
 		game.battle.h1--
 
-	if (!has_unrouted_units(lord)) {
+	if (!has_unrouted_units(lord))
 		rout_lord(lord)
-		if (game.battle.h1 > 0 || game.battle.h2 > 0)
-			log("TODO: remaining hits!")
-	}
 
-	resume_hit_lord()
+	resume_apply_hits()
 }
 
-function prompt_hit_armored_forces(lord) {
+function prompt_hit_armored_forces() {
 	let has_armored = false
-	if (get_lord_forces(lord, KNIGHTS) > 0) {
-		gen_action_knights(lord)
-		has_armored = true
-	}
-	if (get_lord_forces(lord, SERGEANTS) > 0) {
-		gen_action_sergeants(lord)
-		has_armored = true
-	}
-	if (get_lord_forces(lord, MEN_AT_ARMS) > 0) {
-		gen_action_men_at_arms(lord)
-		has_armored = true
+	for (let p of game.battle.hg) {
+		let lord = game.battle.array[p]
+		if (get_lord_forces(lord, KNIGHTS) > 0) {
+			gen_action_knights(lord)
+			has_armored = true
+		}
+		if (get_lord_forces(lord, SERGEANTS) > 0) {
+			gen_action_sergeants(lord)
+			has_armored = true
+		}
+		if (get_lord_forces(lord, MEN_AT_ARMS) > 0) {
+			gen_action_men_at_arms(lord)
+			has_armored = true
+		}
 	}
 	return has_armored
 }
 
-function prompt_hit_unarmored_forces(lord) {
-	if (get_lord_forces(lord, LIGHT_HORSE) > 0)
-		gen_action_light_horse(lord)
-	if (get_lord_forces(lord, ASIATIC_HORSE) > 0)
-		gen_action_asiatic_horse(lord)
-	if (get_lord_forces(lord, MILITIA) > 0)
-		gen_action_militia(lord)
-	if (get_lord_forces(lord, SERFS) > 0)
-		gen_action_serfs(lord)
+function prompt_hit_unarmored_forces() {
+	for (let p of game.battle.hg) {
+		let lord = game.battle.array[p]
+		if (get_lord_forces(lord, LIGHT_HORSE) > 0)
+			gen_action_light_horse(lord)
+		if (get_lord_forces(lord, ASIATIC_HORSE) > 0)
+			gen_action_asiatic_horse(lord)
+		if (get_lord_forces(lord, MILITIA) > 0)
+			gen_action_militia(lord)
+		if (get_lord_forces(lord, SERFS) > 0)
+			gen_action_serfs(lord)
+	}
 }
 
-function prompt_hit_forces(lord) {
-	if (get_lord_forces(lord, KNIGHTS) > 0)
-		gen_action_knights(lord)
-	if (get_lord_forces(lord, SERGEANTS) > 0)
-		gen_action_sergeants(lord)
-	if (get_lord_forces(lord, LIGHT_HORSE) > 0)
-		gen_action_light_horse(lord)
-	if (get_lord_forces(lord, ASIATIC_HORSE) > 0)
-		gen_action_asiatic_horse(lord)
-	if (get_lord_forces(lord, MEN_AT_ARMS) > 0)
-		gen_action_men_at_arms(lord)
-	if (get_lord_forces(lord, MILITIA) > 0)
-		gen_action_militia(lord)
-	if (get_lord_forces(lord, SERFS) > 0)
-		gen_action_serfs(lord)
+function prompt_hit_forces() {
+	for (let p of game.battle.hg) {
+		let lord = game.battle.array[p]
+		if (get_lord_forces(lord, KNIGHTS) > 0)
+			gen_action_knights(lord)
+		if (get_lord_forces(lord, SERGEANTS) > 0)
+			gen_action_sergeants(lord)
+		if (get_lord_forces(lord, LIGHT_HORSE) > 0)
+			gen_action_light_horse(lord)
+		if (get_lord_forces(lord, ASIATIC_HORSE) > 0)
+			gen_action_asiatic_horse(lord)
+		if (get_lord_forces(lord, MEN_AT_ARMS) > 0)
+			gen_action_men_at_arms(lord)
+		if (get_lord_forces(lord, MILITIA) > 0)
+			gen_action_militia(lord)
+		if (get_lord_forces(lord, SERFS) > 0)
+			gen_action_serfs(lord)
+	}
 }
 
-states.hit_lord = {
+states.apply_hits = {
 	prompt() {
 		view.prompt = `${format_strike_step()}: Assign ${format_hits()} to units.`
-		view.who = game.who
 
 		// TODO: h1 or h2 choice
 
 		if (game.battle.storm) {
 			if (game.active === game.battle.attacker) {
 				// Storm - attacker must apply hits to armored first
-				let has_armored = prompt_hit_armored_forces(game.who)
+				let has_armored = prompt_hit_armored_forces()
 				if (!has_armored)
-					prompt_hit_unarmored_forces(game.who)
+					prompt_hit_unarmored_forces()
 			} else {
 				// Storm - defender must apply hits to garrison first
 				if (game.battle.garrison) {
@@ -6313,44 +6328,35 @@ states.hit_lord = {
 					if (game.battle.garrison.men_at_arms > 0)
 						gen_action_men_at_arms(GARRISON)
 				} else {
-					prompt_hit_forces(game.who)
+					prompt_hit_forces()
 				}
 			}
 
 		} else {
-			prompt_hit_forces(game.who)
+			prompt_hit_forces()
 		}
 	},
 	knights(lord) {
-		action_hit_lord(lord, KNIGHTS)
+		action_apply_hits(lord, KNIGHTS)
 	},
 	sergeants(lord) {
-		action_hit_lord(lord, SERGEANTS)
+		action_apply_hits(lord, SERGEANTS)
 	},
 	light_horse(lord) {
-		action_hit_lord(lord, LIGHT_HORSE)
+		action_apply_hits(lord, LIGHT_HORSE)
 	},
 	asiatic_horse(lord) {
-		action_hit_lord(lord, ASIATIC_HORSE)
+		action_apply_hits(lord, ASIATIC_HORSE)
 	},
 	men_at_arms(lord) {
-		action_hit_lord(lord, MEN_AT_ARMS)
+		action_apply_hits(lord, MEN_AT_ARMS)
 	},
 	militia(lord) {
-		action_hit_lord(lord, MILITIA)
+		action_apply_hits(lord, MILITIA)
 	},
 	serfs(lord) {
-		action_hit_lord(lord, SERFS)
+		action_apply_hits(lord, SERFS)
 	},
-}
-
-function end_hit_lord() {
-	game.who = NOBODY
-	set_active_enemy()
-	if (game.battle.storm)
-		goto_next_strike()
-	else
-		goto_select_strike_group()
 }
 
 // === BATTLE: NEW ROUND ===
@@ -6383,6 +6389,7 @@ function end_battle_round() {
 			end_battle()
 		}
 	} else {
+		set_active_attacker()
 		goto_concede()
 	}
 }
