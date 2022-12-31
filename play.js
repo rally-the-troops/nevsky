@@ -1,11 +1,12 @@
 "use strict"
 
+// TODO: Feed x2 markers on lord mats with >6 units
+
 // TODO: tooltip on cylinders
 //	fealty rating and starting assets + forces on calendar
 //	current assets and forces on map
 
-// TODO: battle.where marker on map
-// TODO: battle.conceded pursuit marker on battle mat
+// TODO: battle.where marker on map, remove cylinders?
 
 // inactive command cylinder color - other color outline
 // moved/fought lord coloring - blue outline?

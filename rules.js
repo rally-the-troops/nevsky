@@ -5,12 +5,11 @@
 // TODO: choose crossbow/normal hit application order
 
 // TODO: precompute distance to supply lines for faster supply path rejection
+// TODO - precompute possible supply lines for faster rejections
 // Use BFS for winter/rasputitsa supply
 
 // TODO: Lodya capability during supply!
 // TODO: 2nd edition supply rule - no reuse of transports
-
-// TODO - precompute possible supply lines for faster rejections
 
 // TODO: show command lord different from selected lord (inactive player)
 // TODO: show siegeworks + walls on battle mat for protection indication?
@@ -40,6 +39,7 @@ const FEED_PAY_DISBAND = true // feed, pay, disband in one go
 const WASTAGE_DISCARD = true // wastage, discard in one go
 // option ACTIVE_FEED_FIRST // active card feeds first (instead of P1 always first)
 // option DELAY_PAY_IF_NO_FEED_OR_DISBAND
+// TODO service shift before spoils
 // option SERVICE_BEFORE_SPOILS
 
 const DIE_HIT = "01234567"
@@ -842,6 +842,20 @@ function is_no_event_card(c) {
 	return false
 }
 
+function is_p1_card(c) {
+	return c <= last_p1_card_no_event
+}
+
+function is_p2_card(c) {
+	return c >= first_p2_card
+}
+
+function is_friendly_card(c) {
+	if (game.active === P1)
+		return is_p1_card(c)
+	return is_p2_card(c)
+}
+
 function can_discard_card(c) {
 	if (set_has(game.hand1, c))
 		return true
@@ -1188,7 +1202,6 @@ function has_conquered_stronghold(loc) {
 
 function is_friendly_stronghold_locale(loc) {
 	if (is_stronghold(loc) || has_friendly_castle(loc))
-		// TODO: use full "is friendly locale" check here, or just color of stronghold?
 		return is_friendly_locale(loc)
 	return false
 }
@@ -1494,6 +1507,18 @@ function discard_events(when) {
 	for (let i = 0; i < game.events.length; ) {
 		let c = game.events[i]
 		if (data.cards[c].when === when) {
+			array_remove(game.events, i)
+			discard_card(c)
+		} else {
+			++i
+		}
+	}
+}
+
+function discard_friendly_events(when) {
+	for (let i = 0; i < game.events.length; ) {
+		let c = game.events[i]
+		if (is_friendly_card(c) && data.cards[c].when === when) {
 			array_remove(game.events, i)
 			discard_card(c)
 		} else {
@@ -2099,7 +2124,6 @@ function discard_global_capability(c) {
 	}
 
 	if (c === AOW_RUSSIAN_SMERDI) {
-		// TODO: remove serfs from lord mats?
 		game.pieces.smerdi = 0
 	}
 
@@ -5320,9 +5344,13 @@ states.concede_storm = {
 
 // === BATTLE: REPOSITION ===
 
-// If all SA routed, RD to reserve
-// If all empty front D, all RD to front
-// If all empty front A, all SA to A, RD to reserve (resume as if sally)
+// If all SA routed, send RD back to reserve (end sally).
+// If all D routed, advance RD to front.
+// If all A routed, advance SA to front (to regular sally).
+// Advance from reserve to A.
+// Advance from reserve to D.
+// Center A.
+// Center D.
 
 function send_to_reserve(pos) {
 	if (game.battle.array[pos] !== NOBODY) {
@@ -7892,25 +7920,45 @@ states.wastage = {
 function end_wastage() {
 	if (WASTAGE_DISCARD) {
 		push_undo()
-		goto_reset_discard()
+		goto_reset()
 	} else {
 		clear_undo()
 		set_active_enemy()
 		if (game.active === P2)
 			goto_plow_and_reap()
 		else
-			goto_reset_discard()
+			goto_reset()
 
 	}
 }
 
-// === END CAMPAIGN: DISCARD ARTS OF WAR ===
+// === END CAMPAIGN: RESET (DISCARD ARTS OF WAR) ===
 
-function goto_reset_discard() {
-	game.state = "reset_discard"
+function reset_serfs() {
 }
 
-states.reset_discard = {
+function goto_reset() {
+	game.state = "reset"
+
+	// Unstack Lieutenants and Lower Lords
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		remove_lieutenant(lord)
+
+	// Remove all Serfs to the Smerdi card
+	if (game.active === RUSSIANS) {
+		for (let lord = first_p2_lord; lord <= last_p2_lord; ++lord)
+			set_lord_forces(lord, SERFS, 0)
+		if (has_global_capability(AOW_RUSSIAN_SMERDI))
+			game.pieces.smerdi = 6
+		else
+			game.pieces.smerdi = 0
+	}
+
+	// Discard "This Campaign" events from play.
+	discard_friendly_events("this_campaign")
+}
+
+states.reset = {
 	prompt() {
 		view.prompt = "Reset: You may discard any Arts of War cards desired."
 		if (game.active === P1) {
@@ -7945,46 +7993,29 @@ states.reset_discard = {
 		}
 	},
 	end_discard() {
-		end_reset_discard()
+		end_reset()
 	},
 }
 
-function end_reset_discard() {
+function end_reset() {
 	if (WASTAGE_DISCARD) {
 		clear_undo()
 		set_active_enemy()
 		if (game.active === P2)
 			goto_plow_and_reap()
 		else
-			goto_reset()
+			goto_advance_campaign()
 	} else {
 		clear_undo()
 		set_active_enemy()
 		if (game.active === P2)
-			goto_reset_discard()
-		else
 			goto_reset()
+		else
+			goto_advance_campaign()
 	}
 }
 
-// === END CAMPAIGN: RESET ===
-
-function goto_reset() {
-	// Unstack Lieutenants and Lower Lords
-	game.pieces.lieutenants = []
-
-	// Remove all Serfs to the Smerdi card
-	if (has_global_capability(AOW_RUSSIAN_SMERDI)) {
-		for (let lord = first_p2_lord; lord <= last_p2_lord; ++lord)
-			set_lord_forces(lord, SERFS, 0)
-		game.pieces.smerdi = 6
-	}
-
-	// Discard "This Campaign" events from play.
-	discard_events("this_campaign")
-
-	goto_advance_campaign()
-}
+// === END CAMPAIGN: RESET (ADVANCE CAMPAIGN) ===
 
 function goto_advance_campaign() {
 	game.turn++
