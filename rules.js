@@ -4,6 +4,9 @@
 // TODO: hit remainders
 // TODO: choose crossbow/normal hit application order
 
+// TODO: precompute distance to supply lines for faster supply path rejection
+// Use BFS for winter/rasputitsa supply
+
 // TODO: Lodya capability during supply!
 // TODO: 2nd edition supply rule - no reuse of transports
 
@@ -2096,6 +2099,7 @@ function discard_global_capability(c) {
 	}
 
 	if (c === AOW_RUSSIAN_SMERDI) {
+		// TODO: remove serfs from lord mats?
 		game.pieces.smerdi = 0
 	}
 
@@ -2189,11 +2193,12 @@ function end_levy_arts_of_war_first() {
 function goto_levy_arts_of_war() {
 	log_br()
 	log(game.active)
-	game.state = "levy_arts_of_war"
 	game.what = draw_two_cards()
+	resume_levy_arts_of_war()
 }
 
 function resume_levy_arts_of_war() {
+	game.state = "levy_arts_of_war"
 	if (game.what.length === 0)
 		end_levy_arts_of_war()
 }
