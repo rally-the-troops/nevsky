@@ -1,6 +1,5 @@
 "use strict"
 
-// TODO: SA without RD
 // TODO: hit remainders
 // TODO: choose crossbow/normal hit application order
 
@@ -304,6 +303,16 @@ const AOW_RUSSIAN_LODYA = R16
 const AOW_RUSSIAN_VELIKY_KNYAZ = R17
 const AOW_RUSSIAN_STONE_KREMLIN = R18
 
+// Battle events
+const EVENT_TEUTONIC_HILL = T9
+const EVENT_RUSSIAN_HILL = R5
+const EVENT_TEUTONIC_MARSH = T5
+const EVENT_RUSSIAN_MARSH = R2
+const EVENT_TEUTONIC_BRIDGE = T4
+const EVENT_RUSSIAN_BRIDGE = R1
+const EVENT_TEUTONIC_FIELD_ORGAN = T10
+const EVENT_RUSSIAN_RAVENS_ROCK = R4
+
 const EVENT_TEUTONIC_FAMINE = T16
 const EVENT_RUSSIAN_FAMINE = R7
 const EVENT_VALDEMAR = R11
@@ -406,6 +415,15 @@ function current_season() {
 	return SEASONS[game.turn >> 1]
 }
 
+function is_winter() {
+	let season = current_season()
+	return season !== EARLY_WINTER && season !== LATE_WINTER
+}
+
+function is_summer() {
+	return current_season() === SUMMER
+}
+
 function current_turn_name() {
 	return TURN_NAME[game.turn >> 1]
 }
@@ -414,6 +432,12 @@ function current_deck() {
 	if (game.active === P1)
 		return game.deck1
 	return game.deck2
+}
+
+function current_hand() {
+	if (game.active === P1)
+		return game.hand1
+	return game.hand2
 }
 
 function is_campaign_phase() {
@@ -855,6 +879,12 @@ function is_friendly_card(c) {
 	if (game.active === P1)
 		return is_p1_card(c)
 	return is_p2_card(c)
+}
+
+function has_card_in_hand(c) {
+	if (game.active === P1)
+		return set_has(game.hand1, c)
+	return set_has(game.hand2, c)
 }
 
 function can_discard_card(c) {
@@ -1860,6 +1890,12 @@ function setup_test() {
 
 	game.plan1 = [ LORD_HERMANN, LORD_HERMANN, LORD_HERMANN, LORD_YAROSLAV, LORD_RUDOLF, LORD_KNUD_ABEL ]
 	game.plan2 = [ LORD_ALEKSANDR, LORD_ANDREY, LORD_DOMASH, LORD_GAVRILO, LORD_DOMASH, LORD_DOMASH ]
+
+	game.hand1 = [ EVENT_TEUTONIC_MARSH, EVENT_TEUTONIC_HILL, EVENT_TEUTONIC_BRIDGE, EVENT_TEUTONIC_FIELD_ORGAN ]
+	game.hand2 = [ EVENT_RUSSIAN_MARSH, EVENT_RUSSIAN_HILL, EVENT_RUSSIAN_BRIDGE, EVENT_RUSSIAN_RAVENS_ROCK ]
+
+	game.hand1.sort((a,b)=>a-b)
+	game.hand2.sort((a,b)=>a-b)
 }
 
 states.setup_lords = {
@@ -1909,6 +1945,32 @@ function end_setup_lords() {
 
 function is_event_in_play(c) {
 	return set_has(game.events, c)
+}
+
+function is_ravens_rock_in_play() {
+	if (game.active === RUSSIANS)
+		return is_event_in_play(EVENT_RUSSIAN_RAVENS_ROCK)
+	return false
+}
+
+function is_marsh_in_play() {
+	if (game.battle.round <= 2) {
+		if (game.active === TEUTONS && is_event_in_play(EVENT_RUSSIAN_MARSH))
+			return true
+		if (game.active === RUSSIANS && is_event_in_play(EVENT_TEUTONIC_MARSH))
+			return true
+	}
+	return false
+}
+
+function is_hill_in_play() {
+	if (game.battle.round <= 2) {
+		if (game.active === TEUTONS && is_event_in_play(EVENT_TEUTONIC_HILL))
+			return true
+		if (game.active === RUSSIANS && is_event_in_play(EVENT_RUSSIAN_HILL))
+			return true
+	}
+	return false
 }
 
 function is_famine_in_play() {
@@ -2265,9 +2327,9 @@ states.levy_arts_of_war = {
 		let c = game.what.shift()
 		log(`Held event card.`)
 		if (game.active === P1)
-			game.hand1.push(c)
+			set_add(game.hand1, c)
 		else
-			game.hand2.push(c)
+			set_add(game.hand2, c)
 		resume_levy_arts_of_war()
 	},
 	discard() {
@@ -2804,7 +2866,7 @@ function end_papal_legate() {
 // === LEVY: SUMMER CRUSADERS (CAPABILITY) ===
 
 function goto_summer_crusaders() {
-	if (current_season() === SUMMER && has_global_capability(AOW_TEUTONIC_CRUSADE)) {
+	if (is_summer() && has_global_capability(AOW_TEUTONIC_CRUSADE)) {
 		for (let v of data.summer_crusaders) {
 			if (can_muster_summer_crusader(v)) {
 				game.state = "summer_crusaders"
@@ -4401,7 +4463,7 @@ function can_action_forage() {
 	let here = get_lord_locale(game.command)
 	if (has_ravaged_marker(here))
 		return false
-	if (current_season() === SUMMER)
+	if (is_summer())
 		return true
 	if (is_friendly_stronghold_locale(here)) // TODO: simpler check?
 		return true
@@ -4625,7 +4687,7 @@ function can_action_sail() {
 
 	// during Rasputitsa or Summer
 	let season = current_season()
-	if (season !== SUMMER && season !== RASPUTITSA)
+	if (is_winter())
 		return false
 
 	// with enough ships to carry all the horses
@@ -5271,15 +5333,230 @@ states.array_defender_storm = {
 
 function goto_attacker_events() {
 	set_active_attacker()
-	log("TODO attacker events")
+	if (can_play_battle_events())
+		game.state = "attacker_events"
+	else
+		end_attacker_events()
+}
+
+function end_attacker_events() {
 	goto_defender_events()
 }
 
 function goto_defender_events() {
 	set_active_defender()
-	log("TODO defender events")
+	if (can_play_battle_events())
+		game.state = "defender_events"
+	else
+		end_defender_events()
+}
+
+function end_defender_events() {
 	goto_battle_rounds()
 }
+
+function resume_battle_events() {
+	game.what = -1
+	if (game.active === game.battle.attacker)
+		goto_attacker_events()
+	else
+		goto_defender_events()
+}
+
+function could_play_card(c) {
+	if (set_has(game.capabilities, c))
+		return false
+	if (game.pieces.capabilities.includes(c))
+		return false
+	if (set_has(game.events, c))
+		return false
+	if (is_p1_card(c))
+		return game.hand1.length > 0
+	if (is_p2_card(c))
+		return game.hand2.length > 0
+	return true
+}
+
+function can_play_battle_events() {
+	if (!game.battle.storm) {
+		if (game.active === TEUTONS) {
+			if (game.active !== game.battle.attacker) {
+				if (could_play_card(EVENT_TEUTONIC_HILL))
+					return true
+				if (!is_winter())
+					if (could_play_card(EVENT_TEUTONIC_MARSH))
+						return true
+			}
+			if (!is_winter())
+				if (could_play_card(EVENT_TEUTONIC_BRIDGE))
+					return true
+		}
+
+		if (game.active === RUSSIANS) {
+			if (game.active !== game.battle.attacker) {
+				if (could_play_card(EVENT_RUSSIAN_HILL))
+					return true
+				if (!is_winter())
+					if (could_play_card(EVENT_RUSSIAN_MARSH))
+						return true
+			}
+			if (!is_winter())
+				if (could_play_card(EVENT_RUSSIAN_BRIDGE))
+					return true
+			if (is_summer())
+				if (could_play_card(EVENT_RUSSIAN_RAVENS_ROCK))
+					return true
+		}
+	}
+
+	// Battle or Storm
+	if (game.active === TEUTONS) {
+		if (could_play_card(EVENT_TEUTONIC_FIELD_ORGAN))
+			return true
+	}
+
+	return false
+}
+
+function gen_action_card_if_held(c) {
+	if (has_card_in_hand(c))
+		gen_action_card(c)
+}
+
+function prompt_battle_events() {
+	// both attacker and defender events
+	if (game.active === TEUTONS) {
+		if (!game.battle.storm) {
+			if (!is_winter())
+				gen_action_card_if_held(EVENT_TEUTONIC_BRIDGE)
+		}
+		gen_action_card_if_held(EVENT_TEUTONIC_FIELD_ORGAN)
+	}
+
+	if (game.active === RUSSIANS) {
+		if (!game.battle.storm) {
+			if (!is_winter())
+				gen_action_card_if_held(EVENT_RUSSIAN_BRIDGE)
+			if (is_summer())
+				gen_action_card_if_held(EVENT_RUSSIAN_RAVENS_ROCK)
+		}
+	}
+
+	view.actions.done = 1
+}
+
+states.attacker_events = {
+	prompt() {
+		view.prompt = "Attacker may play events."
+		prompt_battle_events()
+	},
+	card: action_battle_events,
+	done() {
+		end_attacker_events()
+	},
+}
+
+states.defender_events = {
+	prompt() {
+		view.prompt = "Defender may play events."
+
+		prompt_battle_events()
+
+		// defender only events
+		if (game.active === TEUTONS) {
+			if (!game.battle.storm) {
+				if (!is_winter())
+					gen_action_card_if_held(EVENT_TEUTONIC_MARSH)
+				gen_action_card_if_held(EVENT_TEUTONIC_HILL)
+			}
+		}
+
+		if (game.active === RUSSIANS) {
+			if (!game.battle.storm) {
+				if (!is_winter())
+					gen_action_card_if_held(EVENT_RUSSIAN_MARSH)
+				gen_action_card_if_held(EVENT_RUSSIAN_HILL)
+			}
+		}
+	},
+	card: action_battle_events,
+	done() {
+		end_defender_events()
+	},
+}
+
+function action_battle_events(c) {
+	game.what = c
+	set_delete(game.hand1, c)
+	set_delete(game.hand2, c)
+	set_add(game.events, c)
+	switch (c) {
+	case EVENT_TEUTONIC_HILL:
+	case EVENT_TEUTONIC_MARSH:
+	case EVENT_RUSSIAN_HILL:
+	case EVENT_RUSSIAN_MARSH:
+	case EVENT_RUSSIAN_RAVENS_ROCK:
+		// nothing more needs to be done for these
+		log(`Played E${c}.`)
+		resume_battle_events()
+		break
+	case EVENT_TEUTONIC_BRIDGE:
+	case EVENT_RUSSIAN_BRIDGE:
+		// must select target lord
+		game.state = "bridge"
+		break
+	case EVENT_TEUTONIC_FIELD_ORGAN:
+		// must select target lord
+		game.state = "field_organ"
+		break
+	}
+}
+
+states.bridge = {
+	prompt() {
+		view.prompt = "Bridge: Play on a Center Lord."
+		let array = game.battle.array
+		if (game.active === game.battle.attacker) {
+			if (array[D2] !== NOBODY)
+				gen_action_battle_lord(array[D2])
+			if (array[RD2] !== NOBODY)
+				gen_action_battle_lord(array[RD2])
+		} else {
+			// Cannot play on Relief Sallying lord
+			if (array[A2] !== NOBODY)
+				gen_action_battle_lord(array[A2])
+		}
+	},
+	battle_lord(lord) {
+		log(`Played E${game.what} on L${lord}.`)
+		if (!game.battle.bridge)
+			game.battle.bridge = []
+		set_add(game.battle.bridge, lord)
+		resume_battle_events()
+	},
+}
+
+states.field_organ = {
+	prompt() {
+		view.prompt = "Field Organ: Play on a Lord."
+		let array = game.battle.array
+		if (game.active === game.battle.attacker) {
+			for (let pos of STEP_ARRAY[1])
+				if (array[pos] !== NOBODY)
+					gen_action_battle_lord(array[pos])
+		} else {
+			for (let pos of STEP_ARRAY[0])
+				if (array[pos] !== NOBODY)
+					gen_action_battle_lord(array[pos])
+		}
+	},
+	battle_lord(lord) {
+		log(`Played E${game.what} on L${lord}.`)
+		game.battle.field_organ = lord
+		resume_battle_events()
+	},
+}
+
 
 // === BATTLE: CONCEDE THE FIELD ===
 
@@ -5297,7 +5574,7 @@ function goto_concede() {
 		else
 			game.state = "concede_storm"
 	} else {
-		log_h3("Battle Round")
+		log_h3(`Battle Round ${game.battle.round}`)
 		game.state = "concede_battle"
 	}
 }
@@ -5367,13 +5644,23 @@ function goto_reposition_battle() {
 		slide_array(RD3, D3)
 	}
 
-	// If all A routed, advance SA to front (to regular sally)
+	// If all A routed, flip the battle field around:
 	if (array[A1] === NOBODY && array[A2] === NOBODY && array[A3] === NOBODY) {
 		// Become a regular sally situation (siegeworks still count for defender)
 		game.battle.sally = 1
+		// Advance SA to front (to regular sally)
 		slide_array(SA1, A1)
 		slide_array(SA2, A2)
 		slide_array(SA3, A3)
+		// then D back to reserve
+		send_to_reserv(D1)
+		send_to_reserv(D2)
+		send_to_reserv(D3)
+		// then RD to D
+		slide_array(RD1, D1)
+		slide_array(RD2, D2)
+		slide_array(RD3, D3)
+		// and during the advance D may come back out from reserve
 	}
 
 	set_active_attacker()
@@ -5437,7 +5724,7 @@ states.reposition_advance = {
 
 		for (let lord of game.battle.reserves)
 			if (is_friendly_lord(lord) && lord !== game.who)
-				gen_action_lord(lord)
+				gen_action_battle_lord(lord)
 
 		if (game.who !== NOBODY) {
 			if (game.active === game.battle.attacker) {
@@ -5456,12 +5743,12 @@ states.reposition_advance = {
 			}
 		}
 	},
-	lord(lord) {
+	battle_lord(lord) {
 		game.who = lord
 	},
 	array(pos) {
-		game.battle.array[pos] = lord
-		game.who = NULL
+		game.battle.array[pos] = game.who
+		game.who = NOBODY
 		goto_reposition_advance()
 	},
 }
@@ -5772,16 +6059,25 @@ function debug_battle_array(f, r) {
 
 function count_archery_hits(ix, lord) {
 	if (lord_has_capability(lord, AOW_RUSSIAN_LUCHNIKI)) {
-		game.battle.ah1[ix] += get_lord_forces(lord, LIGHT_HORSE)
+		if (!is_marsh_in_play())
+			game.battle.ah1[ix] += get_lord_forces(lord, LIGHT_HORSE)
 		game.battle.ah1[ix] += get_lord_forces(lord, MILITIA)
 	}
 	if (lord_has_capability(lord, AOW_TEUTONIC_BALISTARII)) {
 		game.battle.ah2[ix] += get_lord_forces(lord, MEN_AT_ARMS)
 	}
-	game.battle.ah1[ix] += get_lord_forces(lord, ASIATIC_HORSE)
+	if (!is_marsh_in_play())
+		game.battle.ah1[ix] += get_lord_forces(lord, ASIATIC_HORSE)
 }
 
 function count_horse_hits(ix, lord) {
+	if (is_marsh_in_play())
+		return
+	if (game.battle.field_organ === lord && game.battle.round === 1) {
+		log(`Field Organ L%{lord}.`)
+		game.battle.ah1[ix] += get_lord_forces(lord, KNIGHTS) << 1
+		game.battle.ah1[ix] += get_lord_forces(lord, SERGEANTS) << 1
+	}
 	if (game.battle.storm)
 		game.battle.ah1[ix] += get_lord_forces(lord, KNIGHTS) << 1
 	else
@@ -5801,6 +6097,8 @@ function count_battle_hits(ix, lord, step) {
 	case BATTLE_STEP_DEF_ARCHERY:
 	case BATTLE_STEP_ATK_ARCHERY:
 		count_archery_hits(ix, lord)
+		if (is_hill_in_play())
+			count_archery_hits(ix, lord) // count 'em twice
 		break
 	case BATTLE_STEP_DEF_HORSE:
 	case BATTLE_STEP_ATK_HORSE:
@@ -5918,22 +6216,22 @@ function goto_strike_storm() {
 	if (game.active === game.battle.attacker) {
 		if (game.battle.garrison) {
 			if (game.battle.array[D2] === NOBODY)
-				log(`L${game.battle.array[A2]} struck Garrison for ${format_hits()}`)
+				log(`L${game.battle.array[A2]} struck Garrison.`)
 			else
-				log(`L${game.battle.array[A2]} struck L${game.battle.array[D2]} and Garrison for ${format_hits()}`)
+				log(`L${game.battle.array[A2]} struck L${game.battle.array[D2]} and Garrison.`)
 		} else {
-			log(`L${game.battle.array[A2]} struck L${game.battle.array[D2]} for ${format_hits()}`)
+			log(`L${game.battle.array[A2]} struck L${game.battle.array[D2]}.`)
 		}
 		game.battle.sg = [ A2 ]
 		game.battle.hg = [ D2 ]
 	} else {
 		if (game.battle.garrison) {
 			if (game.battle.array[D2] === NOBODY)
-				log(`Garrison struck L${game.battle.array[A2]} for ${format_hits()}`)
+				log(`Garrison struck L${game.battle.array[A2]}.`)
 			else
-				log(`L${game.battle.array[D2]} and Garrison struck L${game.battle.array[A2]} for ${format_hits()}`)
+				log(`L${game.battle.array[D2]} and Garrison struck L${game.battle.array[A2]}.`)
 		} else {
-			log(`L${game.battle.array[D2]} struck L${game.battle.array[A2]} for ${format_hits()}`)
+			log(`L${game.battle.array[D2]} struck L${game.battle.array[A2]}.`)
 		}
 		game.battle.sg = [ D2 ]
 		game.battle.hg = [ A2 ]
@@ -5946,6 +6244,16 @@ function goto_strike_battle() {
 	let s = game.battle.step & 1
 
 	log_h4(battle_step_name[game.battle.step])
+
+	if (is_marsh_in_play())
+		log("Marsh")
+
+	if (is_hill_in_play() && game.battle.step < 2)
+		log("Hill")
+
+	if (game.battle.step >= 2) // Melee Step
+		if (game.battle.bridge)
+			log("TODO: Bridge")
 
 	game.battle.ah1 = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
 	game.battle.ah2 = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
@@ -6146,7 +6454,7 @@ function select_strike_group(i) {
 		game.battle.h2 = (game.battle.h2 + 1) >> 1
 	}
 
-	log(`${format_group(game.battle.sg)} struck ${format_group(game.battle.hg)} for ${format_hits()}`)
+	log(`${format_group(game.battle.sg)} struck ${format_group(game.battle.hg)}.`)
 
 	goto_apply_hits()
 }
@@ -6209,13 +6517,34 @@ function goto_apply_hits() {
 		else
 			roll_for_walls()
 	} else if (game.battle.sally) {
-		if (game.active !== game.battle.attacker)
-			roll_for_siegeworks()
+		if (game.active !== game.battle.attacker) {
+			if (is_ravens_rock_in_play() && count_siege_markers(game.battle.where) < 2)
+				roll_for_ravens_rock()
+			else
+				roll_for_siegeworks()
+		} else {
+			if (is_ravens_rock_in_play())
+				roll_for_ravens_rock()
+		}
 	} else {
 		let s = game.battle.sg[0]
-		if (s === SA1 || s === SA2 || s === SA3)
-			roll_for_siegeworks()
+		if (s === SA1 || s === SA2 || s === SA3) {
+			if (is_ravens_rock_in_play() && count_siege_markers(game.battle.where) < 2)
+				roll_for_ravens_rock()
+			else
+				roll_for_siegeworks()
+		} else {
+			if (is_ravens_rock_in_play())
+				roll_for_ravens_rock()
+		}
 	}
+
+	if (game.battle.h2 > 0)
+		log(`${game.battle.h2} crossbow hits`)
+	if (game.battle.h1 > 0)
+		log(`${game.battle.h1} hits`)
+	if (game.battle.h1 + game.battle.h2 === 0)
+		log(`No hits`)
 
 	resume_apply_hits()
 }
@@ -6268,6 +6597,12 @@ function roll_for_siegeworks() {
 	}
 }
 
+function roll_for_ravens_rock() {
+	let prot = 2
+	game.battle.h2 = roll_for_protection(`Raven's Rock 1-${prot} vs crossbow:`, prot, game.battle.h2)
+	game.battle.h1 = roll_for_protection(`Raven's Rock 1-${prot}:`, prot, game.battle.h1)
+}
+
 function roll_for_protection(name, prot, n) {
 	let total = 0
 	if (n > 0) {
@@ -6283,7 +6618,6 @@ function roll_for_protection(name, prot, n) {
 		}
 		log(name)
 		logi(rolls.join(", "))
-		logi("Total " + total)
 	}
 	return total
 }
@@ -6345,21 +6679,21 @@ function action_apply_hits(lord, type) {
 	if (evade > 0 && !game.battle.storm) {
 		let die = roll_die()
 		if (die <= evade) {
-			log(`${FORCE_TYPE_NAME[type]} ${die} <= ${evade}`)
+			log(`L${lord} ${FORCE_TYPE_NAME[type]} ${die} <= ${evade}`)
 		} else {
-			log(`${FORCE_TYPE_NAME[type]} ${die} > ${evade}`)
+			log(`L${lord} ${FORCE_TYPE_NAME[type]} ${die} > ${evade}`)
 			rout_unit(lord, type)
 		}
 	} else if (protection > 0) {
 		let die = roll_die()
 		if (die <= protection - ap) {
-			log(`${FORCE_TYPE_NAME[type]} ${die} <= ${protection - ap}`)
+			log(`L${lord} ${FORCE_TYPE_NAME[type]} ${die} <= ${protection - ap}`)
 		} else {
-			log(`${FORCE_TYPE_NAME[type]} ${die} > ${protection - ap}`)
+			log(`L${lord} ${FORCE_TYPE_NAME[type]} ${die} > ${protection - ap}`)
 			rout_unit(lord, type)
 		}
 	} else {
-		log(`${FORCE_TYPE_NAME[type]} unprotected`)
+		log(`L${lord} ${FORCE_TYPE_NAME[type]} unprotected`)
 		rout_unit(lord, type)
 	}
 
