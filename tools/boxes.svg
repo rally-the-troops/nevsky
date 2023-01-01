@@ -28,9 +28,9 @@
      inkscape:window-height="480"
      id="namedview8"
      showgrid="false"
-     inkscape:zoom="0.4218644"
-     inkscape:cx="2021.1195"
-     inkscape:cy="4535.2592"
+     inkscape:zoom="8"
+     inkscape:cx="3945.1381"
+     inkscape:cy="2061.5273"
      inkscape:current-layer="svg2"
      inkscape:document-rotation="0" />
   <metadata
@@ -50,14 +50,14 @@
   <image
      sodipodi:absref="/home/tor/src/rally/public/nevsky/tools/map300.png"
      xlink:href="map300.png"
-     id="image12"
-     preserveAspectRatio="none"
-     height="6600"
-     width="5100"
-     style="fill:none;fill-opacity:1;stroke:#ff0000;stroke-opacity:1"
-     sodipodi:insensitive="true"
+     y="0"
      x="0"
-     y="0" />
+     sodipodi:insensitive="true"
+     style="display:inline;fill:none;fill-opacity:1;stroke:#ff0000;stroke-opacity:1"
+     width="5100"
+     height="6600"
+     preserveAspectRatio="none"
+     id="image12" />
   <rect
      style="fill:none;fill-opacity:1;stroke:#ff0000;stroke-opacity:1"
      id="rect838"
@@ -685,4 +685,22 @@
      x="4426.3257"
      y="6428.459"
      inkscape:label="veche-label-bottom" />
+  <rect
+     style="fill:#8d0000;fill-opacity:0.341463;stroke:#000000;stroke-miterlimit:10"
+     id="rect80"
+     width="1265.0032"
+     height="88.73423"
+     x="5.7071066"
+     y="61.684658"
+     ry="0.610479"
+     inkscape:label="box0" />
+  <rect
+     style="fill:#8d0000;fill-opacity:0.341463;stroke:#000000;stroke-miterlimit:10"
+     id="rect82"
+     width="1265.125"
+     height="85.625"
+     x="3827.375"
+     y="2055.875"
+     ry="0.610479"
+     inkscape:label="box17" />
 </svg>

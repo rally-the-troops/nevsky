@@ -704,6 +704,11 @@ body.shift .mustered_vassals {
 	border-radius: 50%;
 }
 
+.box.calendar.action {
+	border-color: white;
+	background-color: #fff6;
+}
+
 .box.way.action {
 	border-color: dodgerblue;
 }
@@ -961,6 +966,22 @@ body.shift .mustered_vassals {
 
 #pieces .service_marker {
 	position: absolute;
+}
+
+.service_marker.teutonic.lord.selected {
+	box-shadow: 0 0 0 1px #111, 0 0 0 3px yellow;
+}
+
+.service_marker.russian.lord.selected {
+	box-shadow: 0 0 0 1px #555, 0 0 0 3px yellow;
+}
+
+.service_marker.teutonic.vassal.selected {
+	box-shadow: 0 0 0 1px #0f0d0d, 0 0 0 3px yellow;
+}
+
+.service_marker.russian.vassal.selected {
+	box-shadow: 0 0 0 1px #736e5e, 0 0 0 3px yellow;
 }
 
 .service_marker.teutonic.lord.action {

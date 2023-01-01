@@ -205,6 +205,10 @@ function is_veche_action() {
 	return !!(view.actions && view.actions.veche === 1)
 }
 
+function is_calendar_action(turn) {
+	return !!(view.actions && view.actions.calendar && set_has(view.actions.calendar, turn))
+}
+
 function is_lord_action(lord) {
 	return !!(view.actions && view.actions.lord && set_has(view.actions.lord, lord))
 }
@@ -432,6 +436,8 @@ const original_boxes = {
 	"calendar winter box14": [3196,1120,590,916],
 	"calendar rasputitsa box15": [3860,1120,590,916],
 	"calendar rasputitsa box16": [4470,1120,590,916],
+	"calendar box0": [6,62,1265,89],
+	"calendar box17": [3827,2056,1265,86],
 }
 
 const calendar_xy = [
@@ -668,6 +674,13 @@ function on_click_lord_service_marker(evt) {
 	if (evt.button === 0) {
 		let id = evt.target.my_id
 		send_action('service', id)
+	}
+}
+
+function on_click_calendar(evt) {
+	if (evt.button === 0) {
+		let id = evt.target.my_id
+		send_action('calendar', evt.target.my_id)
 	}
 }
 
@@ -1105,6 +1118,7 @@ function update_lord(ix) {
 		ui.lord_cylinder[ix].classList.toggle("marshal", !is_lord_on_map(LORD_ALEKSANDR))
 
 	ui.lord_cylinder[ix].classList.toggle("selected", is_lord_selected(ix))
+	ui.lord_service[ix].classList.toggle("selected", is_lord_selected(ix))
 	ui.lord_mat[ix].classList.toggle("selected", is_lord_selected(ix))
 
 	ui.lord_cylinder[ix].classList.toggle("command", is_lord_command(ix))
@@ -1503,6 +1517,9 @@ function on_update() {
 
 	update_court()
 
+	for (let i = 0; i <= 17; ++i)
+		ui.calendar[i].classList.toggle("action", is_calendar_action(i))
+
 	// Misc
 	action_button("left", "Left")
 	action_button("right", "Right")
@@ -1799,6 +1816,32 @@ function build_map() {
 		e.style.width = w + "px"
 		e.style.height = h + "px"
 		document.getElementById("boxes").appendChild(e)
+	}
+
+	ui.calendar = [
+		document.querySelector(".calendar.box0"),
+		document.querySelector(".calendar.box1"),
+		document.querySelector(".calendar.box2"),
+		document.querySelector(".calendar.box3"),
+		document.querySelector(".calendar.box4"),
+		document.querySelector(".calendar.box5"),
+		document.querySelector(".calendar.box6"),
+		document.querySelector(".calendar.box7"),
+		document.querySelector(".calendar.box8"),
+		document.querySelector(".calendar.box9"),
+		document.querySelector(".calendar.box10"),
+		document.querySelector(".calendar.box11"),
+		document.querySelector(".calendar.box12"),
+		document.querySelector(".calendar.box13"),
+		document.querySelector(".calendar.box14"),
+		document.querySelector(".calendar.box15"),
+		document.querySelector(".calendar.box16"),
+		document.querySelector(".calendar.box17")
+	]
+
+	for (let i = 0; i <= 17; ++i) {
+		ui.calendar[i].my_id = i
+		ui.calendar[i].addEventListener("mousedown", on_click_calendar)
 	}
 
 	build_way("Crossroads", ".way.crossroads")

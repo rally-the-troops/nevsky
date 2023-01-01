@@ -49,7 +49,6 @@ const DIE_MISS = "01234567"
 let game = null
 let view = null
 let states = {}
-let immediate_events = {}
 
 exports.roles = [ P1, P2 ]
 
@@ -564,6 +563,20 @@ function add_spoils(type, n) {
 	if (!game.spoils)
 		game.spoils = [ 0, 0, 0, 0, 0, 0, 0 ]
 	game.spoils[type] += n
+}
+
+function get_lord_calendar(lord) {
+	if (is_lord_on_calendar(lord))
+		return get_lord_locale(lord) - CALENDAR
+	else
+		return get_lord_service(lord)
+}
+
+function set_lord_calendar(lord, turn) {
+	if (is_lord_on_calendar(lord))
+		set_lord_locale(lord, CALENDAR + turn)
+	else
+		set_lord_service(lord, turn)
 }
 
 function get_lord_locale(lord) {
@@ -2015,21 +2028,48 @@ function no_muster_of_or_by_lord(lord) {
 }
 
 function goto_immediate_event(c) {
-	let e = data.cards[c].event
-	log(e)
-	if (immediate_events[e]) {
-		immediate_events[e]()
-	} else {
+	switch (c) {
+	// This Levy / Campaign
+	case EVENT_TEUTONIC_FAMINE:
+	case EVENT_RUSSIAN_FAMINE:
+		// No immediate effects
+		return end_immediate_event()
+	case EVENT_RUSSIAN_DEATH_OF_THE_POPE:
+		return goto_event_death_of_the_pope()
+	case EVENT_RUSSIAN_VALDEMAR:
+		return goto_event_russian_valdemar()
+	case EVENT_RUSSIAN_DIETRICH_VON_GRUNINGEN:
+		return goto_event_russian_dietrich()
+
+	// Immediate
+	case EVENT_TEUTONIC_GRAND_PRINCE:
+	case EVENT_TEUTONIC_TORZHOK:
+	case EVENT_TEUTONIC_POPE_GREGORY:
+	case EVENT_TEUTONIC_KHAN_BATY:
+	case EVENT_TEUTONIC_BOUNTIFUL_HARVEST:
+	case EVENT_TEUTONIC_MINDAUGAS:
+	case EVENT_TEUTONIC_SWEDISH_CRUSADE:
+
+	// Immediate
+	case EVENT_RUSSIAN_OSILIAN_REVOLT:
+	case EVENT_RUSSIAN_BATU_KHAN:
+	case EVENT_RUSSIAN_MINDAUGAS:
+	case EVENT_RUSSIAN_PRUSSIAN_REVOLT:
+	case EVENT_RUSSIAN_TEMPEST:
+	case EVENT_RUSSIAN_BOUNTIFUL_HARVEST:
+
+	default:
 		log("TODO")
-		end_immediate_event()
+		return end_immediate_event()
 	}
 }
 
 function end_immediate_event() {
+	clear_undo()
 	resume_levy_arts_of_war()
 }
 
-immediate_events["Death of the Pope"] = function () {
+function goto_event_death_of_the_pope() {
 	if (has_global_capability(AOW_TEUTONIC_WILLIAM_OF_MODENA))
 		game.state = "death_of_the_pope"
 	else
@@ -2049,7 +2089,7 @@ states.death_of_the_pope = {
 
 // === EVENTS: SHIFT LORD OR SERVICE ===
 
-immediate_events["Dietrich von Grüningen"] = function () {
+function goto_event_russian_dietrich() {
 	if (is_lord_in_play(LORD_ANDREAS) || is_lord_in_play(LORD_RUDOLF)) {
 		game.state = "dietrich_von_gruningen"
 		game.count = 1
@@ -2058,7 +2098,7 @@ immediate_events["Dietrich von Grüningen"] = function () {
 	}
 }
 
-immediate_events["Valdemar"] = function () {
+function goto_event_russian_valdemar() {
 	if (is_lord_in_play(LORD_KNUD_ABEL)) {
 		game.state = "valdemar"
 		game.count = 1
@@ -2108,55 +2148,23 @@ function action_shift_lord(lord) {
 
 states.shift_lord = {
 	prompt() {
-		view.prompt = `Shift ${lord_name[game.who]} or Service up to ${game.count}.`
-		// TODO: click on calendar boxes? - need off-calendar buttons?
-		let here = 0
-		let lord = game.who
-		if (is_lord_on_calendar(lord))
-			here = get_lord_locale(lord) - CALENDAR
-		else
-			here = get_lord_service(lord)
-		if (here > 0)
-			view.actions.left = 1
-		else
-			view.actions.left = 0
-		if (here < 17)
-			view.actions.right = 1
-		else
-			view.actions.right = 0
+		view.prompt = `Shift ${lord_name[game.who]} up to ${game.count}.`
+		let here = get_lord_calendar(game.who)
+		for (let i = here - game.count; i <= here + game.count; ++i)
+			if (i >= 0 && i <= 17 && i !== here)
+				gen_action_calendar(i)
 		view.actions.done = 1
 	},
-	turn(turn) {
-		let lord = game.who
-		log(`Shifted L${lord} to ${turn}.`)
-		if (is_lord_on_calendar(lord))
-			set_lord_locale(lord, CALENDAR + turn)
-		else
-			set_lord_service(lord, turn)
-		if (--game.count === 0)
-			end_immediate_event()
-	},
-	left() {
-		let lord = game.who
-		log(`Shifted L${lord} left.`)
-		if (is_lord_on_calendar(lord))
-			shift_lord_cylinder(lord, -1)
-		else
-			add_lord_service(lord, -1)
-		if (--game.count === 0)
-			end_immediate_event()
-	},
-	right() {
-		let lord = game.who
-		log(`Shifted L${lord} right.`)
-		if (is_lord_on_calendar(lord))
-			shift_lord_cylinder(lord, 1)
-		else
-			add_lord_service(lord, 1)
-		if (--game.count === 0)
-			end_immediate_event()
+	calendar(turn) {
+		log(`Shifted L${game.who} to ${turn}.`)
+		set_lord_calendar(game.who, turn)
+		game.who = NOBODY
+		game.count = 0
+		end_immediate_event()
 	},
 	done() {
+		game.who = NOBODY
+		game.count = 0
 		end_immediate_event()
 	},
 }
@@ -8555,6 +8563,10 @@ function gen_action_way(way) {
 
 function gen_action_locale(locale) {
 	gen_action("locale", locale)
+}
+
+function gen_action_calendar(calendar) {
+	gen_action("calendar", calendar)
 }
 
 function gen_action_laden_march(locale) {
