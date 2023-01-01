@@ -6254,7 +6254,10 @@ function goto_strike_storm() {
 			log(`L${game.battle.array[A2]} struck L${game.battle.array[D2]}.`)
 		}
 		game.battle.sg = [ A2 ]
-		game.battle.hg = [ D2 ]
+		if (game.battle.array[D2] !== NOBODY)
+			game.battle.hg = [ D2 ]
+		else
+			game.battle.hg = []
 	} else {
 		if (game.battle.garrison) {
 			if (game.battle.array[D2] === NOBODY)
