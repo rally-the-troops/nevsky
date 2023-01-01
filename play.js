@@ -209,10 +209,6 @@ function is_lord_action(lord) {
 	return !!(view.actions && view.actions.lord && set_has(view.actions.lord, lord))
 }
 
-function is_battle_lord_action(lord) {
-	return !!(view.actions && view.actions.battle_lord && set_has(view.actions.battle_lord, lord))
-}
-
 function is_battle_array_action(ix) {
 	return !!(view.actions && view.actions.array && set_has(view.actions.array, ix))
 }
@@ -595,13 +591,6 @@ function on_click_cylinder(evt) {
 	if (evt.button === 0) {
 		let id = evt.target.my_id
 		send_action('lord', id)
-	}
-}
-
-function on_click_battle_cylinder(evt) {
-	if (evt.button === 0) {
-		let id = evt.target.my_id
-		send_action('battle_lord', id)
 	}
 }
 
@@ -1058,15 +1047,11 @@ function update_lord_mat(ix) {
 	update_forces(ui.routed[ix], view.pieces.routed[ix], ix, true)
 }
 
-function is_lord_mat_selected(ix) {
-	if (view.who >= 0)
-		return ix === view.who
-	if (view.group)
-		return view.group.includes(ix)
-	return false
+function is_lord_command(ix) {
+	return view.command === ix
 }
 
-function is_cylinder_selected(ix) {
+function is_lord_selected(ix) {
 	if (view.who >= 0)
 		return ix === view.who
 	if (view.group)
@@ -1119,8 +1104,11 @@ function update_lord(ix) {
 	if (ix === LORD_ANDREY)
 		ui.lord_cylinder[ix].classList.toggle("marshal", !is_lord_on_map(LORD_ALEKSANDR))
 
-	ui.lord_cylinder[ix].classList.toggle("selected", is_cylinder_selected(ix))
-	ui.lord_mat[ix].classList.toggle("selected", is_lord_mat_selected(ix))
+	ui.lord_cylinder[ix].classList.toggle("selected", is_lord_selected(ix))
+	ui.lord_mat[ix].classList.toggle("selected", is_lord_selected(ix))
+
+	ui.lord_cylinder[ix].classList.toggle("command", is_lord_command(ix))
+	ui.lord_mat[ix].classList.toggle("command", is_lord_command(ix))
 
 	ui.lord_mat[ix].classList.toggle("besieged", is_lord_besieged(ix))
 	ui.lord_mat[ix].classList.toggle("moved", is_lord_moved(ix))
@@ -1391,8 +1379,8 @@ function update_battle() {
 	}
 
 	for (let lord = 0; lord < 12; ++lord) {
-		ui.battle_cylinder[lord].classList.toggle("action", is_battle_lord_action(lord))
-		ui.battle_cylinder[lord].classList.toggle("selected", is_cylinder_selected(lord))
+		ui.battle_cylinder[lord].classList.toggle("action", is_lord_action(lord))
+		ui.battle_cylinder[lord].classList.toggle("selected", is_lord_selected(lord))
 	}
 
 	ui.garrison.replaceChildren()
@@ -1768,7 +1756,7 @@ function build_map() {
 		e = ui.battle_cylinder[ix] = document.createElement("div")
 		e.className = "cylinder lord " + clean_name(lord.side) + " " + clean_name(lord.name)
 		e.my_id = ix
-		e.addEventListener("mousedown", on_click_battle_cylinder)
+		e.addEventListener("mousedown", on_click_cylinder)
 		e.addEventListener("mouseenter", on_focus_cylinder)
 		e.addEventListener("mouseleave", on_blur)
 

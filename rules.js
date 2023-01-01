@@ -5163,7 +5163,7 @@ states.array_attacker = {
 			if (array[A1] === NOBODY || array[A2] === NOBODY || array[A3] === NOBODY) {
 				for (let lord of game.battle.reserves) {
 					if (lord !== game.who && is_friendly_lord(lord)) {
-						gen_action_battle_lord(lord)
+						gen_action_lord(lord)
 						done = false
 					}
 				}
@@ -5173,7 +5173,7 @@ states.array_attacker = {
 			if (array[A1] === NOBODY || array[A2] === NOBODY || array[A3] === NOBODY) {
 				for (let lord of game.battle.reserves) {
 					if (lord !== game.who && is_friendly_lord(lord) && is_lord_unbesieged(lord)) {
-						gen_action_battle_lord(lord)
+						gen_action_lord(lord)
 						done = false
 					}
 				}
@@ -5183,7 +5183,7 @@ states.array_attacker = {
 			if (array[SA1] === NOBODY || array[SA2] === NOBODY || array[SA3] === NOBODY) {
 				for (let lord of game.battle.reserves) {
 					if (lord !== game.who && is_friendly_lord(lord) && is_lord_besieged(lord)) {
-						gen_action_battle_lord(lord)
+						gen_action_lord(lord)
 						done = false
 					}
 				}
@@ -5215,7 +5215,7 @@ states.array_attacker = {
 		}
 	},
 	array: action_array_place,
-	battle_lord(lord) {
+	lord(lord) {
 		game.who = lord
 	},
 	end_array() {
@@ -5267,7 +5267,7 @@ states.array_defender = {
 		if (empty_front || empty_rear) {
 			for (let lord of game.battle.reserves) {
 				if (lord !== game.who && is_friendly_lord(lord)) {
-					gen_action_battle_lord(lord)
+					gen_action_lord(lord)
 					done = false
 				}
 			}
@@ -5284,7 +5284,7 @@ states.array_defender = {
 		}
 	},
 	array: action_array_place,
-	battle_lord(lord) {
+	lord(lord) {
 		game.who = lord
 	},
 	end_array() {
@@ -5320,9 +5320,9 @@ states.array_defender_storm = {
 
 		for (let lord of game.battle.reserves)
 			if (is_friendly_lord(lord))
-				gen_action_battle_lord(lord)
+				gen_action_lord(lord)
 	},
-	battle_lord(lord) {
+	lord(lord) {
 		set_delete(game.battle.reserves, lord)
 		game.battle.array[D2] = lord
 		end_array_defender()
@@ -5518,16 +5518,16 @@ states.bridge = {
 		let array = game.battle.array
 		if (game.active === game.battle.attacker) {
 			if (array[D2] !== NOBODY)
-				gen_action_battle_lord(array[D2])
+				gen_action_lord(array[D2])
 			if (array[RD2] !== NOBODY)
-				gen_action_battle_lord(array[RD2])
+				gen_action_lord(array[RD2])
 		} else {
 			// Cannot play on Relief Sallying lord
 			if (array[A2] !== NOBODY)
-				gen_action_battle_lord(array[A2])
+				gen_action_lord(array[A2])
 		}
 	},
-	battle_lord(lord) {
+	lord(lord) {
 		log(`Played E${game.what} on L${lord}.`)
 		if (!game.battle.bridge)
 			game.battle.bridge = []
@@ -5543,14 +5543,14 @@ states.field_organ = {
 		if (game.active === game.battle.attacker) {
 			for (let pos of STEP_ARRAY[1])
 				if (array[pos] !== NOBODY)
-					gen_action_battle_lord(array[pos])
+					gen_action_lord(array[pos])
 		} else {
 			for (let pos of STEP_ARRAY[0])
 				if (array[pos] !== NOBODY)
-					gen_action_battle_lord(array[pos])
+					gen_action_lord(array[pos])
 		}
 	},
-	battle_lord(lord) {
+	lord(lord) {
 		log(`Played E${game.what} on L${lord}.`)
 		game.battle.field_organ = lord
 		resume_battle_events()
@@ -5724,7 +5724,7 @@ states.reposition_advance = {
 
 		for (let lord of game.battle.reserves)
 			if (is_friendly_lord(lord) && lord !== game.who)
-				gen_action_battle_lord(lord)
+				gen_action_lord(lord)
 
 		if (game.who !== NOBODY) {
 			if (game.active === game.battle.attacker) {
@@ -5743,7 +5743,7 @@ states.reposition_advance = {
 			}
 		}
 	},
-	battle_lord(lord) {
+	lord(lord) {
 		game.who = lord
 	},
 	array(pos) {
@@ -5776,21 +5776,21 @@ states.reposition_center = {
 
 		if (game.active === game.battle.attacker) {
 			if (array[A2] === NOBODY) {
-				if (array[A1] !== NOBODY) gen_action_battle_lord(game.battle.array[A1])
-				if (array[A3] !== NOBODY) gen_action_battle_lord(game.battle.array[A3])
+				if (array[A1] !== NOBODY) gen_action_lord(game.battle.array[A1])
+				if (array[A3] !== NOBODY) gen_action_lord(game.battle.array[A3])
 			}
 			if (array[SA2] === NOBODY) {
-				if (array[SA1] !== NOBODY) gen_action_battle_lord(game.battle.array[SA1])
-				if (array[SA3] !== NOBODY) gen_action_battle_lord(game.battle.array[SA3])
+				if (array[SA1] !== NOBODY) gen_action_lord(game.battle.array[SA1])
+				if (array[SA3] !== NOBODY) gen_action_lord(game.battle.array[SA3])
 			}
 		} else {
 			if (array[D2] === NOBODY) {
-				if (array[D1] !== NOBODY) gen_action_battle_lord(game.battle.array[D1])
-				if (array[D3] !== NOBODY) gen_action_battle_lord(game.battle.array[D3])
+				if (array[D1] !== NOBODY) gen_action_lord(game.battle.array[D1])
+				if (array[D3] !== NOBODY) gen_action_lord(game.battle.array[D3])
 			}
 			if (array[RD2] === NOBODY) {
-				if (array[RD1] !== NOBODY) gen_action_battle_lord(game.battle.array[RD1])
-				if (array[RD3] !== NOBODY) gen_action_battle_lord(game.battle.array[RD3])
+				if (array[RD1] !== NOBODY) gen_action_lord(game.battle.array[RD1])
+				if (array[RD3] !== NOBODY) gen_action_lord(game.battle.array[RD3])
 			}
 		}
 
@@ -5802,7 +5802,7 @@ states.reposition_center = {
 			if (from === RD1 || from === RD3) gen_action_array(RD2)
 		}
 	},
-	battle_lord(lord) {
+	lord(lord) {
 		game.who = lord
 	},
 	array(pos) {
@@ -5840,9 +5840,9 @@ states.reposition_storm = {
 		view.prompt = "Reposition: You may switch positions between Front and any Reserve Lord."
 		for (let lord of game.battle.reserves)
 			if (is_friendly_lord(lord) && lord !== game.who)
-				gen_action_battle_lord(lord)
+				gen_action_lord(lord)
 	},
-	battle_lord(lord) {
+	lord(lord) {
 		log(`Swapped in L${lord}.`)
 		set_delete(game.battle.reserves, lord)
 		if (game.active === game.battle.attacker) {
@@ -6323,9 +6323,9 @@ function prompt_strike_choice(X1, X2, X3, Y2) {
 	if (game.battle.array[X2] === NOBODY && game.battle.array[Y2] !== NOBODY) {
 		view.who = game.battle.array[Y2]
 		if (game.battle.array[X1] !== NOBODY)
-			gen_action_battle_lord(game.battle.array[X1])
+			gen_action_lord(game.battle.array[X1])
 		if (game.battle.array[X3] !== NOBODY)
-			gen_action_battle_lord(game.battle.array[X3])
+			gen_action_lord(game.battle.array[X3])
 	}
 }
 
@@ -6347,11 +6347,11 @@ states.strike_choice = {
 			if (has_sa_strike()) {
 				view.group = [ array[SA1], array[SA2], array[SA3] ]
 				if (array[D1] !== NOBODY)
-					gen_action_battle_lord(array[D1])
+					gen_action_lord(array[D1])
 				if (array[D2] !== NOBODY)
-					gen_action_battle_lord(array[D2])
+					gen_action_lord(array[D2])
 				if (array[D3] !== NOBODY)
-					gen_action_battle_lord(array[D3])
+					gen_action_lord(array[D3])
 			}
 		} else {
 			if (game.battle.rc === -1) {
@@ -6362,10 +6362,9 @@ states.strike_choice = {
 			}
 		}
 	},
-	battle_lord(lord) {
-		this.array(get_lord_array_position(lord))
-	},
-	array(pos) {
+	lord(lord) {
+		let pos = get_lord_array_position(lord)
+
 		console.log("STRIKE CHOICE", pos)
 
 		if (pos === A1 || pos === D1)
@@ -6406,11 +6405,11 @@ states.select_strike_group = {
 			for (let p of sg) {
 				let lord = game.battle.array[p]
 				if (game.battle.ah1[p] + game.battle.ah2[p] > 0)
-					gen_action_battle_lord(lord)
+					gen_action_lord(lord)
 			}
 		}
 	},
-	battle_lord(lord) {
+	lord(lord) {
 		for (let i = 0; i < game.battle.groups.length; ++i) {
 			for (let p of game.battle.groups[i][0])
 				if (game.battle.array[p] === lord)
@@ -8541,10 +8540,6 @@ function gen_action_laden_march(locale) {
 
 function gen_action_lord(lord) {
 	gen_action("lord", lord)
-}
-
-function gen_action_battle_lord(lord) {
-	gen_action("battle_lord", lord)
 }
 
 function gen_action_array(pos) {
