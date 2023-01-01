@@ -11,7 +11,8 @@
 // TODO: 2nd edition supply rule - no reuse of transports
 
 // TODO: show command lord different from selected lord (inactive player)
-// TODO: show siegeworks + walls on battle mat for protection indication?
+// TODO: show siegeworks + walls on battle mat for protection indication
+// TODO: show feed x2 on lord mats with > 6 units
 
 // Check all push/clear_undo
 // Remove push_state/pop_state stuff - use explicit substates with common functions instead
@@ -303,21 +304,43 @@ const AOW_RUSSIAN_LODYA = R16
 const AOW_RUSSIAN_VELIKY_KNYAZ = R17
 const AOW_RUSSIAN_STONE_KREMLIN = R18
 
-// Battle events
-const EVENT_TEUTONIC_HILL = T9
-const EVENT_RUSSIAN_HILL = R5
-const EVENT_TEUTONIC_MARSH = T5
-const EVENT_RUSSIAN_MARSH = R2
+const EVENT_TEUTONIC_GRAND_PRINCE = T1
+const EVENT_TEUTONIC_TORZHOK = T2
+const EVENT_TEUTONIC_VODIAN_TREACHERY = T3
 const EVENT_TEUTONIC_BRIDGE = T4
-const EVENT_RUSSIAN_BRIDGE = R1
+const EVENT_TEUTONIC_MARSH = T5
+const EVENT_TEUTONIC_AMBUSH = T6
+const EVENT_TEUTONIC_TVERDILO = T7
+const EVENT_TEUTONIC_TEUTONIC_FERVOR = T8
+const EVENT_TEUTONIC_HILL = T9
 const EVENT_TEUTONIC_FIELD_ORGAN = T10
-const EVENT_RUSSIAN_RAVENS_ROCK = R4
-
+const EVENT_TEUTONIC_POPE_GREGORY = T11
+const EVENT_TEUTONIC_KHAN_BATY = T12
+const EVENT_TEUTONIC_HEINRICH_SEES_THE_CURIA = T13
+const EVENT_TEUTONIC_BOUNTIFUL_HARVEST = T14
+const EVENT_TEUTONIC_MINDAUGAS = T15
 const EVENT_TEUTONIC_FAMINE = T16
+const EVENT_TEUTONIC_DIETRICH_VON_GRUNINGEN = T17
+const EVENT_TEUTONIC_SWEDISH_CRUSADE = T18
+
+const EVENT_RUSSIAN_BRIDGE = R1
+const EVENT_RUSSIAN_MARSH = R2
+const EVENT_RUSSIAN_POGOST = R3
+const EVENT_RUSSIAN_RAVENS_ROCK = R4
+const EVENT_RUSSIAN_HILL = R5
+const EVENT_RUSSIAN_AMBUSH = R6
 const EVENT_RUSSIAN_FAMINE = R7
-const EVENT_VALDEMAR = R11
-const EVENT_DIETRICH = R17
-const EVENT_DEATH_OF_THE_POPE = R15
+const EVENT_RUSSIAN_PRINCE_OF_POLOTSK = R8
+const EVENT_RUSSIAN_OSILIAN_REVOLT = R9
+const EVENT_RUSSIAN_BATU_KHAN = R10
+const EVENT_RUSSIAN_VALDEMAR = R11
+const EVENT_RUSSIAN_MINDAUGAS = R12
+const EVENT_RUSSIAN_PELGUI = R13
+const EVENT_RUSSIAN_PRUSSIAN_REVOLT = R14
+const EVENT_RUSSIAN_DEATH_OF_THE_POPE = R15
+const EVENT_RUSSIAN_TEMPEST = R16
+const EVENT_RUSSIAN_DIETRICH_VON_GRUNINGEN = R17
+const EVENT_RUSSIAN_BOUNTIFUL_HARVEST = R18
 
 const VASSAL_UNAVAILABLE = 0
 const VASSAL_READY = 1
@@ -1985,9 +2008,9 @@ function is_famine_in_play() {
 
 function no_muster_of_or_by_lord(lord) {
 	if (lord === LORD_KNUD_ABEL)
-		return is_event_in_play(EVENT_VALDEMAR)
+		return is_event_in_play(EVENT_RUSSIAN_VALDEMAR)
 	if (lord === LORD_ANDREAS || lord === LORD_RUDOLF)
-		return is_event_in_play(EVENT_DIETRICH)
+		return is_event_in_play(EVENT_RUSSIAN_DIETRICH_VON_GRUNINGEN)
 	return false
 }
 
@@ -2142,7 +2165,7 @@ states.shift_lord = {
 
 function can_deploy_global_capability(c) {
 	if (c === AOW_TEUTONIC_WILLIAM_OF_MODENA) {
-		return !is_event_in_play(EVENT_DEATH_OF_THE_POPE)
+		return !is_event_in_play(EVENT_RUSSIAN_DEATH_OF_THE_POPE)
 	}
 	return true
 }
