@@ -41,6 +41,7 @@ const WASTAGE_DISCARD = true // wastage, discard in one go
 // option DELAY_PAY_IF_NO_FEED_OR_DISBAND
 // TODO service shift before spoils
 // option SERVICE_BEFORE_SPOILS
+// option AUTO_SELECT_STRIKE_GROUPS
 
 const DIE_HIT = "01234567"
 const DIE_MISS = "01234567"
@@ -1492,7 +1493,6 @@ function draw_card(deck) {
 	let i = random(deck.length)
 	let c = deck[i]
 	set_delete(deck, c)
-	console.log("deck", c, deck)
 	return c
 }
 
@@ -1845,17 +1845,21 @@ function setup_pleskau_quickstart() {
 }
 
 function setup_test() {
-	set_lord_locale(LORD_HERMANN, LOC_ODENPAH)
-	set_lord_locale(LORD_KNUD_ABEL, LOC_ODENPAH)
+	muster_lord(LORD_HEINRICH, LOC_FELLIN)
+	set_lord_locale(LORD_HERMANN, LOC_FELLIN)
+	set_lord_locale(LORD_KNUD_ABEL, LOC_FELLIN)
+
 	set_lord_locale(LORD_YAROSLAV, LOC_ODENPAH)
 	set_lord_locale(LORD_RUDOLF, LOC_ODENPAH)
 
+	muster_lord(LORD_ANDREY, LOC_IZBORSK)
+	muster_lord(LORD_ALEKSANDR, LOC_IZBORSK)
 	set_lord_locale(LORD_GAVRILO, LOC_IZBORSK)
 	set_lord_locale(LORD_VLADISLAV, LOC_IZBORSK)
 	set_lord_locale(LORD_DOMASH, LOC_IZBORSK)
 
 	game.plan1 = [ LORD_HERMANN, LORD_HERMANN, LORD_HERMANN, LORD_YAROSLAV, LORD_RUDOLF, LORD_KNUD_ABEL ]
-	game.plan2 = [ LORD_GAVRILO, LORD_VLADISLAV, LORD_DOMASH, LORD_GAVRILO, LORD_DOMASH, LORD_DOMASH ]
+	game.plan2 = [ LORD_ALEKSANDR, LORD_ANDREY, LORD_DOMASH, LORD_GAVRILO, LORD_DOMASH, LORD_DOMASH ]
 }
 
 states.setup_lords = {
@@ -2352,8 +2356,10 @@ states.levy_muster_lord = {
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 				if (lord === LORD_ALEKSANDR)
 					continue
-				if (lord === LORD_ANDREY && game.who !== LORD_ALEKSANDR)
-					continue
+
+				// NOTE: 2E change, ANDREY may be mustered normally
+				// if (lord === LORD_ANDREY && game.who !== LORD_ALEKSANDR) continue
+
 				if (no_muster_of_or_by_lord(lord))
 					continue
 				if (is_lord_ready(lord) && has_free_seat(lord))
@@ -5084,18 +5090,6 @@ function goto_array_attacker() {
 		goto_array_defender()
 }
 
-function prompt_array_place_attacker(X1, X2, X3) {
-	let array = game.battle.array
-	if (array[X2] === NOBODY) {
-		gen_action_array(X2)
-	} else {
-		if (array[X1] === NOBODY)
-			gen_action_array(X1)
-		if (array[X3] === NOBODY)
-			gen_action_array(X3)
-	}
-}
-
 states.array_attacker = {
 	prompt() {
 		view.prompt = "Battle Array: Position your attacking lords."
@@ -5182,6 +5176,22 @@ function goto_array_defender() {
 	}
 }
 
+function prompt_array_place_defender(X1, X2, X3, Y1, Y3) {
+	let array = game.battle.array
+	if (array[X2] === NOBODY) {
+		gen_action_array(X2)
+	} else if (array[Y1] !== NOBODY && array[Y3] === NOBODY && array[X1] === NOBODY) {
+		gen_action_array(X1)
+	} else if (array[Y1] === NOBODY && array[Y3] !== NOBODY && array[X3] === NOBODY) {
+		gen_action_array(X3)
+	} else {
+		if (array[X1] === NOBODY)
+			gen_action_array(X1)
+		if (array[X3] === NOBODY)
+			gen_action_array(X3)
+	}
+}
+
 states.array_defender = {
 	prompt() {
 		view.prompt = "Battle Array: Position your defending lords."
@@ -5205,26 +5215,10 @@ states.array_defender = {
 			view.actions.end_array = 1
 
 		if (game.who !== NOBODY) {
-			if (empty_front) {
-				if (array[D2] === NOBODY) {
-					gen_action_array(D2)
-				} else {
-					if (array[D1] === NOBODY)
-						gen_action_array(D1)
-					if (array[D3] === NOBODY)
-						gen_action_array(D3)
-				}
-			}
-			if (empty_rear) {
-				if (array[RD2] === NOBODY) {
-					gen_action_array(RD2)
-				} else {
-					if (array[RD1] === NOBODY)
-						gen_action_array(RD1)
-					if (array[RD3] === NOBODY)
-						gen_action_array(RD3)
-				}
-			}
+			if (empty_front)
+				prompt_array_place_defender(D1, D2, D3, A1, A3)
+			else if (empty_rear)
+				prompt_array_place_defender(RD1, RD2, RD3, SA1, SA3)
 		}
 	},
 	array: action_array_place,
@@ -5344,14 +5338,6 @@ states.concede_storm = {
 
 // === BATTLE: REPOSITION ===
 
-// If all SA routed, send RD back to reserve (end sally).
-// If all D routed, advance RD to front.
-// If all A routed, advance SA to front (to regular sally).
-// Advance from reserve to A.
-// Advance from reserve to D.
-// Center A.
-// Center D.
-
 function send_to_reserve(pos) {
 	if (game.battle.array[pos] !== NOBODY) {
 		set_add(game.battle.reserves, game.battle.array[pos])
@@ -5367,23 +5353,21 @@ function slide_array(from, to) {
 function goto_reposition_battle() {
 	let array = game.battle.array
 
-	// TODO: strict order of these three relief sally reassessment steps
-
-	// If no SA left, RD to reserve (relief sally ended)
+	// If all SA routed, send RD to reserve (end relief sally)
 	if (array[SA1] === NOBODY && array[SA2] === NOBODY && array[SA3] === NOBODY) {
 		send_to_reserve(RD1)
 		send_to_reserve(RD2)
 		send_to_reserve(RD3)
 	}
 
-	// If no front D left, RD to front
+	// If all D routed, advance RD to front
 	if (array[D1] === NOBODY && array[D2] === NOBODY && array[D3] === NOBODY) {
 		slide_array(RD1, D1)
 		slide_array(RD2, D2)
 		slide_array(RD3, D3)
 	}
 
-	// If no front A left, SA to front
+	// If all A routed, advance SA to front (to regular sally)
 	if (array[A1] === NOBODY && array[A2] === NOBODY && array[A3] === NOBODY) {
 		// Become a regular sally situation (siegeworks still count for defender)
 		game.battle.sally = 1
@@ -5587,9 +5571,19 @@ states.reposition_storm = {
 
 // === BATTLE: STRIKE ===
 
+// Segment strikers and targets into groups according to flanking situation (front/rear choice).
+// S picks group to strike.
+// Roll for walls or siegeworks.
+// T applies hits.
+// Rolls for armor.
+// If any routed, recalculate target group for current strike group (front/rear choice again).
+
+// TODO: Order of applying mixed archery hits?
+
 function format_strike_step() {
 	if (game.battle.storm)
 		return storm_step_name[game.battle.step]
+	// TODO: format strike group and target groups too?
 	return battle_step_name[game.battle.step]
 }
 
@@ -5597,34 +5591,6 @@ const STEP_ARRAY = [
 	[ D1, D2, D3, RD1, RD2, RD3 ],
 	[ A1, A2, A3, SA1, SA2, SA3 ],
 ]
-
-// Segment strikers into groups according to flanking situation.
-// S picks group to strike.
-// T picks lord to apply hits.
-// If routed, resume hits on next lord in same group (T's choice).
-// If routed and multiple groups can be next target, S's choice of target.
-// If routed, S or T chooses next lord (in same group
-
-// interrupt for enemy to select flank to attack when center has hits left after center is routed
-
-// TODO: Order of applying mixed archery hits?
-
-/*
-	strike steps:
-	1) calculate hits per lord
-	2) combine flanking attacks and assign to section - center choose
-	3) apply hits to lords - choose lord to take all hits from one group
-		4) roll walls
-		5) assign hits to units
-		6) roll by hit
-		7) if rout, reassign remaining hits (striking player chooses)
-			7a) front left to front center THEN front right
-			7b) front right to front center THEN front left
-			7c) front center to front left OR front right
-			7d) sallying attackers (as one) to any reserve defender THEN any front
-
-	8) goto 3
-*/
 
 function pack_battle_array_front() {
 	let x = 0
@@ -5688,6 +5654,24 @@ function debug_group_list(list) {
 		console.log(debug_group(sg), "strike", debug_group(hg))
 }
 
+function has_sa_without_rd() {
+	if (game.active === game.battle.attacker) {
+		let array = game.battle.array
+		if (array[SA1] !== NOBODY || array[SA2] !== NOBODY || array[SA3] !== NOBODY)
+			if (array[RD1] === NOBODY && array[RD2] === NOBODY && array[RD3] === NOBODY)
+				return true
+	}
+	return false
+}
+
+function has_sa_strike() {
+	return (
+		game.battle.ah1[SA1] + game.battle.ah2[SA1] +
+		game.battle.ah1[SA2] + game.battle.ah2[SA2] +
+		game.battle.ah1[SA3] + game.battle.ah2[SA3] > 0
+	)
+}
+
 function has_no_unrouted_forces() {
 	// All unrouted lords are either in battle array or in reserves
 	for (let p = 0; p < 12; ++p)
@@ -5702,22 +5686,50 @@ function has_no_unrouted_forces() {
 	return true
 }
 
-function has_front_strike_choice() {
+function front_strike_choice() {
 	let s = game.battle.step & 1
 	let f = pack_battle_array_front()
 	// Choice only matters if the center Lord has strikes this step
-	if (GROUPS[s][1][f] !== 0)
-		return (game.battle.ah1[A2] + game.battle.ah2[A2] + game.battle.ah1[D2] + game.battle.ah2[D2] > 0)
-	return false
+	if (GROUPS[s][1][f] !== 0) {
+		if (game.battle.ah1[A2] + game.battle.ah2[A2] + game.battle.ah1[D2] + game.battle.ah2[D2] > 0)
+			game.battle.fc = -1
+		else
+			game.battle.fc = 0
+	} else {
+		game.battle.fc = 0
+	}
 }
 
-function has_rear_strike_choice() {
-	let s = game.battle.step & 1
-	let r = pack_battle_array_rear()
-	// Choice only matters if the center Lord has strikes this step
-	if (GROUPS[s][1][r] !== 0)
-		return (game.battle.ah1[SA2] + game.battle.ah2[SA2] + game.battle.ah1[RD2] + game.battle.ah2[RD2] > 0)
-	return false
+function select_lone_defender() {
+	let array = game.battle.array
+	if (array[D1] !== NOBODY && array[D2] === NOBODY && array[D3] === NOBODY)
+		return D1
+	if (array[D1] === NOBODY && array[D2] !== NOBODY && array[D3] === NOBODY)
+		return D2
+	if (array[D1] === NOBODY && array[D2] === NOBODY && array[D3] !== NOBODY)
+		return D3
+	return -1
+}
+
+function rear_strike_choice() {
+	if (has_sa_without_rd()) {
+		if (has_sa_strike())
+			game.battle.rc = select_lone_defender()
+		else
+			game.battle.rc = 0
+	} else {
+		let s = game.battle.step & 1
+		let r = pack_battle_array_rear()
+		if (GROUPS[s][1][r] !== 0) {
+			// Choice only matters if the center Lord has strikes this step
+			if (game.battle.ah1[SA2] + game.battle.ah2[SA2] + game.battle.ah1[RD2] + game.battle.ah2[RD2] > 0)
+				game.battle.rc = -1
+			else
+				game.battle.rc = 0
+		} else {
+			game.battle.rc = 0
+		}
+	}
 }
 
 function format_group(g) {
@@ -5953,19 +5965,14 @@ function goto_strike_battle() {
 		return
 	}
 
-	if (has_front_strike_choice())
-		game.battle.fc = -1
-	else
-		game.battle.fc = 0
-	if (has_rear_strike_choice())
-		game.battle.rc = -1
-	else
-		game.battle.rc = 0
+	front_strike_choice()
+	rear_strike_choice()
 
 	goto_strike_choice()
 }
 
 function goto_strike_choice() {
+	console.log("choice", game.battle.fc, game.battle.rc)
 	if (game.battle.fc === -1 || game.battle.rc === -1)
 		game.state = "strike_choice"
 	else
@@ -5977,12 +5984,28 @@ function end_strike_choice() {
 	let front = pack_battle_array_front()
 	let rear = pack_battle_array_rear()
 
-	// TODO: if SA and no RD
-
-	game.battle.groups = unpack_group_list(GROUPS[s][game.battle.fc][front], GROUPS[s][game.battle.rc][rear])
-
 	console.log("STRIKE")
 	debug_battle_array(front, rear)
+
+	if (has_sa_without_rd()) {
+		game.battle.groups = unpack_group_list(GROUPS[s][game.battle.fc][front])
+		if (has_sa_strike()) {
+			let sg = []
+			if (game.battle.ah1[SA1] + game.battle.ah2[SA1] > 0)
+				sg.push(SA1)
+			if (game.battle.ah1[SA2] + game.battle.ah2[SA2] > 0)
+				sg.push(SA2)
+			if (game.battle.ah1[SA3] + game.battle.ah2[SA3] > 0)
+				sg.push(SA3)
+			game.battle.groups.push([ sg, [ game.battle.rc ] ])
+		}
+
+	} else {
+		game.battle.groups = unpack_group_list(GROUPS[s][game.battle.fc][front], GROUPS[s][game.battle.rc][rear])
+	}
+
+
+	console.log(game.battle.groups)
 	debug_group_list(game.battle.groups)
 
 	goto_select_strike_group()
@@ -5990,6 +6013,7 @@ function end_strike_choice() {
 
 function prompt_strike_choice(X1, X2, X3, Y2) {
 	if (game.battle.array[X2] === NOBODY && game.battle.array[Y2] !== NOBODY) {
+		view.who = game.battle.array[Y2]
 		if (game.battle.array[X1] !== NOBODY)
 			gen_action_battle_lord(game.battle.array[X1])
 		if (game.battle.array[X3] !== NOBODY)
@@ -5999,18 +6023,35 @@ function prompt_strike_choice(X1, X2, X3, Y2) {
 
 states.strike_choice = {
 	prompt() {
-		view.prompt = `${format_strike_step()}: Strike left or right?`
+		let array = game.battle.array
+
+		view.prompt = `${format_strike_step()}: Strike who?`
+		// view.group = game.battle.sg.map(p => game.battle.array[p])
+
 		if (game.battle.fc === -1) {
 			if (game.active === game.battle.attacker)
 				prompt_strike_choice(D1, D2, D3, A2)
 			else
 				prompt_strike_choice(A1, A2, A3, D2)
 		}
-		if (game.battle.rc === -1) {
-			if (game.active === game.battle.attacker)
-				prompt_strike_choice(RD1, RD2, RD3, SA2)
-			else
-				prompt_strike_choice(SA1, SA2, SA3, RD2)
+
+		if (has_sa_without_rd()) {
+			if (has_sa_strike()) {
+				view.group = [ array[SA1], array[SA2], array[SA3] ]
+				if (array[D1] !== NOBODY)
+					gen_action_battle_lord(array[D1])
+				if (array[D2] !== NOBODY)
+					gen_action_battle_lord(array[D2])
+				if (array[D3] !== NOBODY)
+					gen_action_battle_lord(array[D3])
+			}
+		} else {
+			if (game.battle.rc === -1) {
+				if (game.active === game.battle.attacker)
+					prompt_strike_choice(RD1, RD2, RD3, SA2)
+				else
+					prompt_strike_choice(SA1, SA2, SA3, RD2)
+			}
 		}
 	},
 	battle_lord(lord) {
@@ -6018,14 +6059,23 @@ states.strike_choice = {
 	},
 	array(pos) {
 		console.log("STRIKE CHOICE", pos)
+
 		if (pos === A1 || pos === D1)
 			game.battle.fc = 0
 		if (pos === A3 || pos === D3)
 			game.battle.fc = 1
-		if (pos === SA1 || pos === RD1)
-			game.battle.rc = 0
-		if (pos === SA3 || pos === RD3)
-			game.battle.rc = 1
+
+		if (has_sa_without_rd()) {
+			if (has_sa_strike()) {
+				game.battle.rc = pos
+			}
+		} else {
+			if (pos === SA1 || pos === RD1)
+				game.battle.rc = 0
+			if (pos === SA3 || pos === RD3)
+				game.battle.rc = 1
+		}
+
 		goto_strike_choice()
 	},
 }
@@ -6109,9 +6159,27 @@ function has_unrouted_forces_in_hit_group() {
 			return true
 	for (let p of game.battle.hg) {
 		let lord = game.battle.array[p]
-		console.log("lord1", lord, has_unrouted_units(lord), game.pieces.forces[lord])
 		if (has_unrouted_units(lord))
 			return true
+	}
+	return false
+}
+
+function is_flanked_target() {
+	if (game.battle.hg.length === 1) {
+		let pos = game.battle.hg[0]
+		let has_d1 = game.battle.array[D1] !== NOBODY && game.battle.array[A1] === NOBODY
+		let has_d2 = game.battle.array[D2] !== NOBODY && game.battle.array[A2] === NOBODY
+		let has_d3 = game.battle.array[D3] !== NOBODY && game.battle.array[A3] === NOBODY
+		let has_a2 = game.battle.array[A2] !== NOBODY
+		switch (pos) {
+		case A1:
+			return has_d2 || (has_d3 && !has_a2)
+		case A2:
+			return has_d1 || has_d3
+		case A3:
+			return has_d2 || (has_d1 && !has_a2)
+		}
 	}
 	return false
 }
@@ -6121,6 +6189,19 @@ function goto_apply_hits() {
 
 	if (game.battle.hg.length === 0)
 		end_apply_hits()
+
+	if (has_sa_without_rd()) {
+		console.log("SA without RD (getting hit)")
+		if (!is_flanked_target()) {
+			console.log("  unflanked, SA added to hit group")
+			if (game.battle.array[SA1] !== NOBODY)
+				game.battle.hg.push(SA1)
+			if (game.battle.array[SA2] !== NOBODY)
+				game.battle.hg.push(SA2)
+			if (game.battle.array[SA3] !== NOBODY)
+				game.battle.hg.push(SA3)
+		}
+	}
 
 	if (game.battle.storm) {
 		if (game.active === game.battle.attacker)
@@ -6143,7 +6224,6 @@ function resume_apply_hits() {
 	if (game.battle.h1 + game.battle.h2 === 0) {
 		end_apply_hits()
 	} else if (!has_unrouted_forces_in_hit_group()) {
-		console.log("wha?", game.battle.hg, has_unrouted_forces_in_hit_group())
 		log("TODO: remaining hits!")
 		// TODO: calculate new hit group for the current striking group, and resume or end if no valid targets
 		end_apply_hits()
@@ -6153,7 +6233,9 @@ function resume_apply_hits() {
 }
 
 function end_apply_hits() {
-	console.log("end_apply_hits")
+	game.battle.sg = 0
+	game.battle.hg = 0
+
 	set_active_enemy()
 	if (game.battle.storm)
 		goto_next_strike()
@@ -6351,6 +6433,8 @@ states.apply_hits = {
 	prompt() {
 		view.prompt = `${format_strike_step()}: Assign ${format_hits()} to units.`
 
+		view.group = game.battle.sg.map(p => game.battle.array[p])
+
 		// TODO: h1 or h2 choice
 
 		if (game.battle.storm) {
@@ -6482,7 +6566,7 @@ function end_battle() {
 	}
 }
 
-// === ENDING THE BATTLE: SACK ===
+// === ENDING THE STORM: SACK ===
 
 function award_spoils(n) {
 	add_spoils(LOOT, n)
@@ -6572,7 +6656,6 @@ states.battle_withdraw = {
 	prompt() {
 		let here = game.battle.where
 		let capacity = stronghold_capacity(here)
-		console.log("capacity", capacity)
 
 		view.prompt = "Battle: You may withdraw losing lords into stronghold."
 

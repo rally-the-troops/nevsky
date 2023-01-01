@@ -2,6 +2,8 @@
 
 // TODO: Feed x2 markers on lord mats with >6 units
 
+// TODO: show sg and hg highlighting on battle mat (separate from view.group)
+
 // TODO: tooltip on cylinders
 //	fealty rating and starting assets + forces on calendar
 //	current assets and forces on map
@@ -1059,13 +1061,17 @@ function update_lord_mat(ix) {
 function is_lord_mat_selected(ix) {
 	if (view.who >= 0)
 		return ix === view.who
-	return ix === view.command
+	if (view.group)
+		return view.group.includes(ix)
+	return false
 }
 
 function is_cylinder_selected(ix) {
-	if (view.who === undefined && view.group === undefined)
-		return ix === view.command
-	return ix === view.who || !!(view.group && set_has(view.group, ix))
+	if (view.who >= 0)
+		return ix === view.who
+	if (view.group)
+		return view.group.includes(ix)
+	return false
 }
 
 function update_lord(ix) {
@@ -1113,10 +1119,7 @@ function update_lord(ix) {
 	if (ix === LORD_ANDREY)
 		ui.lord_cylinder[ix].classList.toggle("marshal", !is_lord_on_map(LORD_ALEKSANDR))
 
-	if (view.who === undefined)
-		ui.lord_cylinder[ix].classList.toggle("selected", ix === view.command)
-	else
-		ui.lord_cylinder[ix].classList.toggle("selected", is_cylinder_selected(ix))
+	ui.lord_cylinder[ix].classList.toggle("selected", is_cylinder_selected(ix))
 	ui.lord_mat[ix].classList.toggle("selected", is_lord_mat_selected(ix))
 
 	ui.lord_mat[ix].classList.toggle("besieged", is_lord_besieged(ix))
@@ -1389,7 +1392,7 @@ function update_battle() {
 
 	for (let lord = 0; lord < 12; ++lord) {
 		ui.battle_cylinder[lord].classList.toggle("action", is_battle_lord_action(lord))
-		ui.battle_cylinder[lord].classList.toggle("selected", view.who === lord)
+		ui.battle_cylinder[lord].classList.toggle("selected", is_cylinder_selected(lord))
 	}
 
 	ui.garrison.replaceChildren()
