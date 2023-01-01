@@ -268,6 +268,17 @@ const LOC_ZHELTSY = find_locale("Zheltsy")
 const LOC_TESOVO = find_locale("Tesovo")
 const LOC_SABLIA = find_locale("Sablia")
 
+const LOC_OSTROV = find_locale("Ostrov")
+const LOC_UZMEN = find_locale("Uzmen")
+const LOC_SOROT_RIVER = find_locale("Sorot River")
+const LOC_VELIKAYA_RIVER = find_locale("Velikaya River")
+const LOC_ZHELCHA_RIVER = find_locale("Zhelcha River")
+
+const LOC_ROSITTEN = find_locale("Rositten")
+const LOC_LETTGALLIA = find_locale("Lettgallia")
+const LOC_TOLOWA = find_locale("Tolowa")
+
+
 // Misc tracking flags
 const FLAG_FIRST_ACTION = 1 << 0
 const FLAG_FIRST_MARCH = 1 << 1
@@ -418,6 +429,10 @@ function is_in_rus(loc) {
 
 function is_in_livonia(loc) {
 	return data.locales[loc].region === "Crusader Livonia"
+}
+
+function is_in_estonia(loc) {
+	return data.locales[loc].region === "Danish Estonia"
 }
 
 function is_commandery(loc) {
@@ -2032,34 +2047,65 @@ function goto_immediate_event(c) {
 	// This Levy / Campaign
 	case EVENT_TEUTONIC_FAMINE:
 	case EVENT_RUSSIAN_FAMINE:
+		set_add(game.events, c)
 		// No immediate effects
 		return end_immediate_event()
 	case EVENT_RUSSIAN_DEATH_OF_THE_POPE:
+		set_add(game.events, c)
 		return goto_event_death_of_the_pope()
 	case EVENT_RUSSIAN_VALDEMAR:
-		return goto_event_russian_valdemar()
+		set_add(game.events, c)
+		return goto_russian_event_valdemar()
 	case EVENT_RUSSIAN_DIETRICH_VON_GRUNINGEN:
-		return goto_event_russian_dietrich()
+		set_add(game.events, c)
+		return goto_russian_event_dietrich()
 
-	// Immediate
-	case EVENT_TEUTONIC_GRAND_PRINCE:
-	case EVENT_TEUTONIC_TORZHOK:
+	// Add to capabilities...
 	case EVENT_TEUTONIC_POPE_GREGORY:
-	case EVENT_TEUTONIC_KHAN_BATY:
-	case EVENT_TEUTONIC_BOUNTIFUL_HARVEST:
-	case EVENT_TEUTONIC_MINDAUGAS:
-	case EVENT_TEUTONIC_SWEDISH_CRUSADE:
+		set_add(game.capabilities, c)
+		return goto_teutonic_event_pope_gregory()
 
-	// Immediate
+	// Discard
+	case EVENT_TEUTONIC_GRAND_PRINCE:
+		discard_card(c)
+		return goto_teutonic_event_grand_prince()
+	case EVENT_TEUTONIC_KHAN_BATY:
+		discard_card(c)
+		return goto_teutonic_event_khan_baty()
+	case EVENT_TEUTONIC_SWEDISH_CRUSADE:
+		discard_card(c)
+		return goto_teutonic_event_swedish_crusade()
 	case EVENT_RUSSIAN_OSILIAN_REVOLT:
+		discard_card(c)
+		return goto_russian_event_osilian_revolt()
 	case EVENT_RUSSIAN_BATU_KHAN:
-	case EVENT_RUSSIAN_MINDAUGAS:
+		discard_card(c)
+		return goto_russian_event_batu_khan()
 	case EVENT_RUSSIAN_PRUSSIAN_REVOLT:
-	case EVENT_RUSSIAN_TEMPEST:
+		discard_card(c)
+		return goto_russian_event_prussian_revolt()
+	case EVENT_TEUTONIC_BOUNTIFUL_HARVEST:
+		discard_card(c)
+		return goto_event_bountiful_harvest()
 	case EVENT_RUSSIAN_BOUNTIFUL_HARVEST:
+		discard_card(c)
+		return goto_event_bountiful_harvest()
+	case EVENT_TEUTONIC_MINDAUGAS:
+		discard_card(c)
+		return goto_teutonic_event_mindaugas()
+	case EVENT_RUSSIAN_MINDAUGAS:
+		discard_card(c)
+		return goto_russian_event_mindaugas()
+	case EVENT_TEUTONIC_TORZHOK:
+		discard_card()
+		return goto_teutonic_event_torzhok()
+	case EVENT_RUSSIAN_TEMPEST:
+		discard_card()
+		return goto_russian_event_tempest()
 
 	default:
 		log("TODO")
+		discard_card(c)
 		return end_immediate_event()
 	}
 }
@@ -2068,6 +2114,8 @@ function end_immediate_event() {
 	clear_undo()
 	resume_levy_arts_of_war()
 }
+
+// === EVENTS: UNIQUE IMMEDIATE EVENTS ===
 
 function goto_event_death_of_the_pope() {
 	if (has_global_capability(AOW_TEUTONIC_WILLIAM_OF_MODENA))
@@ -2082,26 +2130,368 @@ states.death_of_the_pope = {
 		gen_action_card(AOW_TEUTONIC_WILLIAM_OF_MODENA)
 	},
 	card(card) {
+		logi(`Discarded C${card}.`)
 		discard_global_capability(AOW_TEUTONIC_WILLIAM_OF_MODENA)
 		end_immediate_event()
 	},
 }
 
-// === EVENTS: SHIFT LORD OR SERVICE ===
-
-function goto_event_russian_dietrich() {
-	if (is_lord_in_play(LORD_ANDREAS) || is_lord_in_play(LORD_RUDOLF)) {
-		game.state = "dietrich_von_gruningen"
-		game.count = 1
+function goto_teutonic_event_torzhok() {
+	if (is_lord_on_map(LORD_DOMASH)) {
+		game.who = LORD_DOMASH
+		game.count = 3
+		game.state = "torzhok"
+	} else if (game.pieces.veche_coin > 0) {
+		game.who = NOBODY
+		game.count = 3
+		game.state = "torzhok"
 	} else {
 		end_immediate_event()
 	}
 }
 
-function goto_event_russian_valdemar() {
+function torzhok_action(lord, asset) {
+	push_undo()
+	logi(`Removed ${ASSET_TYPE_NAME[type]} from L${lord}.`)
+	add_lord_assets(lord, type, -1)
+	game.count--
+}
+
+states.torzhok = {
+	prompt() {
+		view.prompt = "Torzhok: Remove up to 3 Assets from Domash or up to 3 Coin from Veche."
+		if (game.count > 0) {
+			if (game.count === 3 || game.who === NOBODY) {
+				if (game.pieces.veche_coin > 0)
+					view.actions.veche_coin = 1
+			}
+			if (game.count === 3 || game.who === LORD_DOMASH) {
+				if (get_lord_assets(LORD_DOMASH, PROV) > 0)
+					gen_action_prov(LORD_DOMASH)
+				if (get_lord_assets(LORD_DOMASH, COIN) > 0)
+					gen_action_coin(LORD_DOMASH)
+				if (get_lord_assets(LORD_DOMASH, LOOT) > 0)
+					gen_action_loot(LORD_DOMASH)
+				if (get_lord_assets(LORD_DOMASH, CART) > 0)
+					gen_action_cart(LORD_DOMASH)
+				if (get_lord_assets(LORD_DOMASH, SLED) > 0)
+					gen_action_sled(LORD_DOMASH)
+				if (get_lord_assets(LORD_DOMASH, BOAT) > 0)
+					gen_action_boat(LORD_DOMASH)
+				if (get_lord_assets(LORD_DOMASH, SHIP) > 0)
+					gen_action_ship(LORD_DOMASH)
+			}
+		}
+		view.actions.done = 1
+	},
+	prov(lord) { action_torzhok(lord, PROV) },
+	coin(lord) { action_torzhok(lord, COIN) },
+	loot(lord) { action_torzhok(lord, LOOT) },
+	cart(lord) { action_torzhok(lord, CART) },
+	sled(lord) { action_torzhok(lord, SLED) },
+	boat(lord) { action_torzhok(lord, BOAT) },
+	ship(lord) { action_torzhok(lord, SHIP) },
+	veche_coin() {
+		push_undo()
+		logi(`Removed Coin from Veche.`)
+		view.actions.veche_coin -= 1
+		game.count--
+	},
+	done() {
+		clear_undo()
+		game.who = NOBODY
+		game.count = 0
+		end_immediate_event()
+	},
+}
+
+function goto_russian_event_tempest() {
+	game.state = "tempest"
+	for (let lord = first_enemy_lord; lord <= last_enemy_lord; ++lord)
+		if (get_lord_assets(lord, SHIP) > 0)
+			return
+	end_immediate_event()
+}
+
+states.tempest = {
+	prompt() {
+		view.prompt = "Remove all Ships from a Teutonic Lord (half if he has Cogs)."
+		for (let lord = first_enemy_lord; lord <= last_enemy_lord; ++lord)
+			if (get_lord_assets(lord, SHIP) > 0)
+				gen_action_ship(lord)
+	},
+	ship(lord) {
+		logi(`Removed ships from L${lord}.`)
+		let n = 0
+		if (lord_has_capability(AOW_TEUTONIC_COGS))
+			n = Math.ceil(get_lord_assets(lord, SHIP) / 2)
+		set_lord_assets(lord, SHIP, n)
+		end_immediate_event()
+	},
+}
+
+function goto_event_bountiful_harvest() {
+	game.state = "bountiful_harvest"
+	for (let loc of game.pieces.ravaged)
+		if (is_friendly_territory(loc))
+			return
+	end_immediate_event()
+}
+
+states.bountiful_harvest = {
+	prompt() {
+		if (game.active === TEUTONS)
+			view.prompt = "Bountiful Harvest: Remove 1 Ravaged marker from Livonia or Estonia."
+		else
+			view.prompt = "Bountiful Harvest: Remove 1 Ravaged marker from Rus."
+		for (let loc of game.pieces.ravaged)
+			if (is_friendly_territory(loc))
+				gen_action_locale(loc)
+	},
+	locale(loc) {
+		logi(`Removed Ravaged from %${loc}.`)
+		remove_ravaged_marker(loc)
+		end_immediate_event()
+	},
+}
+
+const TEUTONIC_MINDAUGAS = [
+	LOC_OSTROV,
+	LOC_DUBROVNO,
+	LOC_UZMEN,
+	LOC_SOROT_RIVER,
+	LOC_VELIKAYA_RIVER,
+	LOC_ZHELCHA_RIVER,
+]
+
+const RUSSIAN_MINDAUGAS = [
+	LOC_ROSITTEN,
+	LOC_LETTGALLIA,
+	LOC_TOLOWA,
+]
+
+function goto_teutonic_event_mindaugas() {
+	game.state = "teutonic_mindaugas"
+	for (let loc of TEUTONIC_MINDAUGAS)
+		if (!has_enemy_lord(loc) && !is_enemy_stronghold(loc))
+			return
+	end_immediate_event()
+}
+
+function goto_russian_event_mindaugas() {
+	game.state = "russian_mindaugas"
+	for (let loc of RUSSIAN_MINDAUGAS)
+		if (!has_enemy_lord(loc) && !is_enemy_stronghold(loc))
+			return
+	end_immediate_event()
+}
+
+states.teutonic_mindaugas = {
+	prompt() {
+		view.prompt = "Mindaugas: Place Ravaged..."
+		for (let loc of TEUTONIC_MINDAUGAS)
+			if (!has_enemy_lord(loc) && !is_enemy_stronghold(loc))
+				gen_action_locale(loc)
+	},
+	locale(loc) {
+		logi(`Ravaged %${loc}.`)
+		add_ravaged_marker(loc)
+		end_immediate_event()
+	},
+}
+
+states.russian_mindaugas = {
+	prompt() {
+		view.prompt = "Mindaugas: Place Ravaged..."
+		for (let loc of RUSSIAN_MINDAUGAS)
+			if (!has_enemy_lord(loc) && !is_enemy_stronghold(loc))
+				gen_action_locale(loc)
+	},
+	locale(loc) {
+		logi(`Ravaged %${loc}.`)
+		add_ravaged_marker(loc)
+		end_immediate_event()
+	},
+}
+
+function goto_teutonic_event_pope_gregory() {
+	game.state = "pope_gregory"
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (is_lord_on_calendar(lord))
+			return
+	end_immediate_event()
+}
+
+states.pope_gregory = {
+	prompt() {
+		view.prompt = "Pope Gregory: On Calendar, slide 1 Teuton cylinder 1 box left."
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+			if (is_lord_on_calendar(lord))
+				gen_action_lord_on_calendar(lord)
+		if (game.who !== NOBODY)
+			gen_action_calendar(get_lord_calendar(game.who) - 1)
+	},
+	lord(lord) { game.who = lord },
+	calendar(turn) {
+		set_lord_calendar(game.who, turn)
+		game.who = NOBODY
+		end_immediate_event()
+	},
+}
+
+function is_nothing_at_riga() {
+	// No pieces or markers
+	return !(
+		has_friendly_lord(LOC_RIGA) ||
+		has_enemy_lord(LOC_RIGA) ||
+		game.pieces.legate === LOC_RIGA ||
+		has_conquered_marker(LOC_RIGA) ||
+		has_ravaged_marker(LOC_RIGA)
+	)
+}
+
+function goto_russian_event_prussian_revolt() {
+	if (is_lord_on_map(LORD_ANDREAS) && !is_lord_besieged(LORD_ANDREAS) && is_nothing_at_riga()) {
+		game.who = LORD_ANDREAS
+		game.state = "prussian_revolt"
+	} else if (is_lord_on_calendar(LORD_ANDREAS)) {
+		game.who = LORD_ANDREAS
+		game.state = "prussian_revolt"
+	} else {
+		end_immediate_event()
+	}
+}
+
+states.prussian_revolt = {
+	prompt() {
+		if (is_lord_on_calendar(game.who)) {
+			view.prompt = "Prussian Revolt: Shift Andreas 2 right."
+			gen_action_calendar(get_lord_calendar(game.who) + 2)
+		} else {
+			view.prompt = "Prussian Revolt: Place Andreas at Riga."
+			gen_action_locale(LOC_RIGA)
+		}
+	},
+	locale(loc) {
+		logi(`Placed L${game.who} at %${LOC_RIGA}.`)
+		set_lord_locale(game.who, LOC_RIGA)
+		game.who = NOBODY
+		end_immediate_event()
+	},
+	calendar(turn) {
+		logi(`Shifted L${game.who} to Calendar ${turn}.`)
+		set_lord_calendar(game.who, turn)
+		game.who = NOBODY
+		end_immediate_event()
+	},
+}
+
+// === EVENTS: SHIFT LORD OR SERVICE (IMMEDIATE) ===
+
+function goto_teutonic_event_grand_prince() {
+	if (is_lord_in_play(LORD_ALEKSANDR) || is_lord_in_play(LORD_ANDREY))
+		game.state = "grand_prince"
+	else
+		end_immediate_event()
+}
+
+states.grand_prince = {
+	prompt() {
+		view.prompt = "Grand Prince: On Calendar, shift Aleksandr or Andrey or furthest right service of either 2 boxes."
+		if (is_lord_on_calendar(LORD_ALEKSANDR))
+			gen_action_lord(LORD_ALEKSANDR)
+		if (is_lord_on_calendar(LORD_ANDREY))
+			gen_action_lord(LORD_ANDREY)
+		if (is_lord_on_map(LORD_ALEKSANDR) && is_lord_on_map(LORD_ANDREY)) {
+			let aleksandr = get_lord_service(LORD_ALEKSANDR)
+			let andrey = get_lord_service(LORD_ANDREY)
+			if (aleksandr >= andrey)
+				gen_action_service(LORD_ALEKSANDR)
+			if (andrey >= aleksandr)
+				gen_action_service(LORD_ANDREY)
+		}
+		if (game.who !== NOBODY) {
+			gen_action_calendar(get_lord_calendar(game.who) - 2)
+			gen_action_calendar(get_lord_calendar(game.who) + 2)
+		}
+	},
+	lord(lord) { game.who = lord },
+	service(lord) { game.who = lord },
+	calendar(turn) {
+		set_lord_calendar(game.who, turn)
+		game.who = NOBODY
+		end_immediate_event()
+	},
+}
+
+function goto_teutonic_event_khan_baty() {
+	if (is_lord_in_play(LORD_ALEKSANDR) || is_lord_in_play(LORD_ANDREY))
+		game.state = "khan_baty"
+	else
+		end_immediate_event()
+}
+
+states.khan_baty = {
+	prompt() {
+		view.prompt = "Khan Baty: On Calendar, shift Aleksandr or Andrey or service of either 2 boxes."
+		if (is_lord_in_play(LORD_ALEKSANDR))
+			gen_action_lord_on_calendar(LORD_ALEKSANDR)
+		if (is_lord_in_play(LORD_ANDREY))
+			gen_action_lord_on_calendar(LORD_ANDREY)
+		if (game.who !== NOBODY) {
+			gen_action_calendar(get_lord_calendar(game.who) - 2)
+			gen_action_calendar(get_lord_calendar(game.who) + 2)
+		}
+	},
+	lord(lord) { game.who = lord },
+	service(lord) { game.who = lord },
+	calendar(turn) {
+		set_lord_calendar(game.who, turn)
+		game.who = NOBODY
+		end_immediate_event()
+	},
+}
+
+function goto_teutonic_event_swedish_crusade() {
+	if (is_lord_in_play(LORD_VLADISLAV) || is_lord_in_play(LORD_KARELIANS)) {
+		game.state = "swedish_crusade"
+		game.count = 0
+		if (is_lord_in_play(LORD_VLADISLAV))
+			game.count |= (1 << LORD_VLADISLAV)
+		if (is_lord_in_play(LORD_KARELIANS))
+			game.count |= (1 << LORD_KARELIANS)
+	} else {
+		end_immediate_event()
+	}
+}
+
+states.swedish_crusade = {
+	prompt() {
+		view.prompt = "Swedish Crusade: On Calendar, shift Vladislav and Karelians each 1 box."
+		if (game.count & (1 << LORD_VLADISLAV))
+			gen_action_lord_on_calendar(LORD_VLADISLAV)
+		if (game.count & (1 << LORD_KARELIANS))
+			gen_action_lord_on_calendar(LORD_KARELIANS)
+		if (game.who !== NOBODY) {
+			gen_action_calendar(get_lord_calendar(game.who) - 1)
+			gen_action_calendar(get_lord_calendar(game.who) + 1)
+		}
+	},
+	lord(lord) { game.who = lord },
+	service(lord) { game.who = lord },
+	calendar(turn) {
+		game.count ^= (1 << game.who)
+		set_lord_calendar(game.who, turn)
+		game.who = NOBODY
+		if (game.count === 0)
+			end_immediate_event()
+	},
+}
+
+function goto_russian_event_valdemar() {
 	if (is_lord_in_play(LORD_KNUD_ABEL)) {
+		game.who = LORD_KNUD_ABEL
 		game.state = "valdemar"
-		game.count = 1
 	} else {
 		end_immediate_event()
 	}
@@ -2109,65 +2499,109 @@ function goto_event_russian_valdemar() {
 
 states.valdemar = {
 	prompt() {
-		view.prompt = "Valdemar: On Calendar, shift Knud & Abel or their Service up to one box."
-		prompt_shift_lord(LORD_KNUD_ABEL)
-		view.actions.pass = 1
+		view.prompt = "Valdemar: On Calendar, shift Knud & Abel up to 1 box."
+		gen_action_calendar(get_lord_calendar(game.who) - 1)
+		gen_action_calendar(get_lord_calendar(game.who) + 1)
+		view.actions.pass = 1 // up to
 	},
-	lord: action_shift_lord,
-	service: action_shift_lord,
-	pass: end_immediate_event,
+	lord(lord) { game.who = lord },
+	service(lord) { game.who = lord },
+	calendar(turn) {
+		set_lord_calendar(game.who, turn)
+		game.who = NOBODY
+		end_immediate_event()
+	},
+	pass() {
+		end_immediate_event()
+	},
 }
 
-
-states.dietrich_von_gruningen = {
-	prompt() {
-		view.prompt = "Dietrich von Grüningen: On Calendar, shift Andreas or Rudolf or their Service."
-		prompt_shift_lord(LORD_ANDREAS)
-		prompt_shift_lord(LORD_RUDOLF)
-		view.actions.pass = 1
-	},
-	lord: action_shift_lord,
-	service: action_shift_lord,
-	pass: end_immediate_event,
-}
-
-function prompt_shift_lord(lord) {
-	if (is_lord_in_play(lord)) {
-		if (is_lord_on_calendar(lord))
-			gen_action_lord(lord)
-		else
-			gen_action_service(lord)
+function goto_russian_event_osilian_revolt() {
+	if (is_lord_on_map(LORD_ANDREAS) || is_lord_on_map(LORD_HEINRICH)) {
+		game.state = "osilian_revolt"
+		game.count = 2
+	} else {
+		end_immediate_event()
 	}
 }
 
-function action_shift_lord(lord) {
-	push_undo()
-	push_state("shift_lord")
-	game.who = lord
-}
-
-states.shift_lord = {
+states.osilian_revolt = {
 	prompt() {
-		view.prompt = `Shift ${lord_name[game.who]} up to ${game.count}.`
-		let here = get_lord_calendar(game.who)
-		for (let i = here - game.count; i <= here + game.count; ++i)
-			if (i >= 0 && i <= 17 && i !== here)
-				gen_action_calendar(i)
-		view.actions.done = 1
+		view.prompt = "Osilian Revolt: On Calendar, shift Service of Andreas or Heinrich 2 boxes left."
+		// Note: Service only!
+		if (is_lord_on_map(LORD_ANDREAS))
+			gen_action_service(LORD_ANDREAS)
+		if (is_lord_on_map(LORD_RUDOLF))
+			gen_action_service(LORD_RUDOLF)
+		if (game.who !== NOBODY)
+			gen_action_calendar(get_lord_calendar(game.who) - 2)
 	},
+	service(lord) { game.who = lord },
 	calendar(turn) {
-		log(`Shifted L${game.who} to ${turn}.`)
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
-		game.count = 0
-		end_immediate_event()
-	},
-	done() {
-		game.who = NOBODY
-		game.count = 0
 		end_immediate_event()
 	},
 }
+
+function goto_russian_event_batu_khan() {
+	if (is_lord_in_play(LORD_ANDREAS)) {
+		game.who = LORD_ANDREAS
+		game.state = "batu_khan"
+	} else {
+		end_immediate_event()
+	}
+}
+
+states.batu_khan = {
+	prompt() {
+		view.prompt = "Batu Khan: On Calendar, shift Andreas up to 2 boxes."
+		gen_action_calendar(get_lord_calendar(game.who) - 2)
+		gen_action_calendar(get_lord_calendar(game.who) - 1)
+		gen_action_calendar(get_lord_calendar(game.who) + 1)
+		gen_action_calendar(get_lord_calendar(game.who) + 2)
+		view.actions.pass = 1 // up to
+	},
+	lord(lord) { game.who = lord },
+	service(lord) { game.who = lord },
+	calendar(turn) {
+		set_lord_calendar(game.who, turn)
+		game.who = NOBODY
+		end_immediate_event()
+	},
+}
+
+function goto_russian_event_dietrich() {
+	if (is_lord_in_play(LORD_ANDREAS) || is_lord_in_play(LORD_RUDOLF))
+		game.state = "dietrich_von_gruningen"
+	else
+		end_immediate_event()
+}
+
+states.dietrich_von_gruningen = {
+	prompt() {
+		view.prompt = "Dietrich von Grüningen: On Calendar, shift Andreas or Rudolf 1 box."
+		if (is_lord_in_play(LORD_ANDREAS))
+			gen_action_lord_on_calendar(LORD_ANDREAS)
+		if (is_lord_in_play(LORD_RUDOLF))
+			gen_action_lord_on_calendar(LORD_RUDOLF)
+		if (game.who !== NOBODY) {
+			gen_action_calendar(get_lord_calendar(game.who) - 1)
+			gen_action_calendar(get_lord_calendar(game.who) + 1)
+		}
+	},
+	lord(lord) { game.who = lord },
+	service(lord) { game.who = lord },
+	calendar(turn) {
+		set_lord_calendar(game.who, turn)
+		game.who = NOBODY
+		end_immediate_event()
+	},
+}
+
+// === EVENTS: SHIFT CYLINDER OR LORDSHIP (HELD) ===
+
+// TODO
 
 // === CAPABILITIES ===
 
@@ -2348,10 +2782,7 @@ states.levy_arts_of_war = {
 	},
 	play() {
 		let c = game.what.shift()
-		discard_card(c)
 		log(`Played E${c}`)
-		if (data.cards[c].when === "this_levy" || data.cards[c].when === "this_campaign")
-			set_add(game.events, c)
 		goto_immediate_event(c)
 	},
 	hold() {
@@ -5447,11 +5878,6 @@ function can_play_battle_events() {
 	}
 
 	return false
-}
-
-function gen_action_card_if_held(c) {
-	if (has_card_in_hand(c))
-		gen_action_card(c)
 }
 
 function prompt_battle_events() {
@@ -8560,16 +8986,35 @@ function gen_action(action, argument) {
 	set_add(view.actions[action], argument)
 }
 
+function gen_action_card_if_held(c) {
+	if (has_card_in_hand(c))
+		gen_action_card(c)
+}
+
+function gen_action_lord_on_calendar(lord) {
+	if (lord !== game.who) {
+		if (is_lord_on_calendar(lord))
+			gen_action_lord(lord)
+		else
+			gen_action_service(lord)
+	}
+}
+
+function gen_action_calendar(calendar) {
+	if (calendar < 0)
+		calendar = 0
+	if (calendar > 17)
+		calendar = 17
+	gen_action("calendar", calendar)
+}
+
+
 function gen_action_way(way) {
 	gen_action("way", way)
 }
 
 function gen_action_locale(locale) {
 	gen_action("locale", locale)
-}
-
-function gen_action_calendar(calendar) {
-	gen_action("calendar", calendar)
 }
 
 function gen_action_laden_march(locale) {
