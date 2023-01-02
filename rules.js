@@ -3,6 +3,10 @@
 // TODO: hit remainders
 // TODO: choose crossbow/normal hit application order
 
+// TODO: Halbbruder
+// TODO: Trebuchets
+// TODO: Warrior Monks
+
 // TODO: precompute distance to supply lines for faster supply path rejection
 // TODO - precompute possible supply lines for faster rejections
 // Use BFS for winter/rasputitsa supply
@@ -6951,11 +6955,19 @@ function is_flanked_target() {
 	return false
 }
 
+function has_valid_target() {
+	if (game.battle.storm && game.active === game.battle.attacker && game.battle.garrison)
+		return true
+	return game.battle.hg.length > 0
+}
+
 function goto_apply_hits() {
 	set_active_enemy()
 
-	if (game.battle.hg.length === 0)
+	if (!has_valid_target()) {
 		end_apply_hits()
+		return
+	}
 
 	if (has_sa_without_rd()) {
 		console.log("SA without RD (getting hit)")
