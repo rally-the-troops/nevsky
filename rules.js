@@ -6755,6 +6755,8 @@ function goto_strike_storm() {
 	game.battle.hits = hits
 	game.battle.xhits = xhits
 
+	// TODO: "select_strike_group" w/ garrison?
+
 	goto_assign_hits()
 }
 
@@ -6952,7 +6954,7 @@ function is_flanked_target() {
 }
 
 function has_valid_target() {
-	if (game.battle.storm && game.active === game.battle.attacker && game.battle.garrison)
+	if (game.battle.storm && game.active !== game.battle.attacker && game.battle.garrison)
 		return true
 	return game.battle.targets.length > 0
 }
@@ -6965,7 +6967,10 @@ function goto_assign_hits() {
 		return
 	}
 
-	log(`${format_group(game.battle.targets)}`)
+	if (game.battle.storm && game.active !== game.battle.attacker && game.battle.garrison)
+		log("Garrison")
+	else
+		log(`${format_group(game.battle.targets)}`)
 
 	if (has_sa_without_rd()) {
 		console.log("SA without RD (getting hit)")
