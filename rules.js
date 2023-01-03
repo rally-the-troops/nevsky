@@ -1437,6 +1437,41 @@ function count_unbesieged_friendly_lords(loc) {
 	return n
 }
 
+// === MAP ===
+
+function calculate_distance(start, adjacent) {
+	let queue = []
+	queue.push([start, 0])
+
+	let distance = new Array(last_locale+1).fill(-1)
+	distance[start] = 0
+
+	while (queue.length > 0) {
+		let [ here, d ] = queue.shift()
+		for (let next of data.locales[here][adjacent]) {
+			if (distance[next] < 0) {
+				distance[next] = d+1
+				queue.push([next, d+1])
+			}
+		}
+	}
+
+	return distance
+}
+
+for (let loc = 0; loc <= last_locale; ++loc) {
+	data.locales[loc].distance = calculate_distance(loc, "adjacent")
+	data.locales[loc].distance_by_waterway = calculate_distance(loc, "adjacent_by_waterway")
+}
+
+function locale_distance(from, to) {
+	return data.locales[from].distance[to]
+}
+
+function locale_distance_by_waterway(from, to) {
+	return data.locales[from].distance_by_waterway[to]
+}
+
 // === SETUP ===
 
 function setup_lord_on_calendar(lord, turn) {
