@@ -7856,15 +7856,17 @@ function end_battle_round() {
 	}
 
 	game.battle.round ++
+
 	if (game.battle.storm) {
 		if (game.battle.round > count_siege_markers(game.battle.where)) {
 			game.battle.loser = game.battle.attacker
 			end_battle()
+			return
 		}
-	} else {
-		set_active_attacker()
-		goto_concede()
 	}
+
+	set_active_attacker()
+	goto_concede()
 }
 
 // === ENDING THE BATTLE ===
