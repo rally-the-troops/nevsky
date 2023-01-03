@@ -3524,6 +3524,7 @@ states.muster_capability = {
 	},
 	card(c) {
 		logi(`Capability C${c}`)
+		set_delete(current_deck(), c)
 		if (data.cards[c].this_lord) {
 			if (can_add_lord_capability(game.who, c)) {
 				add_lord_capability(game.who, c)
