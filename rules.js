@@ -488,7 +488,7 @@ function push_state(next) {
 }
 
 function pop_state() {
-	[ game.state, game.who, game.count ] = game.stack.pop()
+	;[ game.state, game.who, game.count ] = game.stack.pop()
 }
 
 function set_active(new_active) {
@@ -1379,7 +1379,7 @@ function add_lieutenant(upper) {
 
 function remove_lieutenant(lord) {
 	for (let i = 0; i < game.pieces.lieutenants.length; i += 2) {
-		if(game.pieces.lieutenants[i] === lord || game.pieces.lieutenants[i+1] === lord) {
+		if (game.pieces.lieutenants[i] === lord || game.pieces.lieutenants[i + 1] === lord) {
 			array_remove_pair(game.pieces.lieutenants, i)
 			return
 		}
@@ -1888,7 +1888,6 @@ function setup_pleskau_quickstart() {
 	set_lord_capability(LORD_GAVRILO, 0, R2)
 	set_lord_capability(LORD_GAVRILO, 1, R6)
 
-
 	game.pieces.veche_coin += 1
 
 	goto_campaign_plan()
@@ -2004,56 +2003,56 @@ function no_muster_of_or_by_lord(lord) {
 
 function goto_immediate_event(c) {
 	switch (c) {
-	// This Levy / Campaign
-	case EVENT_TEUTONIC_FAMINE:
-	case EVENT_RUSSIAN_FAMINE:
-		set_add(game.events, c)
-		// No immediate effects
-		return end_immediate_event()
-	case EVENT_RUSSIAN_DEATH_OF_THE_POPE:
-		set_add(game.events, c)
-		return goto_russian_event_death_of_the_pope()
-	case EVENT_RUSSIAN_VALDEMAR:
-		set_add(game.events, c)
-		return goto_russian_event_valdemar()
-	case EVENT_RUSSIAN_DIETRICH_VON_GRUNINGEN:
-		set_add(game.events, c)
-		return goto_russian_event_dietrich()
+		// This Levy / Campaign
+		case EVENT_TEUTONIC_FAMINE:
+		case EVENT_RUSSIAN_FAMINE:
+			set_add(game.events, c)
+			// No immediate effects
+			return end_immediate_event()
+		case EVENT_RUSSIAN_DEATH_OF_THE_POPE:
+			set_add(game.events, c)
+			return goto_russian_event_death_of_the_pope()
+		case EVENT_RUSSIAN_VALDEMAR:
+			set_add(game.events, c)
+			return goto_russian_event_valdemar()
+		case EVENT_RUSSIAN_DIETRICH_VON_GRUNINGEN:
+			set_add(game.events, c)
+			return goto_russian_event_dietrich()
 
-	// Add to capabilities...
-	case EVENT_TEUTONIC_POPE_GREGORY:
-		set_add(game.capabilities, c)
-		return goto_teutonic_event_pope_gregory()
+		// Add to capabilities...
+		case EVENT_TEUTONIC_POPE_GREGORY:
+			set_add(game.capabilities, c)
+			return goto_teutonic_event_pope_gregory()
 
-	// Discard
-	case EVENT_TEUTONIC_GRAND_PRINCE:
-		return goto_teutonic_event_grand_prince()
-	case EVENT_TEUTONIC_KHAN_BATY:
-		return goto_teutonic_event_khan_baty()
-	case EVENT_TEUTONIC_SWEDISH_CRUSADE:
-		return goto_teutonic_event_swedish_crusade()
-	case EVENT_RUSSIAN_OSILIAN_REVOLT:
-		return goto_russian_event_osilian_revolt()
-	case EVENT_RUSSIAN_BATU_KHAN:
-		return goto_russian_event_batu_khan()
-	case EVENT_RUSSIAN_PRUSSIAN_REVOLT:
-		return goto_russian_event_prussian_revolt()
-	case EVENT_TEUTONIC_BOUNTIFUL_HARVEST:
-		return goto_event_bountiful_harvest()
-	case EVENT_RUSSIAN_BOUNTIFUL_HARVEST:
-		return goto_event_bountiful_harvest()
-	case EVENT_TEUTONIC_MINDAUGAS:
-		return goto_teutonic_event_mindaugas()
-	case EVENT_RUSSIAN_MINDAUGAS:
-		return goto_russian_event_mindaugas()
-	case EVENT_TEUTONIC_TORZHOK:
-		return goto_teutonic_event_torzhok()
-	case EVENT_RUSSIAN_TEMPEST:
-		return goto_russian_event_tempest()
+		// Discard
+		case EVENT_TEUTONIC_GRAND_PRINCE:
+			return goto_teutonic_event_grand_prince()
+		case EVENT_TEUTONIC_KHAN_BATY:
+			return goto_teutonic_event_khan_baty()
+		case EVENT_TEUTONIC_SWEDISH_CRUSADE:
+			return goto_teutonic_event_swedish_crusade()
+		case EVENT_RUSSIAN_OSILIAN_REVOLT:
+			return goto_russian_event_osilian_revolt()
+		case EVENT_RUSSIAN_BATU_KHAN:
+			return goto_russian_event_batu_khan()
+		case EVENT_RUSSIAN_PRUSSIAN_REVOLT:
+			return goto_russian_event_prussian_revolt()
+		case EVENT_TEUTONIC_BOUNTIFUL_HARVEST:
+			return goto_event_bountiful_harvest()
+		case EVENT_RUSSIAN_BOUNTIFUL_HARVEST:
+			return goto_event_bountiful_harvest()
+		case EVENT_TEUTONIC_MINDAUGAS:
+			return goto_teutonic_event_mindaugas()
+		case EVENT_RUSSIAN_MINDAUGAS:
+			return goto_russian_event_mindaugas()
+		case EVENT_TEUTONIC_TORZHOK:
+			return goto_teutonic_event_torzhok()
+		case EVENT_RUSSIAN_TEMPEST:
+			return goto_russian_event_tempest()
 
-	default:
-		log("TODO")
-		return end_immediate_event()
+		default:
+			log("TODO")
+			return end_immediate_event()
 	}
 }
 
@@ -4423,7 +4422,7 @@ function march_with_group_1() {
 		return march_with_group_2(false)
 
 	if (prov > transport || loot > 0)
-		game.state = 'march_laden'
+		game.state = "march_laden"
 	else
 		march_with_group_2(false)
 }
@@ -4691,7 +4690,7 @@ function avoid_battle_1() {
 	let prov = count_group_assets(PROV)
 	let loot = count_group_assets(LOOT)
 	if (prov > transport || loot > 0)
-		game.state = 'avoid_battle_laden'
+		game.state = "avoid_battle_laden"
 	else
 		avoid_battle_2()
 }
@@ -5139,17 +5138,17 @@ function filter_reachable_supply_sources(sources, boats, carts, sleds) {
 	}
 
 	switch (current_season()) {
-	case SUMMER:
-		_supply_seen.fill(0)
-		search_supply_reachable_summer(sources, get_lord_locale(game.command), boats, carts)
-		break
-	case EARLY_WINTER:
-	case LATE_WINTER:
-		search_supply_reachable_winter(get_lord_locale(game.command), sleds)
-		break
-	case RASPUTITSA:
-		search_supply_reachable_rasputitsa(get_lord_locale(game.command), boats)
-		break
+		case SUMMER:
+			_supply_seen.fill(0)
+			search_supply_reachable_summer(sources, get_lord_locale(game.command), boats, carts)
+			break
+		case EARLY_WINTER:
+		case LATE_WINTER:
+			search_supply_reachable_winter(get_lord_locale(game.command), sleds)
+			break
+		case RASPUTITSA:
+			search_supply_reachable_rasputitsa(get_lord_locale(game.command), boats)
+			break
 	}
 
 	let result = []
@@ -5510,7 +5509,7 @@ function can_action_tax() {
 		return false
 
 	// Must be at own seat
-	return is_lord_at_seat(game.command);
+	return is_lord_at_seat(game.command)
 }
 
 function goto_tax() {
@@ -5587,7 +5586,7 @@ function can_action_sail() {
 
 function goto_sail() {
 	push_undo()
-	game.state = 'sail'
+	game.state = "sail"
 }
 
 states.sail = {
@@ -6371,24 +6370,24 @@ function action_battle_events(c) {
 	set_delete(current_hand(), c)
 	set_add(game.events, c)
 	switch (c) {
-	case EVENT_TEUTONIC_HILL:
-	case EVENT_TEUTONIC_MARSH:
-	case EVENT_RUSSIAN_HILL:
-	case EVENT_RUSSIAN_MARSH:
-	case EVENT_RUSSIAN_RAVENS_ROCK:
-		// nothing more needs to be done for these
-		log(`Played E${c}.`)
-		resume_battle_events()
-		break
-	case EVENT_TEUTONIC_BRIDGE:
-	case EVENT_RUSSIAN_BRIDGE:
-		// must select target lord
-		game.state = "bridge"
-		break
-	case EVENT_TEUTONIC_FIELD_ORGAN:
-		// must select target lord
-		game.state = "field_organ"
-		break
+		case EVENT_TEUTONIC_HILL:
+		case EVENT_TEUTONIC_MARSH:
+		case EVENT_RUSSIAN_HILL:
+		case EVENT_RUSSIAN_MARSH:
+		case EVENT_RUSSIAN_RAVENS_ROCK:
+			// nothing more needs to be done for these
+			log(`Played E${c}.`)
+			resume_battle_events()
+			break
+		case EVENT_TEUTONIC_BRIDGE:
+		case EVENT_RUSSIAN_BRIDGE:
+			// must select target lord
+			game.state = "bridge"
+			break
+		case EVENT_TEUTONIC_FIELD_ORGAN:
+			// must select target lord
+			game.state = "field_organ"
+			break
 	}
 }
 
@@ -7339,7 +7338,7 @@ states.select_strike_group = {
 }
 
 function select_strike_group(i) {
-	[ game.battle.strikers, game.battle.targets, game.battle.hits, game.battle.xhits ] = game.battle.groups[i]
+	;[ game.battle.strikers, game.battle.targets, game.battle.hits, game.battle.xhits ] = game.battle.groups[i]
 	array_remove(game.battle.groups, i)
 	goto_assign_hits()
 }
@@ -7568,7 +7567,7 @@ function rout_lord(lord) {
 	// remove from current hit group
 	array_remove_item(game.battle.targets, p)
 
-	for (let i = 0; i < game.battle.groups;) {
+	for (let i = 0; i < game.battle.groups; ) {
 		let targets = game.battle.groups[i][1]
 
 		// remove from other hit groups
@@ -8141,7 +8140,7 @@ function retreat_1() {
 		let prov = count_retreat_assets(PROV)
 		let loot = count_retreat_assets(LOOT)
 		if (prov > transport || loot > 0)
-			game.state = 'retreat_laden'
+			game.state = "retreat_laden"
 		else
 			retreat_2()
 	}
@@ -8658,7 +8657,7 @@ states.feed = {
 function resume_feed_lord_shared() {
 	if (!is_lord_unfed(game.who) || !can_feed_from_shared(game.who)) {
 		game.who = NOBODY
-		game.state = 'feed'
+		game.state = "feed"
 	}
 }
 
@@ -8982,7 +8981,7 @@ states.ransom_besieged_lord = {
 	end_ransom() {
 		clear_undo()
 		end_ransom_besieged_lord()
-	}
+	},
 }
 
 // === CAMPAIGN: REMOVE MARKERS ===
@@ -9190,7 +9189,7 @@ states.plow_and_reap = {
 	},
 	end_plow_and_reap() {
 		end_plow_and_reap()
-	}
+	},
 }
 
 function end_plow_and_reap() {
@@ -9304,7 +9303,7 @@ states.wastage = {
 	ship(lord) { action_wastage(lord, SHIP) },
 	end_wastage() {
 		end_wastage()
-	}
+	},
 }
 
 function end_wastage() {
@@ -9318,7 +9317,6 @@ function end_wastage() {
 			goto_plow_and_reap()
 		else
 			goto_reset()
-
 	}
 }
 
@@ -9518,7 +9516,6 @@ function gen_action_calendar(calendar) {
 		calendar = 17
 	gen_action("calendar", calendar)
 }
-
 
 function gen_action_way(way) {
 	gen_action("way", way)
