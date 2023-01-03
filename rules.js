@@ -1,25 +1,24 @@
 "use strict"
 
-// TODO: hit remainders
-// TODO: choose crossbow/normal hit application order
+// TODO: hit overflow
 // TODO: Ambush
 // TODO: Bridge - kn, sgt, 1x lh, maa, militia, serf, lh, ah
 // TODO: Lodya capability during supply!
 // TODO: 2nd edition supply rule - no reuse of transports
+// TODO: optimize summer supply search algorithm! (not brute force)
 
-// TODO: battle mat - optional - either mat in middle, or garrison + siegeworks display
-// TODO: array position - click on mat grid as well
-// TODO: battle event on lord mat (at top) - in client for Bridge and Field Organs
+// FIXME: lift_siege / besieged needs checking!
+// FIXME: remove_legate_if_endangered needs checking!
+// FIXME: verify card deck is emptied and refilled as cards move around
 
-// TODO: lift_siege / besieged needs checking!
-// TODO: remove_legate_if_endangered needs checking!
-// TODO: precompute distance to supply lines for faster supply path rejection
-// TODO - precompute possible supply lines for faster rejections
-// Use BFS for winter/rasputitsa supply
+// GUI: show command lord different from selected lord (inactive player)
+// GUI: show siegeworks + walls on battle mat for protection indication
+// GUI: show feed x2 on lord mats with > 6 units
+// GUI: battle mat - optional - either mat in middle, or garrison + siegeworks display
+// GUI: array position - click on mat grid as well
+// GUI: battle event on lord mat (at top) - in client for Bridge and Field Organs
 
-// TODO: show command lord different from selected lord (inactive player)
-// TODO: show siegeworks + walls on battle mat for protection indication
-// TODO: show feed x2 on lord mats with > 6 units
+// WONTFIX: choose crossbow/normal hit application order
 
 // Check all push/clear_undo
 // Remove push_state/pop_state stuff - use explicit substates with common functions instead
@@ -446,12 +445,6 @@ function is_summer() {
 
 function current_turn_name() {
 	return TURN_NAME[game.turn >> 1]
-}
-
-function current_deck() {
-	if (game.active === P1)
-		return game.deck1
-	return game.deck2
 }
 
 function current_hand() {
@@ -907,6 +900,33 @@ function is_p1_card(c) {
 
 function is_p2_card(c) {
 	return c >= first_p2_card
+}
+
+function is_card_in_use(c) {
+	if (set_has(game.hand1, c))
+		return true
+	if (set_has(game.hand2, c))
+		return true
+	if (set_has(game.events, c))
+		return true
+	if (set_has(game.capabilities, c))
+		return true
+	if (game.pieces.capabilities.includes(c))
+		return true
+	return false
+}
+
+function list_deck() {
+	let deck = []
+	let first_card = (game.active === P1) ? first_p1_card : first_p2_card
+	let last_card = (game.active === P1) ? last_p1_card : last_p2_card
+	let no = (game.active === P1) ? game.no1 : game.no2
+	for (let c = first_card; c <= last_card; ++c)
+		if (!is_card_in_play(c))
+			deck.push(c)
+	for (let c = last_card + 1; c <= last_card + no; ++c)
+		deck.push(c)
+	return deck
 }
 
 function is_friendly_card(c) {
@@ -1576,18 +1596,6 @@ function muster_vassal(lord, vassal) {
 	muster_vassal_forces(lord, vassal)
 }
 
-function setup_decks() {
-	for (let c = first_p1_card; c <= last_p1_card; ++c)
-		game.deck1.push(c)
-	for (let c = last_p1_card; c <= last_p1_card_no_event; ++c)
-		game.deck1.push(c)
-
-	for (let c = first_p2_card; c <= last_p2_card; ++c)
-		game.deck2.push(c)
-	for (let c = last_p2_card; c <= last_p2_card_no_event; ++c)
-		game.deck2.push(c)
-}
-
 function draw_card(deck) {
 	let i = random(deck.length)
 	let c = deck[i]
@@ -1595,34 +1603,23 @@ function draw_card(deck) {
 	return c
 }
 
-function discard_card(c) {
-	if (c >= first_p1_card && c <= last_p1_card_no_event)
-		set_add(game.deck1, c)
-	else if (c >= first_p2_card && c <= last_p2_card_no_event)
-		set_add(game.deck2, c)
-}
-
 function discard_events(when) {
 	for (let i = 0; i < game.events.length; ) {
 		let c = game.events[i]
-		if (data.cards[c].when === when) {
+		if (data.cards[c].when === when)
 			array_remove(game.events, i)
-			discard_card(c)
-		} else {
+		else
 			++i
-		}
 	}
 }
 
 function discard_friendly_events(when) {
 	for (let i = 0; i < game.events.length; ) {
 		let c = game.events[i]
-		if (is_friendly_card(c) && data.cards[c].when === when) {
+		if (is_friendly_card(c) && data.cards[c].when === when)
 			array_remove(game.events, i)
-			discard_card(c)
-		} else {
+		else
 			++i
-		}
 	}
 }
 
@@ -1639,12 +1636,12 @@ exports.setup = function (seed, scenario, options) {
 		state: "setup_lords",
 		stack: [],
 
-		deck1: [],
-		deck2: [],
 		hand1: [],
 		hand2: [],
 		plan1: [],
 		plan2: [],
+		no1: 3,
+		no2: 3,
 
 		turn: 0,
 		events: [], // this levy/this campaign cards
@@ -1700,8 +1697,6 @@ exports.setup = function (seed, scenario, options) {
 	update_aliases()
 
 	log_h1(scenario)
-
-	setup_decks()
 
 	switch (scenario) {
 		default:
@@ -1935,28 +1930,21 @@ function setup_pleskau_quickstart() {
 	add_lord_assets(LORD_KNUD_ABEL, BOAT, 1)
 
 	muster_vassal(LORD_HERMANN, data.lords[LORD_HERMANN].vassals[0])
-	set_delete(game.deck1, T4)
 	set_lord_capability(LORD_HERMANN, 0, T4)
-	set_delete(game.deck1, T14)
 	set_lord_capability(LORD_HERMANN, 1, T14)
 
-	set_delete(game.deck1, T3)
 	set_lord_capability(LORD_YAROSLAV, 0, T3)
 
-	set_delete(game.deck1, T13)
 	set_add(game.capabilities, T13)
 	game.pieces.legate = LOC_DORPAT
 
-	set_delete(game.deck2, R8)
 	set_add(game.capabilities, R8)
 	muster_lord(LORD_DOMASH, LOC_NOVGOROD)
 	add_lord_assets(LORD_DOMASH, BOAT, 2)
 	add_lord_assets(LORD_DOMASH, CART, 2)
 
 	muster_vassal(LORD_GAVRILO, data.lords[LORD_GAVRILO].vassals[0])
-	set_delete(game.deck2, R2)
 	set_lord_capability(LORD_GAVRILO, 0, R2)
-	set_delete(game.deck2, R6)
 	set_lord_capability(LORD_GAVRILO, 1, R6)
 
 
@@ -1972,18 +1960,12 @@ function setup_pleskau_quickstart() {
 
 function setup_test() {
 	setup_crusade_on_novgorod()
-	for (let c = first_p1_card; c <= last_p1_card; ++c) {
-		if (data.cards[c].when === "hold") {
+	for (let c = first_p1_card; c <= last_p1_card; ++c)
+		if (data.cards[c].when === "hold")
 			game.hand1.push(c)
-			set_delete(game.deck1, c)
-		}
-	}
-	for (let c = first_p2_card; c <= last_p2_card; ++c) {
-		if (data.cards[c].when === "hold") {
+	for (let c = first_p2_card; c <= last_p2_card; ++c)
+		if (data.cards[c].when === "hold")
 			game.hand2.push(c)
-			set_delete(game.deck2, c)
-		}
-	}
 }
 
 states.setup_lords = {
@@ -2104,45 +2086,32 @@ function goto_immediate_event(c) {
 
 	// Discard
 	case EVENT_TEUTONIC_GRAND_PRINCE:
-		discard_card(c)
 		return goto_teutonic_event_grand_prince()
 	case EVENT_TEUTONIC_KHAN_BATY:
-		discard_card(c)
 		return goto_teutonic_event_khan_baty()
 	case EVENT_TEUTONIC_SWEDISH_CRUSADE:
-		discard_card(c)
 		return goto_teutonic_event_swedish_crusade()
 	case EVENT_RUSSIAN_OSILIAN_REVOLT:
-		discard_card(c)
 		return goto_russian_event_osilian_revolt()
 	case EVENT_RUSSIAN_BATU_KHAN:
-		discard_card(c)
 		return goto_russian_event_batu_khan()
 	case EVENT_RUSSIAN_PRUSSIAN_REVOLT:
-		discard_card(c)
 		return goto_russian_event_prussian_revolt()
 	case EVENT_TEUTONIC_BOUNTIFUL_HARVEST:
-		discard_card(c)
 		return goto_event_bountiful_harvest()
 	case EVENT_RUSSIAN_BOUNTIFUL_HARVEST:
-		discard_card(c)
 		return goto_event_bountiful_harvest()
 	case EVENT_TEUTONIC_MINDAUGAS:
-		discard_card(c)
 		return goto_teutonic_event_mindaugas()
 	case EVENT_RUSSIAN_MINDAUGAS:
-		discard_card(c)
 		return goto_russian_event_mindaugas()
 	case EVENT_TEUTONIC_TORZHOK:
-		discard_card()
 		return goto_teutonic_event_torzhok()
 	case EVENT_RUSSIAN_TEMPEST:
-		discard_card()
 		return goto_russian_event_tempest()
 
 	default:
 		log("TODO")
-		discard_card(c)
 		return end_immediate_event()
 	}
 }
@@ -2642,10 +2611,8 @@ function play_held_event(c) {
 	log(`Played E${c}.`)
 	if (c >= first_p1_card && c <= last_p1_card_no_event) {
 		set_delete(game.hand1, c)
-		set_add(game.deck1, c)
 	} else {
 		set_delete(game.hand2, c)
-		set_add(game.deck2, c)
 	}
 }
 
@@ -3047,7 +3014,6 @@ function deploy_global_capability(c) {
 
 function discard_global_capability(c) {
 	set_delete(game.capabilities, c)
-	discard_card(c)
 
 	if (c === AOW_TEUTONIC_WILLIAM_OF_MODENA) {
 		game.pieces.legate = LEGATE_INDISPOSED
@@ -3077,7 +3043,7 @@ function discard_global_capability(c) {
 // === LEVY: ARTS OF WAR (FIRST TURN) ===
 
 function draw_two_cards() {
-	let deck = current_deck()
+	let deck = list_deck()
 	return [ draw_card(deck), draw_card(deck) ]
 }
 
@@ -3137,8 +3103,11 @@ states.levy_arts_of_war_first = {
 
 		if (is_no_event_card(c) && should_remove_no_event_card()) {
 			logi(`C${c} - removed`)
+			if (game.active === P1)
+				game.no1--
+			else
+				game.no2--
 		} else {
-			discard_card(c)
 			logi(`C${c} - discarded`)
 		}
 
@@ -3209,7 +3178,6 @@ states.levy_arts_of_war = {
 	},
 	discard() {
 		let c = game.what.shift()
-		discard_card(c)
 		log(`Discarded E${c}.`)
 		resume_levy_arts_of_war()
 	},
@@ -3528,14 +3496,10 @@ function add_lord_capability(lord, c) {
 }
 
 function discard_lord_capability_n(lord, n) {
-	let c = get_lord_capability(lord, 0)
-	if (c !== NOTHING)
-		discard_card(c)
 	set_lord_capability(lord, 0, NOTHING)
 }
 
 function discard_lord_capability(lord, c) {
-	discard_card(c)
 	if (get_lord_capability(lord, 0) === c)
 		return set_lord_capability(lord, 0, NOTHING)
 	if (get_lord_capability(lord, 1) === c)
@@ -3545,12 +3509,10 @@ function discard_lord_capability(lord, c) {
 
 states.muster_capability = {
 	prompt() {
-		let deck = current_deck()
+		let deck = list_deck()
 		view.prompt = `Muster: Select a new capability for ${lord_name[game.who]}.`
 		view.arts_of_war = deck
 		for (let c of deck) {
-			if (is_no_event_card(c))
-				continue
 			if (!data.cards[c].lords || set_has(data.cards[c].lords, game.who)) {
 				if (data.cards[c].this_lord) {
 					if (!lord_already_has_capability(game.who, c))
@@ -3564,7 +3526,6 @@ states.muster_capability = {
 	},
 	card(c) {
 		logi(`Capability C${c}`)
-		set_delete(current_deck(), c)
 		if (data.cards[c].this_lord) {
 			if (can_add_lord_capability(game.who, c)) {
 				add_lord_capability(game.who, c)
@@ -9781,12 +9742,10 @@ exports.view = function (state, current) {
 	if (current === P1) {
 		view.hand = game.hand1
 		view.plan = game.plan1
-		// view.arts_of_war = game.deck1
 	}
 	if (current === P2) {
 		view.hand = game.hand2
 		view.plan = game.plan2
-		// view.arts_of_war = game.deck2
 	}
 
 	if (game.state === "game_over") {
