@@ -61,6 +61,7 @@ exports.roles = [ P1, P2 ]
 
 exports.scenarios = [
 	"Pleskau",
+	"Watland (1st ed)",
 	"Watland",
 	"Peipus",
 	"Return of the Prince",
@@ -72,6 +73,7 @@ exports.scenarios = [
 
 const scenario_last_turn = {
 	"Pleskau": 2,
+	"Watland (1st ed)": 8,
 	"Watland": 8,
 	"Peipus": 16,
 	"Return of the Prince": 16,
@@ -1706,8 +1708,11 @@ exports.setup = function (seed, scenario, options) {
 		case "Pleskau":
 			setup_pleskau()
 			break
+		case "Watland (1st ed)":
+			setup_watland_1st_ed()
+			break
 		case "Watland":
-			setup_watland()
+			setup_watland_2nd_ed()
 			break
 		case "Peipus":
 			setup_peipus()
@@ -1747,7 +1752,7 @@ function setup_pleskau() {
 	setup_lord_on_calendar(LORD_DOMASH, 1)
 }
 
-function setup_watland() {
+function setup_watland_1st_ed() {
 	game.turn = 4 << 1
 
 	game.pieces.veche_vp = 1
@@ -1768,6 +1773,31 @@ function setup_watland() {
 	setup_lord_on_calendar(LORD_VLADISLAV, 4)
 	setup_lord_on_calendar(LORD_KARELIANS, 4)
 	setup_lord_on_calendar(LORD_ANDREY, 5)
+	setup_lord_on_calendar(LORD_ALEKSANDR, 7)
+	setup_lord_on_calendar(LORD_HERMANN, 8)
+}
+
+function setup_watland_2nd_ed() {
+	game.turn = 4 << 1
+
+	game.pieces.veche_vp = 1
+	game.pieces.veche_coin = 1
+
+	set_add(game.pieces.conquered, LOC_IZBORSK)
+	set_add(game.pieces.conquered, LOC_PSKOV)
+	set_add(game.pieces.ravaged, LOC_PSKOV)
+	set_add(game.pieces.ravaged, LOC_DUBROVNO)
+
+	muster_lord(LORD_ANDREAS, LOC_FELLIN, 7)
+	muster_lord(LORD_KNUD_ABEL, LOC_WESENBERG, 6)
+	muster_lord(LORD_DOMASH, LOC_NOVGOROD, 7)
+	muster_lord(LORD_VLADISLAV, LOC_LADOGA, 6)
+
+	setup_lord_on_calendar(LORD_RUDOLF, 4)
+	setup_lord_on_calendar(LORD_KARELIANS, 4)
+	setup_lord_on_calendar(LORD_YAROSLAV, 5)
+	setup_lord_on_calendar(LORD_ANDREY, 5)
+	setup_lord_on_calendar(LORD_HEINRICH, 7)
 	setup_lord_on_calendar(LORD_ALEKSANDR, 7)
 	setup_lord_on_calendar(LORD_HERMANN, 8)
 }
@@ -3880,10 +3910,16 @@ states.novgorod_veche = {
 	},
 	delay() {
 		push_undo()
-		log("Added 1VP to Veche.")
 		game.state = "novgorod_veche_done"
 
-		view.actions.veche_vp += 1
+		if (game.scenario === "Watland") {
+			log("Decline of Andrey: Added 2VP to Veche.")
+			view.actions.veche_vp += 2
+		} else {
+			log("Added 1VP to Veche.")
+			view.actions.veche_vp += 1
+		}
+
 		if (is_lord_ready(LORD_ALEKSANDR)) {
 			log(`Delayed L${LORD_ALEKSANDR}.`)
 			shift_lord_cylinder(LORD_ALEKSANDR, 1)
