@@ -1,22 +1,17 @@
 "use strict"
 
-// TODO: lift_siege / besieged needs checking!
-// TODO: remove_legate_if_endangered needs checking!
-
-// TODO: clean up and use play_card/discard_card/remove_card helpers
-
 // TODO: hit remainders
 // TODO: choose crossbow/normal hit application order
-
 // TODO: Ambush
 // TODO: Bridge - kn, sgt, 1x lh, maa, militia, serf, lh, ah
+// TODO: Lodya capability during supply!
+// TODO: 2nd edition supply rule - no reuse of transports
 
+// TODO: lift_siege / besieged needs checking!
+// TODO: remove_legate_if_endangered needs checking!
 // TODO: precompute distance to supply lines for faster supply path rejection
 // TODO - precompute possible supply lines for faster rejections
 // Use BFS for winter/rasputitsa supply
-
-// TODO: Lodya capability during supply!
-// TODO: 2nd edition supply rule - no reuse of transports
 
 // TODO: show command lord different from selected lord (inactive player)
 // TODO: show siegeworks + walls on battle mat for protection indication

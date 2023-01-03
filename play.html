@@ -310,12 +310,12 @@ body.Teutons #plan_actions .russian { display: none }
 	filter: grayscale(50%)
 }
 
-.mat.selected .background {
-	box-shadow: 0 0 0 1px #584800, 0 0 0 3px yellow;
-}
-
 .mat.command .background {
 	box-shadow: 0 0 0 1px #584800, 0 0 0 3px gold;
+}
+
+.mat.selected .background {
+	box-shadow: 0 0 0 1px #584800, 0 0 0 3px yellow;
 }
 
 .mat .capabilities {
@@ -900,6 +900,14 @@ body.shift .mustered_vassals {
 	transform: translateY(8px)
 }
 
+.cylinder.command {
+	filter:
+		drop-shadow(2px 0px 0px gold)
+		drop-shadow(0px 2px 0px gold)
+		drop-shadow(0px -2px 0px gold)
+		drop-shadow(-2px 0px 0px gold);
+}
+
 .cylinder.action {
 	filter:
 		drop-shadow(2px 0px 0px white)
@@ -914,14 +922,6 @@ body.shift .mustered_vassals {
 		drop-shadow(0px 2px 0px yellow)
 		drop-shadow(0px -2px 0px yellow)
 		drop-shadow(-2px 0px 0px yellow);
-}
-
-.cylinder.command {
-	filter:
-		drop-shadow(2px 0px 0px gold)
-		drop-shadow(0px 2px 0px gold)
-		drop-shadow(0px -2px 0px gold)
-		drop-shadow(-2px 0px 0px gold);
 }
 
 .cylinder.andreas { background-image: url(images/lord_teutonic_1.svg) }
