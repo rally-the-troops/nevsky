@@ -6780,6 +6780,7 @@ states.reposition_storm = {
 		for (let lord of game.battle.reserves)
 			if (is_friendly_lord(lord) && lord !== game.who)
 				gen_action_lord(lord)
+		view.action.end_reposition = 1
 	},
 	lord(lord) {
 		log(`Swapped in L${lord}.`)
@@ -6791,6 +6792,9 @@ states.reposition_storm = {
 			set_add(game.battle.reserves, game.battle.array[D2])
 			game.battle.array[A2] = lord
 		}
+		end_reposition_storm()
+	},
+	end_reposition() {
 		end_reposition_storm()
 	},
 }
