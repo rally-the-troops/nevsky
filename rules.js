@@ -7938,6 +7938,7 @@ function goto_sack() {
 
 	remove_all_siege_markers(game.battle.where)
 	add_conquered_marker(game.battle.where)
+	remove_walls(game.battle.where)
 
 	if (here === LOC_NOVGOROD)
 		award_spoils(3)
