@@ -221,50 +221,41 @@ const LORD_VLADISLAV = find_lord("Vladislav")
 const LEGATE_INDISPOSED = -2
 const LEGATE_ARRIVED = -1
 
-const LOC_REVAL = find_locale("Reval")
-const LOC_WESENBERG = find_locale("Wesenberg")
-const LOC_DORPAT = find_locale("Dorpat")
-const LOC_LEAL = find_locale("Leal")
-const LOC_RIGA = find_locale("Riga")
 const LOC_ADSEL = find_locale("Adsel")
+const LOC_DORPAT = find_locale("Dorpat")
+const LOC_DUBROVNO = find_locale("Dubrovno")
 const LOC_FELLIN = find_locale("Fellin")
-const LOC_ODENPAH = find_locale("Odenpäh")
-const LOC_WENDEN = find_locale("Wenden")
-const LOC_NOVGOROD = find_locale("Novgorod")
-const LOC_LADOGA = find_locale("Ladoga")
-const LOC_PSKOV = find_locale("Pskov")
-const LOC_RUSA = find_locale("Rusa")
-const LOC_LOVAT = find_locale("Lovat")
-const LOC_LUGA = find_locale("Luga")
-const LOC_NEVA = find_locale("Neva")
-const LOC_VOLKHOV = find_locale("Volkhov")
 const LOC_IZBORSK = find_locale("Izborsk")
 const LOC_KAIBOLOVO = find_locale("Kaibolovo")
 const LOC_KOPORYE = find_locale("Koporye")
-const LOC_PORKHOV = find_locale("Porkhov")
-const LOC_VELIKIYE_LUKI = find_locale("Velikiye Luki")
-
-const LOC_DUBROVNO = find_locale("Dubrovno")
-const LOC_VOD = find_locale("Vod")
-const LOC_ZHELTSY = find_locale("Zheltsy")
-const LOC_TESOVO = find_locale("Tesovo")
-const LOC_SABLIA = find_locale("Sablia")
-
-const LOC_OSTROV = find_locale("Ostrov")
-const LOC_UZMEN = find_locale("Uzmen")
-const LOC_SOROT_RIVER = find_locale("Sorot River")
-const LOC_VELIKAYA_RIVER = find_locale("Velikaya River")
-const LOC_ZHELCHA_RIVER = find_locale("Zhelcha River")
-
-const LOC_ROSITTEN = find_locale("Rositten")
+const LOC_LADOGA = find_locale("Ladoga")
+const LOC_LEAL = find_locale("Leal")
 const LOC_LETTGALLIA = find_locale("Lettgallia")
+const LOC_LOVAT = find_locale("Lovat")
+const LOC_LUGA = find_locale("Luga")
+const LOC_NEVA = find_locale("Neva")
+const LOC_NOVGOROD = find_locale("Novgorod")
+const LOC_ODENPAH = find_locale("Odenpäh")
+const LOC_OSTROV = find_locale("Ostrov")
+const LOC_PORKHOV = find_locale("Porkhov")
+const LOC_PSKOV = find_locale("Pskov")
+const LOC_REVAL = find_locale("Reval")
+const LOC_RIGA = find_locale("Riga")
+const LOC_ROSITTEN = find_locale("Rositten")
+const LOC_RUSA = find_locale("Rusa")
+const LOC_SABLIA = find_locale("Sablia")
+const LOC_SOROT_RIVER = find_locale("Sorot River")
+const LOC_TESOVO = find_locale("Tesovo")
 const LOC_TOLOWA = find_locale("Tolowa")
-
-
-// Misc tracking flags
-const FLAG_FIRST_ACTION = 1 << 0
-const FLAG_FIRST_MARCH = 1 << 1
-const FLAG_TEUTONIC_RAIDERS = 1 << 2
+const LOC_UZMEN = find_locale("Uzmen")
+const LOC_VELIKAYA_RIVER = find_locale("Velikaya River")
+const LOC_VELIKIYE_LUKI = find_locale("Velikiye Luki")
+const LOC_VOD = find_locale("Vod")
+const LOC_VOLKHOV = find_locale("Volkhov")
+const LOC_WENDEN = find_locale("Wenden")
+const LOC_WESENBERG = find_locale("Wesenberg")
+const LOC_ZHELCHA_RIVER = find_locale("Zhelcha River")
+const LOC_ZHELTSY = find_locale("Zheltsy")
 
 const AOW_TEUTONIC_TREATY_OF_STENSBY = T1
 const AOW_TEUTONIC_RAIDERS = T2
@@ -391,13 +382,6 @@ const TURN_NAME = [
 	null,
 ]
 
-const USABLE_TRANSPORT = [
-	[ CART, BOAT, SHIP ],
-	[ SLED ],
-	[ SLED ],
-	[ BOAT, SHIP ]
-]
-
 const COMMANDERIES = [
 	LOC_ADSEL,
 	LOC_FELLIN,
@@ -406,15 +390,12 @@ const COMMANDERIES = [
 ]
 
 function is_in_rus(loc) {
-	return loc >= 0 && loc < last_locale && data.locales[loc].region === "Novgorodan Rus"
+	return loc >= first_p2_locale && loc <= last_p2_locale
 }
 
 function is_in_livonia(loc) {
+	// FIXME actual numbers
 	return loc >= 0 && loc <= last_locale && data.locales[loc].region === "Crusader Livonia"
-}
-
-function is_in_estonia(loc) {
-	return loc >= 0 && loc <= last_locale && data.locales[loc].region === "Danish Estonia"
 }
 
 function is_commandery(loc) {
@@ -507,7 +488,7 @@ function push_state(next) {
 }
 
 function pop_state() {
-	;[ game.state, game.who, game.count ] = game.stack.pop()
+	[ game.state, game.who, game.count ] = game.stack.pop()
 }
 
 function set_active(new_active) {
@@ -544,7 +525,7 @@ function has_any_spoils() {
 	)
 }
 
-function get_spoils(type, n) {
+function get_spoils(type) {
 	if (game.spoils)
 		return game.spoils[type]
 	return 0
@@ -922,7 +903,7 @@ function list_deck() {
 	let last_card = (game.active === P1) ? last_p1_card : last_p2_card
 	let no = (game.active === P1) ? game.no1 : game.no2
 	for (let c = first_card; c <= last_card; ++c)
-		if (!is_card_in_play(c))
+		if (!is_card_in_use(c))
 			deck.push(c)
 	for (let c = last_card + 1; c <= last_card + no; ++c)
 		deck.push(c)
@@ -992,10 +973,6 @@ function is_special_vassal_available(vassal) {
 	return true
 }
 
-function is_vassal_unavailable(vassal) {
-	return game.pieces.vassals[vassal] === VASSAL_UNAVAILABLE
-}
-
 function is_vassal_ready(vassal) {
 	return game.pieces.vassals[vassal] === VASSAL_READY
 }
@@ -1014,10 +991,6 @@ function is_russian_lord(lord) {
 
 function is_friendly_lord(lord) {
 	return lord >= first_friendly_lord && lord <= last_friendly_lord
-}
-
-function is_enemy_lord(lord) {
-	return lord >= first_enemy_lord && lord <= last_enemy_lord
 }
 
 function is_lord_at_friendly_locale(lord) {
@@ -1213,14 +1186,6 @@ function add_siege_marker(loc) {
 	map_set(game.pieces.sieges, loc, map_get(game.pieces.sieges, loc, 0) + 1)
 }
 
-function remove_siege_marker(loc) {
-	let n = map_get(game.pieces.sieges, loc, 0)
-	if (n > 1)
-		map_set(game.pieces.sieges, loc, n - 1)
-	else
-		map_delete(game.pieces.sieges, loc)
-}
-
 function remove_all_but_one_siege_markers(loc) {
 	map_set(game.pieces.sieges, loc, 1)
 }
@@ -1243,7 +1208,7 @@ function conquer_trade_route(loc) {
 	}
 }
 
-function count_castles(loc) {
+function count_castles() {
 	return game.pieces.castles1.length + game.pieces.castles2.length
 }
 
@@ -1279,10 +1244,6 @@ function flip_castle(loc) {
 		set_delete(game.pieces.castle1, loc)
 		set_add(game.pieces.castle2, loc)
 	}
-}
-
-function has_conquered_stronghold(loc) {
-	return is_stronghold(loc) && has_conquered_marker(loc)
 }
 
 function is_friendly_stronghold_locale(loc) {
@@ -1327,10 +1288,6 @@ function is_besieged_enemy_stronghold(loc) {
 	return is_enemy_stronghold(loc) && has_siege_marker(loc)
 }
 
-function is_besieged_friendly_stronghold(loc) {
-	return is_friendly_stronghold(loc) && has_siege_marker(loc)
-}
-
 function is_friendly_locale(loc) {
 	if (loc !== NOWHERE && loc < CALENDAR) {
 		if (has_enemy_lord(loc))
@@ -1351,14 +1308,9 @@ function is_friendly_locale(loc) {
 	return false
 }
 
-function is_not_friendly_locale(loc) {
-	return !is_friendly_locale(loc)
-}
-
 function can_add_transport(who, what) {
 	return get_lord_assets(who, what) < 8
 }
-
 
 function count_lord_transport(lord, type) {
 	let season = current_season()
@@ -1402,10 +1354,6 @@ function list_ways(from, to) {
 	return null
 }
 
-function has_two_ways(from, to) {
-	return list_ways(from, to).length > 2
-}
-
 function is_upper_lord(lord) {
 	return map_has(game.pieces.lieutenants, lord)
 }
@@ -1415,13 +1363,6 @@ function is_lower_lord(lord) {
 		if (game.pieces.lieutenants[i] === lord)
 			return true
 	return false
-}
-
-function get_upper_lord(lower) {
-	for (let i = 0; i < game.pieces.lieutenants.length; i += 2)
-		if (game.pieces.lieutenants[i+1] === lower)
-			return i
-	return NOBODY
 }
 
 function get_lower_lord(upper) {
@@ -1588,7 +1529,7 @@ function disband_vassal(vassal) {
 	add_lord_forces(lord, MILITIA, -(info.forces.militia | 0))
 	add_lord_forces(lord, SERFS, -(info.forces.serfs | 0))
 
-	game.pieces.vassals[v] = VASSAL_READY
+	game.pieces.vassals[vassal] = VASSAL_READY
 }
 
 function muster_vassal(lord, vassal) {
@@ -2156,10 +2097,10 @@ function goto_teutonic_event_torzhok() {
 	}
 }
 
-function torzhok_action(lord, asset) {
+function action_torzhok(lord, asset) {
 	push_undo()
-	logi(`Removed ${ASSET_TYPE_NAME[type]} from L${lord}.`)
-	add_lord_assets(lord, type, -1)
+	logi(`Removed ${ASSET_TYPE_NAME[asset]} from L${lord}.`)
+	add_lord_assets(lord, asset, -1)
 	game.count--
 }
 
@@ -2378,7 +2319,7 @@ states.prussian_revolt = {
 			gen_action_locale(LOC_RIGA)
 		}
 	},
-	locale(loc) {
+	locale(_) {
 		logi(`Placed L${game.who} at %${LOC_RIGA}.`)
 		set_lord_locale(game.who, LOC_RIGA)
 		game.who = NOBODY
@@ -2813,7 +2754,7 @@ states.heinrich_sees_the_curia = {
 		view.prompt = "Heinrich Sees the Curia: Disband Heinrich to add 4 Assets each to 2 Lords."
 		gen_action_lord(LORD_HEINRICH)
 	},
-	lord(lord) {
+	lord(_) {
 		disband_lord(LORD_HEINRICH)
 		game.state = "heinrich_sees_the_curia_1"
 		game.who = NOBODY
@@ -3260,7 +3201,6 @@ states.levy_muster_lord = {
 		prompt_held_event_lordship()
 
 		if (game.count > 0) {
-			let season = current_season()
 			view.prompt += ` ${game.count} lordship left.`
 
 			// Roll to muster Ready Lord at Seat
@@ -3268,7 +3208,7 @@ states.levy_muster_lord = {
 				if (lord === LORD_ALEKSANDR)
 					continue
 
-				// NOTE: 2E change, ANDREY may be mustered normally
+				// NOTE: ANDREY may be mustered normally in 2nd edition
 				// if (lord === LORD_ANDREY && game.who !== LORD_ALEKSANDR) continue
 
 				if (no_muster_of_or_by_lord(lord))
@@ -3496,7 +3436,7 @@ function add_lord_capability(lord, c) {
 }
 
 function discard_lord_capability_n(lord, n) {
-	set_lord_capability(lord, 0, NOTHING)
+	set_lord_capability(lord, n, NOTHING)
 }
 
 function discard_lord_capability(lord, c) {
@@ -4792,7 +4732,7 @@ states.avoid_battle_laden = {
 		push_undo()
 		spoil_loot(lord)
 	},
-	locale(to) {
+	locale(_) {
 		avoid_battle_2()
 	},
 	avoid() {
@@ -4801,7 +4741,6 @@ states.avoid_battle_laden = {
 }
 
 function avoid_battle_2() {
-	let from = game.march.to
 	let to = game.march.avoid_to
 	let way = game.march.avoid_way
 
@@ -4935,7 +4874,6 @@ function take_spoils(type) {
 function take_spoils_prov() { take_spoils(PROV) }
 function take_spoils_loot() { take_spoils(LOOT) }
 function take_spoils_coin() { take_spoils(COIN) }
-function take_spoils_ship() { take_spoils(SHIP) }
 function take_spoils_boat() { take_spoils(BOAT) }
 function take_spoils_cart() { take_spoils(CART) }
 function take_spoils_sled() { take_spoils(SLED) }
@@ -5559,7 +5497,7 @@ function restore_mustered_forces(lord) {
 	muster_lord_forces(lord)
 	for (let v of data.lords[lord].vassals)
 		if (is_vassal_mustered(v))
-			muster_vassal_forces(lord, v)
+			restore_vassal_forces(lord, v)
 }
 
 function can_action_tax() {
@@ -5632,7 +5570,6 @@ function can_action_sail() {
 		return false
 
 	// during Rasputitsa or Summer
-	let season = current_season()
 	if (is_winter())
 		return false
 
@@ -6022,10 +5959,6 @@ function start_storm() {
 // === BATTLE: RELIEF SALLY ===
 
 // NOTE: sallying attackers are flagged as besieged
-
-function is_lord_arrayed(lord) {
-	return game.battle.array.includes(lord)
-}
 
 function goto_relief_sally() {
 	set_active_attacker()
@@ -6600,9 +6533,9 @@ function goto_reposition_battle() {
 		slide_array(SA2, A2)
 		slide_array(SA3, A3)
 		// then D back to reserve
-		send_to_reserv(D1)
-		send_to_reserv(D2)
-		send_to_reserv(D3)
+		send_to_reserve(D1)
+		send_to_reserve(D2)
+		send_to_reserve(D3)
 		// then RD to D
 		slide_array(RD1, D1)
 		slide_array(RD2, D2)
@@ -6812,9 +6745,6 @@ states.reposition_storm = {
 const battle_defending_positions = [ D1, D2, D3, RD1, RD2, RD3 ]
 const battle_attacking_positions = [ A1, A2, A3, SA1, SA2, SA3 ]
 
-const storm_defending_positions = [ D2 ]
-const storm_attacking_positions = [ A2 ]
-
 const battle_steps = [
 	{ name: "Defending Archery", hits: count_archery_hits, xhits: count_archery_xhits, archery: 1 },
 	{ name: "Attacking Archery", hits: count_archery_hits, xhits: count_archery_xhits, archery: 1 },
@@ -6831,7 +6761,7 @@ const storm_steps = [
 	{ name: "Attacking Melee", hits: count_melee_hits, xhits: count_zero_hits, archery: 0 },
 ]
 
-function count_zero_hits(lord) {
+function count_zero_hits(_) {
 	return 0
 }
 
@@ -7097,9 +7027,6 @@ function unpack_group(g, offset) {
 		if ((g >> i) & 1)
 			list.push(i + offset)
 	return list
-}
-
-function round_hits(hits, xhits) {
 }
 
 function create_battle_group(list, targets) {
@@ -7397,7 +7324,7 @@ function goto_select_strike_group() {
 states.select_strike_group = {
 	prompt() {
 		view.prompt = `${format_strike_step()}: Select Striking Lord or Group.`
-		for (let [strikers, targets] of game.battle.groups) {
+		for (let [strikers] of game.battle.groups) {
 			for (let p of strikers)
 				gen_action_lord(game.battle.array[p])
 		}
@@ -7412,7 +7339,7 @@ states.select_strike_group = {
 }
 
 function select_strike_group(i) {
-	;[ game.battle.strikers, game.battle.targets, game.battle.hits, game.battle.xhits ] = game.battle.groups[i]
+	[ game.battle.strikers, game.battle.targets, game.battle.hits, game.battle.xhits ] = game.battle.groups[i]
 	array_remove(game.battle.groups, i)
 	goto_assign_hits()
 }
@@ -8109,7 +8036,7 @@ function can_retreat() {
 				return true
 	} else {
 		// Battle after Sally
-		for (let [to, way] of data.locales[game.battle.where].ways)
+		for (let to of data.locales[game.battle.where].adjacent)
 			if (can_retreat_to(to))
 				return true
 	}
@@ -8149,9 +8076,9 @@ states.retreat = {
 			}
 		} else {
 			// after Sally
-			for (let [to, way] of data.locales[game.battle.where].ways)
-			if (can_retreat_to(to))
-				gen_action_locale(to)
+			for (let to of data.locales[game.battle.where].adjacent)
+				if (can_retreat_to(to))
+					gen_action_locale(to)
 		}
 	},
 	locale(to) {
@@ -8254,7 +8181,7 @@ states.retreat_laden = {
 	loot(lord) {
 		spoil_loot(lord)
 	},
-	locale(to) {
+	locale(_) {
 		retreat_2()
 	},
 	retreat() {
@@ -8263,7 +8190,6 @@ states.retreat_laden = {
 }
 
 function retreat_2() {
-	let from = game.battle.where
 	let to = game.battle.retreat_to
 	let way = game.battle.retreat_way
 
@@ -9166,8 +9092,7 @@ function goto_end_campaign() {
 
 function count_vp1() {
 	let vp = 0
-	for (let loc of game.pieces.castles1)
-		vp += 2
+	vp += game.pieces.castles1.length << 1
 	for (let loc of game.pieces.conquered)
 		if (is_p2_locale(loc))
 			vp += data.locales[loc].vp << 1
@@ -9178,9 +9103,9 @@ function count_vp1() {
 }
 
 function count_vp2() {
-	let vp = game.pieces.veche_vp * 2
-	for (let loc of game.pieces.castles2)
-		vp += 2
+	let vp = 0
+	vp += game.pieces.veche_vp << 1
+	vp += game.pieces.castles2.length << 1
 	for (let loc of game.pieces.conquered)
 		if (is_p1_locale(loc))
 			vp += data.locales[loc].vp << 1
@@ -9233,16 +9158,14 @@ function flip_and_discard_half(lord, from_type, to_type) {
 
 states.plow_and_reap = {
 	prompt() {
-		let from_type, to_type
+		let from_type
 		let turn = current_turn()
 		if (turn === 2 || turn === 10) {
 			view.prompt = "Plow and Reap: Flip Carts to Sleds and discard half."
 			from_type = CART
-			to_type = SLED
 		} else {
 			view.prompt = "Plow and Reap: Flip Sleds to Carts and discard half."
 			from_type = SLED
-			to_type = CART
 		}
 		let done = true
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
@@ -9400,9 +9323,6 @@ function end_wastage() {
 }
 
 // === END CAMPAIGN: RESET (DISCARD ARTS OF WAR) ===
-
-function reset_serfs() {
-}
 
 function goto_reset() {
 	game.state = "reset"
@@ -9787,11 +9707,6 @@ exports.action = function (state, current, action, arg) {
 
 // === COMMON TEMPLATE ===
 
-function random(range) {
-	// https://www.ams.org/journals/mcom/1999-68-225/S0025-5718-99-00996-5/S0025-5718-99-00996-5.pdf
-	return (game.seed = (game.seed * 200105) % 34359738337) % range
-}
-
 // Packed array of small numbers in one word
 
 function pack1_get(word, n) {
@@ -9867,34 +9782,6 @@ function random(range) {
 	return (game.seed = (game.seed * 200105) % 34359738337) % range
 }
 
-function random_bigint(range) {
-	// Largest MLCG that will fit its state in a double.
-	// Uses BigInt for arithmetic, so is an order of magnitude slower.
-	// https://www.ams.org/journals/mcom/1999-68-225/S0025-5718-99-00996-5/S0025-5718-99-00996-5.pdf
-	// m = 2**53 - 111
-	return (game.seed = Number((BigInt(game.seed) * 5667072534355537n) % 9007199254740881n)) % range
-}
-
-function shuffle(list) {
-	// Fisher-Yates shuffle
-	for (let i = list.length - 1; i > 0; --i) {
-		let j = random(i + 1)
-		let tmp = list[j]
-		list[j] = list[i]
-		list[i] = tmp
-	}
-}
-
-function shuffle_bigint(list) {
-	// Fisher-Yates shuffle
-	for (let i = list.length - 1; i > 0; --i) {
-		let j = random_bigint(i + 1)
-		let tmp = list[j]
-		list[j] = list[i]
-		list[i] = tmp
-	}
-}
-
 // Fast deep copy for objects without cycles
 function object_copy(original) {
 	if (Array.isArray(original)) {
@@ -9960,10 +9847,6 @@ function array_insert_pair(array, index, key, value) {
 }
 
 // Set as plain sorted array
-
-function set_clear(set) {
-	set.length = 0
-}
 
 function set_has(set, item) {
 	let a = 0
@@ -10033,10 +9916,6 @@ function set_toggle(set, item) {
 }
 
 // Map as plain sorted array of key/value pairs
-
-function map_clear(map) {
-	map.length = 0
-}
 
 function map_has(map, key) {
 	let a = 0
