@@ -7,6 +7,10 @@
 // TODO: Lodya capability during supply!
 // TODO: 2nd edition supply rule - no reuse of transports
 
+// TODO: battle mat - optional - either mat in middle, or garrison + siegeworks display
+// TODO: array position - click on mat grid as well
+// TODO: battle event on lord mat (at top) - in client for Bridge and Field Organs
+
 // TODO: lift_siege / besieged needs checking!
 // TODO: remove_legate_if_endangered needs checking!
 // TODO: precompute distance to supply lines for faster supply path rejection
@@ -5168,40 +5172,116 @@ function list_supply_sources(ships) {
 	return sources
 }
 
+let _supply_stat = 0
+let _supply_stop = new Array(last_locale+1)
+let _supply_seen = new Array(last_locale+1)
+let _supply_reached = new Array(last_locale+1)
+
 function filter_reachable_supply_sources(sources, boats, carts, sleds) {
+	_supply_stat = 0
+	_supply_stop.fill(0)
+	_supply_reached.fill(0)
+
+	for (let here = 0; here <= last_locale; ++here) {
+		if (has_unbesieged_enemy_lord(here))
+			_supply_stop[here] = 1
+		else if (is_unbesieged_enemy_stronghold(here))
+			_supply_stop[here] = 1
+		else if (is_friendly_territory(here) && has_conquered_marker(here))
+			if (!has_siege_marker(here))
+				_supply_stop[here] = 1
+	}
+
+	switch (current_season()) {
+	case SUMMER:
+		_supply_seen.fill(0)
+		search_supply_reachable_summer(sources, get_lord_locale(game.command), boats, carts)
+		break
+	case EARLY_WINTER:
+	case LATE_WINTER:
+		search_supply_reachable_winter(get_lord_locale(game.command), sleds)
+		break
+	case RASPUTITSA:
+		search_supply_reachable_rasputitsa(get_lord_locale(game.command), boats)
+		break
+	}
+
 	let result = []
-	search_supply_reachable(result, [], sources, get_lord_locale(game.command), boats, carts, sleds)
+	for (let here of sources)
+		if (_supply_reached[here])
+			set_add(result, here)
+	console.log("SUPPLY SEARCH", _supply_stat, sources, result, _supply_reached.join(""))
 	return result
 }
 
-function search_supply_reachable(result, seen, sources, here, boats, carts, sleds) {
-	if (set_has(seen, here))
+function has_reached_all_supply_sources(sources) {
+	for (let loc of sources)
+		if (!_supply_reached[loc])
+			return false
+	return true
+}
+
+function search_supply_reachable_summer(sources, here, boats, carts) {
+	if (_supply_seen[here])
+		return
+	if (_supply_stop[here])
 		return
 
-	if (has_unbesieged_enemy_lord(here))
-		return
-	if (is_unbesieged_enemy_stronghold(here))
-		return
-	if (is_friendly_territory(here) && has_conquered_marker(here))
-		if (!has_siege_marker(here))
-			return
+	_supply_stat++
 
-	set_add(seen, here)
+	_supply_reached[here] = 1
 
-	if (set_has(sources, here))
-		set_add(result, here)
+	if (has_reached_all_supply_sources(sources))
+		return
+
+	_supply_seen[here] = 1
 
 	if (boats > 0)
 		for (let next of data.locales[here].adjacent_by_waterway)
-			search_supply_reachable(result, seen, sources, next, boats - 1, carts, sleds)
+			search_supply_reachable_summer(sources, next, boats - 1, carts)
 	if (carts > 0)
 		for (let next of data.locales[here].adjacent_by_trackway)
-			search_supply_reachable(result, seen, sources, next, boats, carts - 1, sleds)
-	if (sleds > 0)
-		for (let next of data.locales[here].adjacent)
-			search_supply_reachable(result, seen, sources, next, boats, carts, sleds - 1)
+			search_supply_reachable_summer(sources, next, boats, carts - 1)
 
-	set_delete(seen, here)
+	_supply_seen[here] = 0
+}
+
+function search_supply_reachable_winter(start, sleds) {
+	if (_supply_stop[start])
+		return
+	let queue = [[start, 0]]
+	_supply_reached[start] = 1
+	if (0 < sleds) {
+		while (queue.length > 0) {
+			let [ here, d ] = queue.shift()
+			for (let next of data.locales[here].adjacent) {
+				if (!_supply_reached[next] && !_supply_stop[next]) {
+					_supply_reached[next] = 1
+					if (d + 1 < sleds)
+						queue.push([ next, d + 1 ])
+				}
+			}
+		}
+	}
+}
+
+function search_supply_reachable_rasputitsa(start, boats) {
+	if (_supply_stop[start])
+		return
+	let queue = [[start, 0]]
+	_supply_reached[start] = 1
+	if (0 < boats) {
+		while (queue.length > 0) {
+			let [ here, d ] = queue.shift()
+			for (let next of data.locales[here].adjacent_by_waterway) {
+				if (!_supply_reached[next] && !_supply_stop[next]) {
+					_supply_reached[next] = 1
+					if (d + 1 < boats)
+						queue.push([ next, d + 1 ])
+				}
+			}
+		}
+	}
 }
 
 function filter_usable_supply_seats(reachable) {
