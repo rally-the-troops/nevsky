@@ -81,6 +81,10 @@ const scenario_last_turn = {
 	"Test": 2,
 }
 
+function should_remove_no_event_card() {
+	return game.scenario !== "Crusade on Novgorod"
+}
+
 // unit types
 const KNIGHTS = 0
 const SERGEANTS = 1
@@ -1872,7 +1876,7 @@ function setup_crusade_on_novgorod() {
 	muster_lord(LORD_GAVRILO, LOC_PSKOV, 4)
 	muster_lord(LORD_VLADISLAV, LOC_NEVA, 3)
 
-	setup_lord_on_calendar(LORD_ANDREAS, 1)
+	setup_lord_on_calendar(LORD_ANDREAS, 3)
 	setup_lord_on_calendar(LORD_HEINRICH, 1)
 	setup_lord_on_calendar(LORD_RUDOLF, 1)
 	setup_lord_on_calendar(LORD_DOMASH, 1)
@@ -3100,8 +3104,14 @@ states.levy_arts_of_war_first = {
 	discard() {
 		push_undo()
 		let c = game.what.shift()
-		discard_card(c)
-		logi(`C${c} - discarded`)
+
+		if (is_no_event_card(c) && should_remove_no_event_card()) {
+			logi(`C${c} - removed`)
+		} else {
+			discard_card(c)
+			logi(`C${c} - discarded`)
+		}
+
 		resume_levy_arts_of_war_first()
 	},
 }
@@ -5995,9 +6005,9 @@ function start_storm() {
 	else if (is_fort(here))
 		init_garrison(0, 1)
 	else if (is_bishopric(here))
-		init_garrison(1, 3)
-	else if (is_castle(here))
 		init_garrison(1, 2)
+	else if (is_castle(here))
+		init_garrison(1, 1)
 
 	// All lords must storm
 	for (let lord = first_lord; lord <= last_lord; ++lord) {
