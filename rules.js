@@ -3,6 +3,8 @@
 // TODO: lift_siege / besieged needs checking!
 // TODO: remove_legate_if_endangered needs checking!
 
+// TODO: clean up and use play_card/discard_card/remove_card helpers
+
 // TODO: hit remainders
 // TODO: choose crossbow/normal hit application order
 
@@ -2603,6 +2605,11 @@ states.russian_dietrich_von_gruningen = {
 
 // === EVENTS: HOLD ===
 
+function end_held_event() {
+	pop_state()
+	game.what = NOTHING
+}
+
 function prompt_held_event_lordship() {
 	for (let c of current_hand())
 		if (can_play_held_event_lordship(c))
@@ -2747,13 +2754,47 @@ states.pogost = {
 	},
 	lord(lord) {
 		add_lord_assets(lord, PROV, 4)
-		pop_state()
+		end_held_event()
 	},
 }
 
 function can_play_vodian_treachery() {
-	// TODO
+	if (is_fort(LOC_KAIBOLOVO) && is_teuton_closer_than_russian(LOC_KAIBOLOVO))
+		return true
+	if (is_fort(LOC_KOPORYE) && is_teuton_closer_than_russian(LOC_KOPORYE))
+		return true
 	return false
+}
+
+function is_teuton_closer_than_russian(where) {
+	return closest_to_locale(where, first_p1_lord, last_p1_lord) < closest_to_locale(where, first_p2_lord, last_p2_lord)
+}
+
+function closest_to_locale(where, first, last) {
+	let min = 100
+	for (let lord = first; lord <= last; ++lord) {
+		if (is_lord_on_map(lord)) {
+			let d = locale_distance(where, get_lord_locale(lord))
+			if (d < min)
+				min = d
+		}
+	}
+	return min
+}
+
+states.vodian_treachery = {
+	prompt() {
+		view.prompt = "Vodian Treachery: Conquer Fort."
+		if (is_fort(LOC_KAIBOLOVO) && is_teuton_closer_than_russian(LOC_KAIBOLOVO))
+			gen_action_locale(LOC_KAIBOLOVO)
+		if (is_fort(LOC_KOPORYE) && is_teuton_closer_than_russian(LOC_KOPORYE))
+			gen_action_locale(LOC_KOPORYE)
+	},
+	locale(loc) {
+		remove_all_siege_markers(loc)
+		add_conquered_marker(loc)
+		end_held_event()
+	},
 }
 
 function can_play_heinrich_sees_the_curia() {
@@ -2831,7 +2872,7 @@ function take_asset(type) {
 }
 
 function end_heinrich_sees_the_curia() {
-	pop_state()
+	end_held_event()
 	if (game.command === LORD_HEINRICH) {
 		spend_all_actions()
 		resume_actions()
@@ -2892,7 +2933,7 @@ function action_shift_cylinder_lord(lord) {
 function action_shift_cylinder_calendar(turn) {
 	set_lord_calendar(game.who, turn)
 	game.who = NOBODY
-	pop_state()
+	end_held_event()
 }
 
 states.tverdilo = {
@@ -8515,6 +8556,9 @@ states.feed = {
 
 		let done = true
 
+		if (is_campaign_phase())
+			prompt_held_event_campaign()
+
 		// Feed from own mat
 		if (done) {
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
@@ -8585,6 +8629,10 @@ states.feed = {
 	end_feed() {
 		end_feed()
 	},
+	card(c) {
+		push_undo()
+		action_held_event_campaign(c)
+	},
 }
 
 function resume_feed_lord_shared() {
@@ -8597,6 +8645,10 @@ function resume_feed_lord_shared() {
 states.feed_lord_shared = {
 	prompt() {
 		view.prompt = `Feed: You must Feed ${lord_name[game.who]} shared Loot or Provender.`
+
+		if (is_campaign_phase())
+			prompt_held_event_campaign()
+
 		let loc = get_lord_locale(game.who)
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 			if (get_lord_locale(lord) === loc) {
@@ -8620,6 +8672,10 @@ states.feed_lord_shared = {
 		add_lord_assets(lord, LOOT, -1)
 		feed_lord(game.who)
 		resume_feed_lord_shared()
+	},
+	card(c) {
+		push_undo()
+		action_held_event_campaign(c)
 	},
 }
 
@@ -8677,6 +8733,9 @@ states.pay = {
 			if (is_lord_on_map(lord) && can_pay_lord(lord))
 				if (lord !== game.who)
 					gen_action_lord(lord)
+
+		if (is_campaign_phase())
+			prompt_held_event_campaign()
 
 		if (game.who === NOBODY) {
 			view.prompt = "Pay: You may Pay your Lords."
@@ -8740,6 +8799,10 @@ states.pay = {
 	end_pay() {
 		push_undo_without_who()
 		end_pay()
+	},
+	card(c) {
+		push_undo()
+		action_held_event_campaign(c)
 	},
 }
 
