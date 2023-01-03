@@ -8354,9 +8354,10 @@ function action_losses(lord, type) {
 		if (game.active === game.battle.attacker)
 			target = 1
 	} else {
-		// Losers in a Battle roll vs 1 if they did not concede
+		// Losers in a Battle roll vs 1 if they did not concede (unless they Withdrew)
 		if (game.active === game.battle.loser && game.active !== game.battle.conceded)
-			target = 1
+			if (is_lord_unbesieged(lord))
+				target = 1
 	}
 
 	let die = roll_die()
