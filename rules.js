@@ -2605,6 +2605,17 @@ states.russian_dietrich_von_gruningen = {
 
 // === EVENTS: HOLD ===
 
+function play_held_event(c) {
+	log(`Played E${c}.`)
+	if (c >= first_p1_card && c <= last_p1_card_no_event) {
+		set_delete(game.hand1, c)
+		set_add(game.deck1, c)
+	} else {
+		set_delete(game.hand2, c)
+		set_add(game.deck2, c)
+	}
+}
+
 function end_held_event() {
 	pop_state()
 	game.what = NOTHING
@@ -2640,10 +2651,8 @@ function can_play_held_event_lordship(c) {
 }
 
 function action_held_event_lordship(c) {
-	log(`Played E${c}.`)
-	set_delete(current_hand(), c)
-	discard_card(c)
-	game.what = c
+	push_undo()
+	play_held_event(c)
 	game.count += 2
 }
 
@@ -2695,9 +2704,8 @@ function can_play_held_event_campaign(c) {
 }
 
 function action_held_event_levy(c) {
-	log(`Played E${c}.`)
-	set_delete(current_hand(), c)
-	discard_card(c)
+	push_undo()
+	play_held_event(c)
 	game.what = c
 	switch (c) {
 		case EVENT_TEUTONIC_TVERDILO:
@@ -2719,9 +2727,8 @@ function action_held_event_levy(c) {
 }
 
 function action_held_event_campaign(c) {
-	log(`Played E${c}.`)
-	set_delete(current_hand(), c)
-	discard_card(c)
+	push_undo()
+	play_held_event(c)
 	game.what = c
 	switch (c) {
 		case EVENT_TEUTONIC_HEINRICH_SEES_THE_CURIA:
@@ -3217,10 +3224,6 @@ states.levy_muster = {
 			view.actions.end_muster = 1
 		}
 	},
-	card(c) {
-		push_undo()
-		action_held_event_levy(c)
-	},
 	lord(lord) {
 		push_undo()
 		log_h3(`L${lord} at %${get_lord_locale(lord)}`)
@@ -3232,6 +3235,7 @@ states.levy_muster = {
 		clear_undo()
 		end_levy_muster()
 	},
+	card: action_held_event_levy,
 }
 
 function resume_levy_muster_lord() {
@@ -3620,6 +3624,8 @@ states.papal_legate_active = {
 
 		let here = game.pieces.legate
 
+		prompt_held_event_levy()
+
 		// Move to friendly locale
 		for (let loc = first_locale; loc <= last_locale; ++loc)
 			if (loc !== here && is_friendly_locale(loc))
@@ -3689,6 +3695,7 @@ states.papal_legate_active = {
 		clear_undo()
 		end_papal_legate()
 	},
+	card: action_held_event_levy,
 }
 
 states.papal_legate_done = {
@@ -3845,6 +3852,8 @@ states.novgorod_veche = {
 		view.prompt = "Novgorod Veche: You may take one action with the Veche."
 		view.actions.end_call_to_arms = 1
 
+		prompt_held_event_levy()
+
 		if (is_lord_ready(LORD_ALEKSANDR) || is_lord_ready(LORD_ANDREY)) {
 			if (game.pieces.veche_vp < 8)
 				view.actions.delay = 1
@@ -3902,6 +3911,7 @@ states.novgorod_veche = {
 		clear_undo()
 		end_levy_call_to_arms()
 	},
+	card: action_held_event_levy,
 }
 
 states.novgorod_veche_done = {
@@ -4327,11 +4337,6 @@ states.actions = {
 		}
 	},
 
-	card(c) {
-		push_undo()
-		action_held_event_campaign(c)
-	},
-
 	use_legate() {
 		push_undo()
 		log(`Used Legate for +1 Command.`)
@@ -4375,6 +4380,8 @@ states.actions = {
 		if (is_upper_lord(lord))
 			set_toggle(game.group, get_lower_lord(lord))
 	},
+
+	card: action_held_event_campaign,
 }
 
 // === ACTION: MARCH ===
@@ -6345,8 +6352,7 @@ states.defender_events = {
 
 function action_battle_events(c) {
 	game.what = c
-	set_delete(game.hand1, c)
-	set_delete(game.hand2, c)
+	set_delete(current_hand(), c)
 	set_add(game.events, c)
 	switch (c) {
 	case EVENT_TEUTONIC_HILL:
@@ -8629,10 +8635,7 @@ states.feed = {
 	end_feed() {
 		end_feed()
 	},
-	card(c) {
-		push_undo()
-		action_held_event_campaign(c)
-	},
+	card: action_held_event_campaign,
 }
 
 function resume_feed_lord_shared() {
@@ -8673,10 +8676,7 @@ states.feed_lord_shared = {
 		feed_lord(game.who)
 		resume_feed_lord_shared()
 	},
-	card(c) {
-		push_undo()
-		action_held_event_campaign(c)
-	},
+	card: action_held_event_campaign,
 }
 
 function end_feed() {
@@ -8800,10 +8800,7 @@ states.pay = {
 		push_undo_without_who()
 		end_pay()
 	},
-	card(c) {
-		push_undo()
-		action_held_event_campaign(c)
-	},
+	card: action_held_event_campaign,
 }
 
 function end_pay() {
