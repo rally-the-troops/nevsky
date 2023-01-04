@@ -2351,10 +2351,13 @@ function goto_teutonic_event_grand_prince() {
 states.grand_prince = {
 	prompt() {
 		view.prompt = "Grand Prince: On Calendar, shift Aleksandr or Andrey or furthest right service of either 2 boxes."
-		if (is_lord_on_calendar(LORD_ALEKSANDR))
+
+		if (is_lord_on_calendar(LORD_ALEKSANDR) && game.who !== LORD_ALEKSANDR)
 			gen_action_lord(LORD_ALEKSANDR)
-		if (is_lord_on_calendar(LORD_ANDREY))
+
+		if (is_lord_on_calendar(LORD_ANDREY) && game.who !== LORD_ANDREY)
 			gen_action_lord(LORD_ANDREY)
+
 		if (is_lord_on_map(LORD_ALEKSANDR) && is_lord_on_map(LORD_ANDREY)) {
 			let aleksandr = get_lord_service(LORD_ALEKSANDR)
 			let andrey = get_lord_service(LORD_ANDREY)
@@ -2362,7 +2365,12 @@ states.grand_prince = {
 				gen_action_service(LORD_ALEKSANDR)
 			if (andrey >= aleksandr)
 				gen_action_service(LORD_ANDREY)
+		} else if (is_lord_on_map(LORD_ALEKSANDR)) {
+			gen_action_service(LORD_ALEKSANDR)
+		} else if (is_lord_on_map(LORD_ANDREY)) {
+			gen_action_service(LORD_ANDREY)
 		}
+
 		if (game.who !== NOBODY) {
 			gen_action_calendar(get_lord_calendar(game.who) - 2)
 			gen_action_calendar(get_lord_calendar(game.who) + 2)
