@@ -1521,8 +1521,7 @@ function on_update() {
 		ui.calendar[i].classList.toggle("action", is_calendar_action(i))
 
 	// Misc
-	action_button("left", "Left")
-	action_button("right", "Right")
+	action_button("lordship", "Lordship")
 	action_button("march", "March")
 	action_button("avoid", "Avoid battle")
 	action_button("withdraw", "Withdraw")

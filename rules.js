@@ -2561,46 +2561,15 @@ function end_held_event() {
 	game.what = NOTHING
 }
 
-function prompt_held_event_lordship() {
-	for (let c of current_hand())
-		if (can_play_held_event_lordship(c))
-			gen_action_card(c)
-}
-
-function can_play_held_event_lordship(c) {
-	switch (c) {
-		case EVENT_TEUTONIC_TVERDILO:
-			return game.who === LORD_HERMANN || game.who === LORD_YAROSLAV
-		case EVENT_TEUTONIC_TEUTONIC_FERVOR:
-			return game.who === LORD_RUDOLF
-		case EVENT_TEUTONIC_DIETRICH_VON_GRUNINGEN:
-			return game.who === LORD_ANDREAS || game.who === LORD_RUDOLF
-		case EVENT_RUSSIAN_PRINCE_OF_POLOTSK:
-			return (
-				game.who === LORD_ALEKSANDR ||
-				game.who === LORD_ANDREY ||
-				game.who === LORD_DOMASH ||
-				game.who === LORD_GAVRILO ||
-				game.who === LORD_KARELIANS ||
-				game.who === LORD_VLADISLAV
-			)
-		case EVENT_RUSSIAN_PELGUI:
-			return game.who === LORD_VLADISLAV || game.who === LORD_KARELIANS
-	}
-	return false
-}
-
-function action_held_event_lordship(c) {
-	push_undo()
-	play_held_event(c)
-	game.count += 2
-}
-
-}
-
 function prompt_held_event() {
 	for (let c of current_hand())
 		if (can_play_held_event(c))
+			gen_action_card(c)
+}
+
+function prompt_held_event_lordship() {
+	for (let c of current_hand())
+		if (can_play_held_event(c) || can_play_held_event_lordship(c))
 			gen_action_card(c)
 }
 
@@ -2629,6 +2598,29 @@ function can_play_held_event(c) {
 			)
 		case EVENT_RUSSIAN_PELGUI:
 			return is_lord_on_calendar(LORD_VLADISLAV) || is_lord_on_calendar(LORD_KARELIANS)
+	}
+	return false
+}
+
+function can_play_held_event_lordship(c) {
+	switch (c) {
+		case EVENT_TEUTONIC_TVERDILO:
+			return game.who === LORD_HERMANN || game.who === LORD_YAROSLAV
+		case EVENT_TEUTONIC_TEUTONIC_FERVOR:
+			return game.who === LORD_RUDOLF
+		case EVENT_TEUTONIC_DIETRICH_VON_GRUNINGEN:
+			return game.who === LORD_ANDREAS || game.who === LORD_RUDOLF
+		case EVENT_RUSSIAN_PRINCE_OF_POLOTSK:
+			return (
+				game.who === LORD_ALEKSANDR ||
+				game.who === LORD_ANDREY ||
+				game.who === LORD_DOMASH ||
+				game.who === LORD_GAVRILO ||
+				game.who === LORD_KARELIANS ||
+				game.who === LORD_VLADISLAV
+			)
+		case EVENT_RUSSIAN_PELGUI:
+			return game.who === LORD_VLADISLAV || game.who === LORD_KARELIANS
 	}
 	return false
 }
@@ -2724,6 +2716,7 @@ states.vodian_treachery = {
 			gen_action_locale(LOC_KOPORYE)
 	},
 	locale(loc) {
+		log(`Conquered %${loc}.`)
 		remove_all_siege_markers(loc)
 		add_conquered_marker(loc)
 		end_held_event()
@@ -2814,6 +2807,30 @@ function end_heinrich_sees_the_curia() {
 
 // === EVENTS: HOLD - SHIFT CYLINDER ===
 
+function action_held_event_lordship(c) {
+	push_undo()
+	play_held_event(c)
+	if (can_play_held_event(c)) {
+		goto_held_event(c)
+		game.what = c
+	} else {
+		push_state("lordship")
+		game.what = c
+	}
+}
+
+states.lordship = {
+	prompt() {
+		view.prompt = `${data.cards[game.what].event}: Play for +2 Lordship.`
+		view.actions.lordship = 1
+	},
+	lordship() {
+		end_held_event()
+		log("+2 Lordship")
+		game.count += 2
+	}
+}
+
 function goto_held_event_tverdilo() {
 	push_state("tverdilo")
 	game.who = NOBODY
@@ -2840,19 +2857,35 @@ function goto_held_event_pelgui() {
 }
 
 function prompt_shift_cylinder(list, boxes) {
+
+	// HACK: look at parent state to see if this can be used as a +2 Lordship event
+	let lordship = NOBODY
+	let parent = game.stack[game.stack.length-1]
+	if (parent[0] === "levy_muster_lord")
+		lordship = parent[1]
+
 	let names
 	if (game.what === EVENT_RUSSIAN_PRINCE_OF_POLOTSK)
 		names = "a Russian Lord"
 	else
 		names = list.filter(lord => is_lord_on_calendar(lord)).map(lord => lord_name[lord]).join(" or ")
+
 	if (boxes === 1)
-		view.prompt = `${data.cards[game.what].event}: Shift ${names} 1 Calendar box.`
+		view.prompt = `${data.cards[game.what].event}: Shift ${names} 1 Calendar box`
 	else
-		view.prompt = `${data.cards[game.what].event}: Shift ${names} 2 Calendar boxes.`
+		view.prompt = `${data.cards[game.what].event}: Shift ${names} 2 Calendar boxes`
+
 	for (let lord of list) {
+		if (lord === lordship) {
+			view.prompt += " or +2 Lordship"
+			view.actions.lordship = 1
+		}
 		if (is_lord_on_calendar(lord) && lord !== game.who)
 			gen_action_lord(lord)
 	}
+
+	view.prompt += "."
+
 	if (game.who !== NOBODY) {
 		gen_action_calendar(get_lord_calendar(game.who) - boxes)
 		gen_action_calendar(get_lord_calendar(game.who) + boxes)
@@ -2869,22 +2902,31 @@ function action_shift_cylinder_calendar(turn) {
 	end_held_event()
 }
 
+function action_shift_cylinder_lordship() {
+	end_held_event()
+	log("+2 Lordship")
+	game.count += 2
+}
+
 states.tverdilo = {
 	prompt() { prompt_shift_cylinder([ LORD_HERMANN, LORD_YAROSLAV ], 2) },
 	lord: action_shift_cylinder_lord,
 	calendar: action_shift_cylinder_calendar,
+	lordship: action_shift_cylinder_lordship,
 }
 
 states.teutonic_fervor = {
 	prompt() { prompt_shift_cylinder([ LORD_RUDOLF ], 2) },
 	lord: action_shift_cylinder_lord,
 	calendar: action_shift_cylinder_calendar,
+	lordship: action_shift_cylinder_lordship,
 }
 
 states.teutonic_dietrich_von_gruningen = {
 	prompt() { prompt_shift_cylinder([ LORD_ANDREAS, LORD_RUDOLF ], 2) },
 	lord: action_shift_cylinder_lord,
 	calendar: action_shift_cylinder_calendar,
+	lordship: action_shift_cylinder_lordship,
 }
 
 states.prince_of_polotsk = {
@@ -2895,12 +2937,14 @@ states.prince_of_polotsk = {
 	},
 	lord: action_shift_cylinder_lord,
 	calendar: action_shift_cylinder_calendar,
+	lordship: action_shift_cylinder_lordship,
 }
 
 states.pelgui = {
 	prompt() { prompt_shift_cylinder([ LORD_VLADISLAV, LORD_KARELIANS ], 2) },
 	lord: action_shift_cylinder_lord,
 	calendar: action_shift_cylinder_calendar,
+	lordship: action_shift_cylinder_lordship,
 }
 
 // === CAPABILITIES ===
@@ -3232,10 +3276,7 @@ states.levy_muster_lord = {
 		view.actions.done = 1
 	},
 
-	card(c) {
-		push_undo()
-		action_held_event_lordship(c)
-	},
+	card: action_held_event_lordship,
 
 	lord(other) {
 		clear_undo()
