@@ -3458,6 +3458,8 @@ states.muster_capability = {
 		view.prompt = `Muster: Select a new capability for ${lord_name[game.who]}.`
 		view.arts_of_war = deck
 		for (let c of deck) {
+			if (is_no_event_card(c))
+				continue
 			if (!data.cards[c].lords || set_has(data.cards[c].lords, game.who)) {
 				if (data.cards[c].this_lord) {
 					if (!lord_already_has_capability(game.who, c))
