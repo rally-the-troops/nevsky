@@ -878,11 +878,11 @@ function is_no_event_card(c) {
 }
 
 function is_p1_card(c) {
-	return c <= last_p1_card_no_event
+	return c >= first_p1_card && c <= last_p1_card_no_event
 }
 
 function is_p2_card(c) {
-	return c >= first_p2_card
+	return c >= first_p2_card && c <= last_p2_card_no_event
 }
 
 function is_card_in_use(c) {
@@ -2550,11 +2550,10 @@ states.russian_dietrich_von_gruningen = {
 
 function play_held_event(c) {
 	log(`Played E${c}.`)
-	if (c >= first_p1_card && c <= last_p1_card_no_event) {
+	if (c >= first_p1_card && c <= last_p1_card_no_event)
 		set_delete(game.hand1, c)
-	} else {
+	else
 		set_delete(game.hand2, c)
-	}
 }
 
 function end_held_event() {
@@ -2597,20 +2596,22 @@ function action_held_event_lordship(c) {
 	game.count += 2
 }
 
-function prompt_held_event_levy() {
+}
+
+function prompt_held_event() {
 	for (let c of current_hand())
-		if (can_play_held_event_levy(c))
+		if (can_play_held_event(c))
 			gen_action_card(c)
 }
 
-function prompt_held_event_campaign() {
-	for (let c of current_hand())
-		if (can_play_held_event_campaign(c))
-			gen_action_card(c)
-}
-
-function can_play_held_event_levy(c) {
+function can_play_held_event(c) {
 	switch (c) {
+		case EVENT_TEUTONIC_HEINRICH_SEES_THE_CURIA:
+			return can_play_heinrich_sees_the_curia()
+		case EVENT_TEUTONIC_VODIAN_TREACHERY:
+			return can_play_vodian_treachery()
+		case EVENT_RUSSIAN_POGOST:
+			return can_play_pogost()
 		case EVENT_TEUTONIC_TVERDILO:
 			return is_lord_on_calendar(LORD_HERMANN) || is_lord_on_calendar(LORD_YAROSLAV)
 		case EVENT_TEUTONIC_TEUTONIC_FERVOR:
@@ -2632,23 +2633,24 @@ function can_play_held_event_levy(c) {
 	return false
 }
 
-function can_play_held_event_campaign(c) {
-	switch (c) {
-		case EVENT_TEUTONIC_HEINRICH_SEES_THE_CURIA:
-			return can_play_heinrich_sees_the_curia()
-		case EVENT_TEUTONIC_VODIAN_TREACHERY:
-			return can_play_vodian_treachery()
-		case EVENT_RUSSIAN_POGOST:
-			return can_play_pogost()
-	}
-	return false
-}
-
-function action_held_event_levy(c) {
+function action_held_event(c) {
 	push_undo()
 	play_held_event(c)
 	game.what = c
+	goto_held_event(c)
+}
+
+function goto_held_event(c) {
 	switch (c) {
+		case EVENT_TEUTONIC_HEINRICH_SEES_THE_CURIA:
+			push_state("heinrich_sees_the_curia")
+			break
+		case EVENT_TEUTONIC_VODIAN_TREACHERY:
+			push_state("vodian_treachery")
+			break
+		case EVENT_RUSSIAN_POGOST:
+			push_state("pogost")
+			break
 		case EVENT_TEUTONIC_TVERDILO:
 			goto_held_event_tverdilo()
 			break
@@ -2663,23 +2665,6 @@ function action_held_event_levy(c) {
 			break
 		case EVENT_RUSSIAN_PELGUI:
 			goto_held_event_pelgui()
-			break
-	}
-}
-
-function action_held_event_campaign(c) {
-	push_undo()
-	play_held_event(c)
-	game.what = c
-	switch (c) {
-		case EVENT_TEUTONIC_HEINRICH_SEES_THE_CURIA:
-			push_state("heinrich_sees_the_curia")
-			break
-		case EVENT_TEUTONIC_VODIAN_TREACHERY:
-			push_state("vodian_treachery")
-			break
-		case EVENT_RUSSIAN_POGOST:
-			push_state("pogost")
 			break
 	}
 }
@@ -3156,7 +3141,7 @@ states.levy_muster = {
 	prompt() {
 		view.prompt = "Levy: Muster with your Lords."
 
-		prompt_held_event_levy()
+		prompt_held_event()
 
 		let done = true
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
@@ -3183,7 +3168,7 @@ states.levy_muster = {
 		clear_undo()
 		end_levy_muster()
 	},
-	card: action_held_event_levy,
+	card: action_held_event,
 }
 
 function resume_levy_muster_lord() {
@@ -3567,7 +3552,7 @@ states.papal_legate_active = {
 
 		let here = game.pieces.legate
 
-		prompt_held_event_levy()
+		prompt_held_event()
 
 		// Move to friendly locale
 		for (let loc = first_locale; loc <= last_locale; ++loc)
@@ -3639,7 +3624,7 @@ states.papal_legate_active = {
 		clear_undo()
 		end_papal_legate()
 	},
-	card: action_held_event_levy,
+	card: action_held_event,
 }
 
 states.papal_legate_done = {
@@ -3796,7 +3781,7 @@ states.novgorod_veche = {
 		view.prompt = "Novgorod Veche: You may take one action with the Veche."
 		view.actions.end_call_to_arms = 1
 
-		prompt_held_event_levy()
+		prompt_held_event()
 
 		if (is_lord_ready(LORD_ALEKSANDR) || is_lord_ready(LORD_ANDREY)) {
 			if (game.pieces.veche_vp < 8)
@@ -3861,7 +3846,7 @@ states.novgorod_veche = {
 		clear_undo()
 		end_levy_call_to_arms()
 	},
-	card: action_held_event_levy,
+	card: action_held_event,
 }
 
 states.novgorod_veche_done = {
@@ -4228,7 +4213,7 @@ states.actions = {
 
 		let here = get_lord_locale(game.command)
 
-		prompt_held_event_campaign()
+		prompt_held_event()
 
 		// 4.3.2 Marshals MAY take other lords
 		if (is_marshal(game.command)) {
@@ -4332,7 +4317,7 @@ states.actions = {
 			set_toggle(game.group, get_lower_lord(lord))
 	},
 
-	card: action_held_event_campaign,
+	card: action_held_event,
 }
 
 // === ACTION: MARCH ===
@@ -8594,7 +8579,7 @@ states.feed = {
 		let done = true
 
 		if (is_campaign_phase())
-			prompt_held_event_campaign()
+			prompt_held_event()
 
 		// Feed from own mat
 		if (done) {
@@ -8666,7 +8651,7 @@ states.feed = {
 	end_feed() {
 		end_feed()
 	},
-	card: action_held_event_campaign,
+	card: action_held_event,
 }
 
 function resume_feed_lord_shared() {
@@ -8681,7 +8666,7 @@ states.feed_lord_shared = {
 		view.prompt = `Feed: You must Feed ${lord_name[game.who]} shared Loot or Provender.`
 
 		if (is_campaign_phase())
-			prompt_held_event_campaign()
+			prompt_held_event()
 
 		let loc = get_lord_locale(game.who)
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
@@ -8707,7 +8692,7 @@ states.feed_lord_shared = {
 		feed_lord(game.who)
 		resume_feed_lord_shared()
 	},
-	card: action_held_event_campaign,
+	card: action_held_event,
 }
 
 function end_feed() {
@@ -8766,7 +8751,7 @@ states.pay = {
 					gen_action_lord(lord)
 
 		if (is_campaign_phase())
-			prompt_held_event_campaign()
+			prompt_held_event()
 
 		if (game.who === NOBODY) {
 			view.prompt = "Pay: You may Pay your Lords."
@@ -8831,7 +8816,7 @@ states.pay = {
 		push_undo_without_who()
 		end_pay()
 	},
-	card: action_held_event_campaign,
+	card: action_held_event,
 }
 
 function end_pay() {
