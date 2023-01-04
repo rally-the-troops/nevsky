@@ -3817,19 +3817,19 @@ states.novgorod_veche = {
 
 		if (game.scenario === "Watland") {
 			log("Decline of Andrey: Added 2VP to Veche.")
-			view.actions.veche_vp += 2
+			game.pieces.veche_vp += 2
 		} else {
 			log("Added 1VP to Veche.")
-			view.actions.veche_vp += 1
+			game.pieces.veche_vp += 1
 		}
 
 		if (is_lord_ready(LORD_ALEKSANDR)) {
 			log(`Delayed L${LORD_ALEKSANDR}.`)
-			shift_lord_cylinder(LORD_ALEKSANDR, 1)
+			set_lord_calendar(LORD_ALEKSANDR, current_turn() + 1)
 		}
 		if (is_lord_ready(LORD_ANDREY)) {
 			log(`Delayed L${LORD_ANDREY}.`)
-			shift_lord_cylinder(LORD_ANDREY, 1)
+			set_lord_calendar(LORD_ANDREY, current_turn() + 1)
 		}
 	},
 	lord(lord) {
