@@ -1624,6 +1624,7 @@ exports.setup = function (seed, scenario, options) {
 			first_action: 0,
 			first_march: 0,
 			teutonic_raiders: 0,
+			famine: 0,
 		},
 
 		command: NOBODY,
@@ -4208,6 +4209,7 @@ function end_actions() {
 	game.flags.first_action = 0
 	game.flags.first_march = 0
 	game.flags.teutonic_raiders = 0
+	game.flags.famine = 0
 
 	goto_feed()
 }
@@ -5102,7 +5104,7 @@ function update_supply() {
 		ships = 2
 
 	if (is_famine_in_play())
-		seats = 1
+		seats = game.flags.famine ? 0 : 1
 
 	let sources = list_supply_sources(ships)
 	let reachable = filter_reachable_supply_sources(sources, boats, carts, sleds)
@@ -5323,6 +5325,10 @@ states.supply_source = {
 
 		if (game.supply.supply_seats.includes(source)) {
 			log(`Supplied from seat at %${source}.`)
+			if (is_famine_in_play()) {
+				log("Famine.")
+				game.flags.famine = 1
+			}
 			array_remove_item(game.supply.supply_seats, source)
 			game.supply.seats--
 		} else {
