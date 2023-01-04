@@ -3580,7 +3580,8 @@ states.papal_legate_active = {
 
 			// Seat of a Ready Lord without rolling
 			if (is_lord_ready(lord)) {
-				gen_action_lord(lord)
+				if (is_lord_seat(lord, here))
+					gen_action_lord(lord)
 			}
 
 			// Seat of a Lord on the Calendar
