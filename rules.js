@@ -594,7 +594,7 @@ function set_lord_locale(lord, locale) {
 }
 
 function shift_lord_cylinder(lord, dir) {
-	set_lord_locale(lord, get_lord_locale(lord) + dir)
+	set_lord_calendar(lord, get_lord_calendar(lord) + dir)
 }
 
 function set_lord_service(lord, service) {
@@ -5123,8 +5123,11 @@ function list_supply_sources(ships) {
 
 let _supply_stat = 0
 let _supply_stop = new Array(last_locale+1)
-let _supply_seen = new Array(last_locale+1)
 let _supply_reached = new Array(last_locale+1)
+
+let _supply_seen = new Array(last_locale+1)
+let _supply_boats = new Array(last_locale+1)
+let _supply_carts = new Array(last_locale+1)
 
 function filter_reachable_supply_sources(sources, boats, carts, sleds) {
 	_supply_stat = 0
@@ -5144,6 +5147,8 @@ function filter_reachable_supply_sources(sources, boats, carts, sleds) {
 	switch (current_season()) {
 		case SUMMER:
 			_supply_seen.fill(0)
+			_supply_boats.fill(0)
+			_supply_carts.fill(0)
 			search_supply_reachable_summer(sources, get_lord_locale(game.command), boats, carts)
 			break
 		case EARLY_WINTER:
