@@ -698,7 +698,7 @@ function get_shared_assets(loc, what) {
 	return n
 }
 
-function count_lord_forces(lord) {
+function count_lord_all_forces(lord) {
 	return (
 		get_lord_forces(lord, KNIGHTS) +
 		get_lord_forces(lord, SERGEANTS) +
@@ -811,7 +811,7 @@ function count_group_assets(type) {
 function count_group_forces(type) {
 	let n = 0
 	for (let lord of game.group)
-		n += count_lord_forces(lord, type)
+		n += get_lord_forces(lord, type)
 	return n
 }
 
@@ -4208,7 +4208,7 @@ function end_actions() {
 function this_lord_has_russian_druzhina() {
 	if (game.active === RUSSIANS)
 		if (lord_has_capability(game.command, AOW_RUSSIAN_DRUZHINA))
-			return count_lord_forces(game.command, KNIGHTS) > 0
+			return get_lord_forces(game.command, KNIGHTS) > 0
 	return false
 }
 
@@ -4423,12 +4423,12 @@ function march_with_group_1() {
 	let loot = count_group_assets(LOOT)
 
 	if (group_has_teutonic_converts() && prov <= transport * 2)
-		return march_with_group_2(false)
+		return march_with_group_2()
 
 	if (prov > transport || loot > 0)
 		game.state = "march_laden"
 	else
-		march_with_group_2(false)
+		march_with_group_2()
 }
 
 states.march_laden = {
@@ -8543,7 +8543,7 @@ function goto_feed() {
 	// Count how much food each lord needs
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 		if (get_lord_moved(lord)) {
-			if (count_lord_forces(lord) >= 7)
+			if (count_lord_all_forces(lord) >= 7)
 				set_lord_unfed(lord, 2)
 			else
 				set_lord_unfed(lord, 1)
