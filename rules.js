@@ -419,7 +419,7 @@ function current_season() {
 
 function is_winter() {
 	let season = current_season()
-	return season !== EARLY_WINTER && season !== LATE_WINTER
+	return season === EARLY_WINTER || season === LATE_WINTER
 }
 
 function is_summer() {
