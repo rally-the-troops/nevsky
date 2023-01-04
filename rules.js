@@ -2477,8 +2477,8 @@ states.osilian_revolt = {
 		// Note: Service only!
 		if (is_lord_on_map(LORD_ANDREAS))
 			gen_action_service(LORD_ANDREAS)
-		if (is_lord_on_map(LORD_RUDOLF))
-			gen_action_service(LORD_RUDOLF)
+		if (is_lord_on_map(LORD_HEINRICH))
+			gen_action_service(LORD_HEINRICH)
 		if (game.who !== NOBODY)
 			gen_action_calendar(get_lord_calendar(game.who) - 2)
 	},
