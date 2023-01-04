@@ -2463,6 +2463,7 @@ states.valdemar = {
 
 function goto_russian_event_osilian_revolt() {
 	if (is_lord_on_map(LORD_ANDREAS) || is_lord_on_map(LORD_HEINRICH)) {
+		set_active_enemy()
 		game.state = "osilian_revolt"
 		game.count = 2
 	} else {
@@ -2483,6 +2484,7 @@ states.osilian_revolt = {
 	},
 	service(lord) { game.who = lord },
 	calendar(turn) {
+		set_active_enemy()
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
 		end_immediate_event()
