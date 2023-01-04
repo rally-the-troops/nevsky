@@ -2104,13 +2104,18 @@ function action_torzhok(lord, asset) {
 
 states.torzhok = {
 	prompt() {
-		view.prompt = "Torzhok: Remove up to 3 Assets from Domash or up to 3 Coin from Veche."
 		if (game.count > 0) {
+			if (game.count === 3)
+				view.prompt = "Torzhok: Remove up to 3 Assets from Domash or up to 3 Coin from Veche."
 			if (game.count === 3 || game.who === NOBODY) {
+				if (game.count < 3)
+					view.prompt = `Torzhok: Remove up to ${game.count} Coin from Veche.`
 				if (game.pieces.veche_coin > 0)
 					view.actions.veche_coin = 1
 			}
 			if (game.count === 3 || game.who === LORD_DOMASH) {
+				if (game.count < 3)
+					view.prompt = `Torzhok: Remove up to ${game.count} Assets from Domash.`
 				if (get_lord_assets(LORD_DOMASH, PROV) > 0)
 					gen_action_prov(LORD_DOMASH)
 				if (get_lord_assets(LORD_DOMASH, COIN) > 0)
@@ -2126,6 +2131,8 @@ states.torzhok = {
 				if (get_lord_assets(LORD_DOMASH, SHIP) > 0)
 					gen_action_ship(LORD_DOMASH)
 			}
+		} else {
+			view.prompt = "Torzhok: All done."
 		}
 		view.actions.done = 1
 	},
@@ -2139,7 +2146,8 @@ states.torzhok = {
 	veche_coin() {
 		push_undo()
 		logi(`Removed Coin from Veche.`)
-		view.actions.veche_coin -= 1
+		game.pieces.veche_coin -= 1
+		game.who = NOBODY
 		game.count--
 	},
 	done() {
