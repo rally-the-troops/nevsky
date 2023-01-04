@@ -7634,7 +7634,8 @@ function action_assign_hits(lord, type) {
 		if (lord_has_capability(lord, AOW_TEUTONIC_HALBBRUDER))
 			protection += 1
 
-	if (evade > 0 && !game.battle.storm) {
+	// Evade only in Battle Melee steps
+	if (evade > 0 && !game.battle.storm && game.battle.step >= 2) {
 		let die = roll_die()
 		if (die <= evade) {
 			logi(`${FORCE_TYPE_NAME[type]} ${die} <= ${evade}`)
