@@ -6806,7 +6806,7 @@ function count_zero_hits(_) {
 
 function count_archery_xhits(lord) {
 	let xhits = 0
-	if (lord_has_capability(lord, AOW_TEUTONIC_BALISTARII))
+	if (lord_has_capability(lord, AOW_TEUTONIC_BALISTARII) || lord_has_capability(lord, AOW_RUSSIAN_STRELTSY))
 		xhits += get_lord_forces(lord, MEN_AT_ARMS)
 	if (is_hill_in_play())
 		return xhits << 1
