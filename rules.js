@@ -6953,7 +6953,7 @@ function has_no_unrouted_forces() {
 		if (is_friendly_lord(game.battle.array[p]))
 			return false
 	for (let lord of game.battle.reserves)
-		if (is_friendly_locale(lord))
+		if (is_friendly_lord(lord))
 			return false
 	if (game.battle.storm && game.active !== game.battle.attacker)
 		if (game.battle.garrison)
