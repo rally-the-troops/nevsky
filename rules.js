@@ -1478,17 +1478,6 @@ function restore_lord_forces(lord, type, count) {
 	return 0
 }
 
-function restore_vassal_forces(lord, vassal) {
-	let info = data.vassals[vassal]
-	restore_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
-	restore_lord_forces(lord, SERGEANTS, info.forces.sergeants | 0)
-	restore_lord_forces(lord, LIGHT_HORSE, info.forces.light_horse | 0)
-	restore_lord_forces(lord, ASIATIC_HORSE, info.forces.asiatic_horse | 0)
-	restore_lord_forces(lord, MEN_AT_ARMS, info.forces.men_at_arms | 0)
-	restore_lord_forces(lord, MILITIA, info.forces.militia | 0)
-	restore_lord_forces(lord, SERFS, info.forces.serfs | 0)
-}
-
 function muster_lord(lord, locale, service) {
 	let info = data.lords[lord]
 
@@ -5513,7 +5502,7 @@ function restore_mustered_forces(lord) {
 	muster_lord_forces(lord)
 	for (let v of data.lords[lord].vassals)
 		if (is_vassal_mustered(v))
-			restore_vassal_forces(lord, v)
+			muster_vassal_forces(lord, v)
 }
 
 function can_action_tax() {
