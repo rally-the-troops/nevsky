@@ -1532,6 +1532,9 @@ function disband_vassal(vassal) {
 	add_lord_forces(lord, SERFS, -(info.forces.serfs | 0))
 
 	game.pieces.vassals[vassal] = VASSAL_READY
+
+	if (!lord_has_unrouted_units(lord))
+		disband_lord(lord)
 }
 
 function muster_vassal(lord, vassal) {
