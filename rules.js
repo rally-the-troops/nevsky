@@ -83,7 +83,9 @@ const scenario_last_turn = {
 }
 
 function should_remove_no_event_card() {
-	return game.scenario !== "Crusade on Novgorod"
+	if (game.scenario === "Crusade on Novgorod")
+		return current_turn() >= 9
+	return true
 }
 
 // unit types
@@ -1675,6 +1677,10 @@ exports.setup = function (seed, scenario, options) {
 
 function setup_pleskau() {
 	game.turn = 1 << 1
+
+	// Remove all No Event cards in this scenario
+	game.no1 = 0
+	game.no2 = 0
 
 	game.pieces.veche_vp = 1
 
