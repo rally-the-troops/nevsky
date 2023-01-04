@@ -6783,11 +6783,13 @@ states.reposition_storm = {
 		log(`Swapped in L${lord}.`)
 		set_delete(game.battle.reserves, lord)
 		if (game.active === game.battle.attacker) {
-			set_add(game.battle.reserves, game.battle.array[A2])
+			if (game.battle.array[A2] !== NOBODY)
+				set_add(game.battle.reserves, game.battle.array[A2])
 			game.battle.array[A2] = lord
 		} else {
-			set_add(game.battle.reserves, game.battle.array[D2])
-			game.battle.array[A2] = lord
+			if (game.battle.array[D2] !== NOBODY)
+				set_add(game.battle.reserves, game.battle.array[D2])
+			game.battle.array[D2] = lord
 		}
 		end_reposition_storm()
 	},
