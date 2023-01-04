@@ -6337,7 +6337,8 @@ function can_play_battle_events() {
 	// Battle or Storm
 	if (game.active === TEUTONS) {
 		if (could_play_card(EVENT_TEUTONIC_FIELD_ORGAN))
-			return true
+			if (has_reserves())
+				return true
 	}
 
 	return false
