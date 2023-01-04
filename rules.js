@@ -2178,7 +2178,7 @@ states.tempest = {
 	ship(lord) {
 		logi(`Removed ships from L${lord}.`)
 		let n = 0
-		if (lord_has_capability(AOW_TEUTONIC_COGS))
+		if (lord_has_capability(lord, AOW_TEUTONIC_COGS))
 			n = Math.ceil(get_lord_assets(lord, SHIP) / 2)
 		set_lord_assets(lord, SHIP, n)
 		end_immediate_event()
