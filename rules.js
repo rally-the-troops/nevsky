@@ -5267,8 +5267,8 @@ function filter_reachable_supply_sources(sources, boats, carts, sleds) {
 	switch (current_season()) {
 		case SUMMER:
 			_supply_seen.fill(0)
-			_supply_boats.fill(0)
-			_supply_carts.fill(0)
+			_supply_boats.fill(-1)
+			_supply_carts.fill(-1)
 			search_supply_reachable_summer(get_lord_locale(game.command), boats, carts)
 			break
 		case EARLY_WINTER:
@@ -5284,13 +5284,12 @@ function filter_reachable_supply_sources(sources, boats, carts, sleds) {
 	for (let here of sources)
 		if (_supply_reached[here])
 			set_add(result, here)
-	console.log("SUPPLY SEARCH", _supply_stat, sources.join(","), result.join(","), _supply_reached.join(""))
+	console.log("SUPPLY SEARCH", _supply_stat, sources, result, _supply_reached.join(""))
 	return result
 }
 
 function search_supply_reachable_summer(here, boats, carts) {
 	// Been here before with same or more transports remaining
-	//if (_supply_boats[here] >= boats && _supply_carts[here] >= carts)
 	if (_supply_boats[here] >= boats && _supply_carts[here] >= carts)
 		return
 
