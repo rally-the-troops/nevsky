@@ -129,7 +129,7 @@ const RD2 = 10
 const RD3 = 11
 
 const battle_array_name = [
-	"A1", "A2", "A2",
+	"A1", "A2", "A3",
 	"D1", "D2", "D3",
 	"SA1", "SA2", "SA3",
 	"RD1", "RD2", "RD3",
@@ -6347,6 +6347,7 @@ states.array_defender_storm = {
 
 function goto_attacker_events() {
 	set_active_attacker()
+	log_br()
 	if (can_play_battle_events())
 		game.state = "attacker_events"
 	else
@@ -6359,6 +6360,7 @@ function end_attacker_events() {
 
 function goto_defender_events() {
 	set_active_defender()
+	log_br()
 	if (can_play_battle_events())
 		game.state = "defender_events"
 	else
@@ -6895,6 +6897,24 @@ states.reposition_storm = {
 
 // === BATTLE: TOTAL HITS ===
 
+function get_battle_array(pos) {
+	if (game.battle.ambush & 1)
+		if (pos === A1 || pos === A3 || pos === SA1 || pos === SA3)
+			return NOBODY
+	if (game.battle.ambush & 2)
+		if (pos === D1 || pos === D3 || pos === RD1 || pos === RD3)
+			return NOBODY
+	return game.battle.array[pos]
+}
+
+function filled(pos) {
+	return get_battle_array(pos) !== NOBODY
+}
+
+function empty(pos) {
+	return get_battle_array(pos) === NOBODY
+}
+
 const battle_defending_positions = [ D1, D2, D3, RD1, RD2, RD3 ]
 const battle_attacking_positions = [ A1, A2, A3, SA1, SA2, SA3 ]
 
@@ -7005,18 +7025,18 @@ function has_lord_strike(lord) {
 	return false
 }
 
-function has_center_strike(X2, Y2) {
-	return (
-		has_lord_strike(game.battle.array[X2]) ||
-		has_lord_strike(game.battle.array[Y2])
-	)
+function has_center_strike(AX, DX) {
+	if (game.active === game.battle.attacker)
+		return has_lord_strike(get_battle_array(AX))
+	else
+		return has_lord_strike(get_battle_array(DX))
 }
 
 function has_sa_strike() {
 	return (
-		has_lord_strike(game.battle.array[SA1]) ||
-		has_lord_strike(game.battle.array[SA2]) ||
-		has_lord_strike(game.battle.array[SA3])
+		has_lord_strike(get_battle_array(SA1)) ||
+		has_lord_strike(get_battle_array(SA2)) ||
+		has_lord_strike(get_battle_array(SA3))
 	)
 }
 
@@ -7103,24 +7123,24 @@ function has_no_unrouted_forces() {
 }
 
 function has_sa_without_rd() {
-	if (game.active === game.battle.attacker) {
-		let array = game.battle.array
-		if (array[SA1] !== NOBODY || array[SA2] !== NOBODY || array[SA3] !== NOBODY)
-			if (array[RD1] === NOBODY && array[RD2] === NOBODY && array[RD3] === NOBODY)
+	if (game.active === game.battle.attacker)
+		if (filled(SA1) || filled(SA2) || filled(SA3))
+			if (empty(RD1) && empty(RD2) && empty(RD3))
 				return true
-	}
 	return false
 }
 
 function select_lone_defender() {
-	let array = game.battle.array
-	if (array[D1] !== NOBODY && array[D2] === NOBODY && array[D3] === NOBODY)
+	let has_d1 = filled(D1)
+	let has_d2 = filled(D2)
+	let has_d3 = filled(D3)
+	if (has_d1 && !has_d2 && !has_d3)
 		return D1
-	if (array[D1] === NOBODY && array[D2] !== NOBODY && array[D3] === NOBODY)
+	if (!has_d1 && has_d2 && !has_d3)
 		return D2
-	if (array[D1] === NOBODY && array[D2] === NOBODY && array[D3] !== NOBODY)
+	if (!has_d1 && !has_d2 && has_d3)
 		return D3
-	if (array[D1] === NOBODY && array[D2] === NOBODY && array[D3] === NOBODY)
+	if (!has_d1 && !has_d2 && !has_d3)
 		return 0 // no target!
 	return -1 // choice of target
 }
@@ -7128,7 +7148,7 @@ function select_lone_defender() {
 function pack_battle_array_front() {
 	let x = 0
 	for (let i = 0; i < 6; ++i)
-		if (game.battle.array[i] >= 0)
+		if (filled(i))
 			x |= (1 << i)
 	return x
 }
@@ -7136,7 +7156,7 @@ function pack_battle_array_front() {
 function pack_battle_array_rear() {
 	let x = 0
 	for (let i = 0; i < 6; ++i)
-		if (game.battle.array[i+6] >= 0)
+		if (filled(i+6))
 			x |= (1 << i)
 	return x
 }
@@ -7377,11 +7397,11 @@ function goto_strike_choice() {
 }
 
 function prompt_strike_choice(X1, X2, X3, Y2) {
-	if (game.battle.array[X2] === NOBODY && game.battle.array[Y2] !== NOBODY) {
+	if (empty(X2) && filled(Y2)) {
 		view.who = game.battle.array[Y2]
-		if (game.battle.array[X1] !== NOBODY)
+		if (filled(X1))
 			gen_action_lord(game.battle.array[X1])
-		if (game.battle.array[X3] !== NOBODY)
+		if (filled(X3))
 			gen_action_lord(game.battle.array[X3])
 	}
 }
@@ -7409,17 +7429,13 @@ states.rear_strike_choice = {
 		view.prompt = `${format_strike_step()}: Strike who?`
 		if (has_sa_without_rd()) {
 			if (has_sa_strike()) {
-				let array = game.battle.array
 				view.group = []
-				if (array[SA1] !== NOBODY) view.group.push(SA1)
-				if (array[SA2] !== NOBODY) view.group.push(SA2)
-				if (array[SA3] !== NOBODY) view.group.push(SA3)
-				if (array[D1] !== NOBODY)
-					gen_action_lord(array[D1])
-				if (array[D2] !== NOBODY)
-					gen_action_lord(array[D2])
-				if (array[D3] !== NOBODY)
-					gen_action_lord(array[D3])
+				if (filled(SA1)) view.group.push(SA1)
+				if (filled(SA2)) view.group.push(SA2)
+				if (filled(SA3)) view.group.push(SA3)
+				if (filled(D1)) gen_action_lord(array[D1])
+				if (filled(D2)) gen_action_lord(array[D2])
+				if (filled(D3)) gen_action_lord(array[D3])
 			}
 		} else {
 			if (game.active === game.battle.attacker)
@@ -7530,10 +7546,10 @@ function has_unrouted_forces_in_target() {
 function is_flanked_target() {
 	if (game.battle.targets.length === 1) {
 		let pos = game.battle.targets[0]
-		let has_d1 = game.battle.array[D1] !== NOBODY && game.battle.array[A1] === NOBODY
-		let has_d2 = game.battle.array[D2] !== NOBODY && game.battle.array[A2] === NOBODY
-		let has_d3 = game.battle.array[D3] !== NOBODY && game.battle.array[A3] === NOBODY
-		let has_a2 = game.battle.array[A2] !== NOBODY
+		let has_d1 = filled(D1) && empty(A1)
+		let has_d2 = filled(D2) && empty(A2)
+		let has_d3 = filled(D3) && empty(A3)
+		let has_a2 = filled(A2)
 		switch (pos) {
 		case A1:
 			return has_d2 || (has_d3 && !has_a2)
@@ -7569,11 +7585,11 @@ function goto_assign_hits() {
 		console.log("SA without RD (getting hit)")
 		if (!is_flanked_target()) {
 			console.log("  unflanked, SA added to hit group")
-			if (game.battle.array[SA1] !== NOBODY)
+			if (filled(SA1))
 				game.battle.targets.push(SA1)
-			if (game.battle.array[SA2] !== NOBODY)
+			if (filled(SA2))
 				game.battle.targets.push(SA2)
-			if (game.battle.array[SA3] !== NOBODY)
+			if (filled(SA3))
 				game.battle.targets.push(SA3)
 		}
 	}
