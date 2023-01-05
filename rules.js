@@ -3805,7 +3805,7 @@ states.black_sea_trade = {
 }
 
 function goto_baltic_sea_trade() {
-	if (has_global_capability(AOW_RUSSIAN_BALTIC_SEA_TRADE)) {
+	if (!is_winter() && has_global_capability(AOW_RUSSIAN_BALTIC_SEA_TRADE)) {
 		if (!has_conquered_marker(LOC_NOVGOROD) && !has_conquered_marker(LOC_NEVA)) {
 			if (count_all_teutonic_ships() <= count_all_russian_ships()) {
 				if (game.pieces.veche_coin < 8) {
