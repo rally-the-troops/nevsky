@@ -1,16 +1,18 @@
 "use strict"
 
-// TODO: hit overflow
-// TODO: Ambush
+// TODO: Strike hit overflow
+// TODO: Ambush - march
+// TODO: Ambush - battle
+// TODO: Ransom - sack
+// TODO: Ransom - battle
+
 // TODO: Bridge - kn, sgt, 1x lh, maa, militia, serf, lh, ah
 // TODO: Lodya capability during supply!
 // TODO: 2nd edition supply rule - no reuse of transports
-// TODO: optimize summer supply search algorithm! (not brute force)
 
-// FIXME: lift_siege / besieged needs checking!
+// FIXME: lift_sieges / besieged needs checking!
 // FIXME: remove_legate_if_endangered needs checking!
 
-// GUI: show command lord different from selected lord (inactive player)
 // GUI: show siegeworks + walls on battle mat for protection indication
 // GUI: show feed x2 on lord mats with > 6 units
 // GUI: battle mat - optional - either mat in middle, or garrison + siegeworks display
@@ -24,6 +26,7 @@
 // Optimize lift_sieges (only check specific locales based on where the check is)
 // Use game.levy or game.command instead of game.who for levy (like game.command for campaign)
 // Clean up game.who (use only in muster / events, not for command)
+// drop game.who from push_state
 
 const data = require("./data.js")
 
