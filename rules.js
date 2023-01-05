@@ -9,7 +9,6 @@
 
 // FIXME: lift_siege / besieged needs checking!
 // FIXME: remove_legate_if_endangered needs checking!
-// FIXME: verify card deck is emptied and refilled as cards move around
 
 // GUI: show command lord different from selected lord (inactive player)
 // GUI: show siegeworks + walls on battle mat for protection indication
@@ -1899,6 +1898,7 @@ function setup_pleskau_quickstart() {
 
 function setup_test() {
 	setup_crusade_on_novgorod()
+	muster_lord(LORD_HEINRICH, LOC_WESENBERG)
 	for (let c = first_p1_card; c <= last_p1_card; ++c)
 		if (data.cards[c].when === "hold")
 			game.hand1.push(c)
@@ -2815,9 +2815,16 @@ function take_asset(type) {
 
 function end_heinrich_sees_the_curia() {
 	end_held_event()
-	if (game.command === LORD_HEINRICH) {
+
+	// No more actions if Heinrich is current command card
+	if (game.state === "actions" && game.command === LORD_HEINRICH) {
 		spend_all_actions()
 		resume_actions()
+	}
+
+	// No more muster of Heinrich
+	if (game.state === "levy_muster_lord" && game.who === LORD_HEINRICH) {
+		game.count = 0
 	}
 }
 
@@ -8638,8 +8645,7 @@ states.feed = {
 
 		let done = true
 
-		if (is_campaign_phase())
-			prompt_held_event()
+		prompt_held_event()
 
 		// Feed from own mat
 		if (done) {
@@ -8724,10 +8730,6 @@ function resume_feed_lord_shared() {
 states.feed_lord_shared = {
 	prompt() {
 		view.prompt = `Feed: You must Feed ${lord_name[game.who]} shared Loot or Provender.`
-
-		if (is_campaign_phase())
-			prompt_held_event()
-
 		let loc = get_lord_locale(game.who)
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 			if (get_lord_locale(lord) === loc) {
@@ -8752,7 +8754,6 @@ states.feed_lord_shared = {
 		feed_lord(game.who)
 		resume_feed_lord_shared()
 	},
-	card: action_held_event,
 }
 
 function end_feed() {
@@ -8810,8 +8811,7 @@ states.pay = {
 				if (lord !== game.who)
 					gen_action_lord(lord)
 
-		if (is_campaign_phase())
-			prompt_held_event()
+		prompt_held_event()
 
 		if (game.who === NOBODY) {
 			view.prompt = "Pay: You may Pay your Lords."
