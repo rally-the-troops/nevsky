@@ -1,7 +1,6 @@
 "use strict"
 
 // TODO: Strike hit overflow
-// TODO: Ambush - march
 // TODO: Ambush - battle
 // TODO: Ransom - sack
 // TODO: Ransom - battle
@@ -4663,7 +4662,7 @@ function select_all_lords(here) {
 function goto_avoid_battle() {
 	clear_undo()
 	set_active_enemy()
-	game.stack = game.group // XXX
+	game.march.group = game.group // save group
 	game.state = "avoid_battle"
 	game.spoils = 0
 	resume_avoid_battle()
@@ -4708,6 +4707,15 @@ states.avoid_battle = {
 	},
 	locale(to) {
 		push_undo()
+
+		// Save Assets and Lords in case Ambush cancels Avoid Battle.
+		if (!game.march.ambush_lords) {
+			if (could_enemy_play_ambush()) {
+				game.march.ambush_lords = []
+				game.march.ambush_assets = game.pieces.assets.slice()
+			}
+		}
+
 		let from = get_lord_locale(game.command)
 		let ways = list_ways(from, to)
 		if (ways.length > 2) {
@@ -4806,6 +4814,7 @@ function avoid_battle_2() {
 		log(`Avoided Battle to %${to}.`)
 
 	for (let lord of game.group) {
+		game.march.ambush_lords.push(lord)
 		set_lord_locale(lord, to)
 		set_lord_moved(lord, 1)
 	}
@@ -4816,13 +4825,66 @@ function avoid_battle_2() {
 }
 
 function end_avoid_battle() {
-	game.group = game.stack // XXX
-	goto_march_withdraw()
+	game.group = game.march.group // restore group
+	game.march.group = 0
+	goto_march_ambush()
 }
 
 // === ACTION: MARCH - AMBUSH ===
 
-// TODO - ambush cancels avoid battle
+function could_enemy_play_ambush() {
+	if (game.active === TEUTONS)
+		return could_play_card(EVENT_RUSSIAN_AMBUSH)
+	else
+		return could_play_card(EVENT_TEUTONIC_AMBUSH)
+}
+
+function goto_march_ambush() {
+	if (game.march.ambush_lords && game.march.ambush_lords.length > 0) {
+		clear_undo()
+		set_active_enemy()
+		game.state = "march_ambush"
+	} else {
+		// TODO: clear_undo here too?
+		goto_march_withdraw()
+	}
+}
+
+states.march_ambush = {
+	prompt() {
+		view.prompt = "Avoid Battle: You may play Ambush if you have it."
+		if (has_card_in_hand(EVENT_TEUTONIC_AMBUSH))
+			gen_action_card(EVENT_TEUTONIC_AMBUSH)
+		if (has_card_in_hand(EVENT_RUSSIAN_AMBUSH))
+			gen_action_card(EVENT_RUSSIAN_AMBUSH)
+		view.actions.pass = 1
+	},
+	card(c) {
+		set_active_enemy()
+		play_held_event(c)
+
+		// Restore assets and spoils
+		game.pieces.assets = game.march.ambush_assets
+		game.spoils = 0
+
+		// Restore lords who avoided
+		for (let lord of game.march.ambush_lords) {
+			console.log("lord", lord, game.march.to)
+			set_lord_locale(lord, game.march.to)
+			set_lord_moved(lord, 0)
+		}
+
+		game.march.ambush_lords = 0
+		game.march.ambush_assets = 0
+		goto_march_withdraw()
+	},
+	pass() {
+		set_active_enemy()
+		game.march.ambush_lords = 0
+		game.march.ambush_assets = 0
+		goto_march_withdraw()
+	},
+}
 
 // === ACTION: MARCH - WITHDRAW ===
 
