@@ -5987,6 +5987,7 @@ function init_battle(here, is_storm, is_sally) {
 		sally: is_sally,
 		relief: 0,
 		attacker: game.active,
+		ambush: 0,
 		conceded: 0,
 		loser: 0,
 		array: [
@@ -6513,16 +6514,22 @@ function action_battle_events(c) {
 	set_delete(current_hand(), c)
 	set_add(game.events, c)
 	switch (c) {
-		case EVENT_TEUTONIC_AMBUSH:
 		case EVENT_TEUTONIC_HILL:
 		case EVENT_TEUTONIC_MARSH:
-		case EVENT_RUSSIAN_AMBUSH:
 		case EVENT_RUSSIAN_HILL:
 		case EVENT_RUSSIAN_MARSH:
 		case EVENT_RUSSIAN_RAVENS_ROCK:
 			// nothing more needs to be done for these
 			log(`Played E${c}.`)
 			resume_battle_events()
+			break
+		case EVENT_TEUTONIC_AMBUSH:
+		case EVENT_RUSSIAN_AMBUSH:
+			log(`Played E${c}.`)
+			if (game.active === game.battle.attacker)
+				game.battle.ambush |= 2
+			else
+				game.battle.ambush |= 1
 			break
 		case EVENT_TEUTONIC_BRIDGE:
 		case EVENT_RUSSIAN_BRIDGE:
@@ -7113,7 +7120,9 @@ function select_lone_defender() {
 		return D2
 	if (array[D1] === NOBODY && array[D2] === NOBODY && array[D3] !== NOBODY)
 		return D3
-	return -1
+	if (array[D1] === NOBODY && array[D2] === NOBODY && array[D3] === NOBODY)
+		return 0 // no target!
+	return -1 // choice of target
 }
 
 function pack_battle_array_front() {
@@ -7132,43 +7141,9 @@ function pack_battle_array_rear() {
 	return x
 }
 
-function clear_attacker_flank_bits(x, a, b) {
-	return x & ~(1<<A1) & ~(1<<A3)
-}
-
-function clear_defender_flank_bits(x, a, b) {
-	return x & ~(1<<D1) & ~(1<<D3)
-}
-
-function is_attacker_ambushed() {
-	if (game.battle.round === 1) {
-		if (game.battle.attacker === TEUTONS)
-			return is_event_in_play(EVENT_RUSSIAN_AMBUSH)
-		else
-			return is_event_in_play(EVENT_TEUTONIC_AMBUSH)
-	}
-	return false
-}
-
-function is_defender_ambushed() {
-	if (game.battle.round === 1) {
-		if (game.battle.attacker !== TEUTONS)
-			return is_event_in_play(EVENT_RUSSIAN_AMBUSH)
-		else
-			return is_event_in_play(EVENT_TEUTONIC_AMBUSH)
-	}
-	return false
-}
-
 function front_strike_choice() {
 	let s = game.battle.step & 1
 	let x = pack_battle_array_front()
-
-	if (is_attacker_ambushed())
-		x = clear_attacker_flank_bits(x)
-	if (is_defender_ambushed())
-		x = clear_defender_flank_bits(x)
-
 	if (GROUPS[s][1][x] !== 0) {
 		// Choice only matters if the center Lord has strikes this step
 		if (has_center_strike(A2, D2))
@@ -7182,7 +7157,6 @@ function front_strike_choice() {
 
 function rear_strike_choice() {
 	if (has_sa_without_rd()) {
-		// TODO: ambush!
 		if (has_sa_strike())
 			game.battle.rc = select_lone_defender()
 		else
@@ -7190,12 +7164,6 @@ function rear_strike_choice() {
 	} else {
 		let s = game.battle.step & 1
 		let x = pack_battle_array_rear()
-
-		if (is_attacker_ambushed())
-			x = clear_attacker_flank_bits(x)
-		if (is_defender_ambushed())
-			x = clear_defender_flank_bits(x)
-
 		if (GROUPS[s][1][x] !== 0) {
 			// Choice only matters if the center Lord has strikes this step
 			if (has_center_strike(SA2, RD2))
@@ -7442,7 +7410,10 @@ states.rear_strike_choice = {
 		if (has_sa_without_rd()) {
 			if (has_sa_strike()) {
 				let array = game.battle.array
-				view.group = [ array[SA1], array[SA2], array[SA3] ]
+				view.group = []
+				if (array[SA1] !== NOBODY) view.group.push(SA1)
+				if (array[SA2] !== NOBODY) view.group.push(SA2)
+				if (array[SA3] !== NOBODY) view.group.push(SA3)
 				if (array[D1] !== NOBODY)
 					gen_action_lord(array[D1])
 				if (array[D2] !== NOBODY)
@@ -7483,10 +7454,12 @@ function end_strike_choice() {
 	game.battle.groups = []
 
 	create_battle_groups_from_array(GROUPS[s][game.battle.fc][front], 0)
-	if (has_sa_without_rd())
-		create_battle_group([ SA1, SA2, SA3 ], [ game.battle.rc ])
-	else
+	if (has_sa_without_rd()) {
+		if (game.battle.rc === D1 || game.battle.rc === D2 || game.battle.rc === D3)
+			create_battle_group([ SA1, SA2, SA3 ], [ game.battle.rc ])
+	} else {
 		create_battle_groups_from_array(GROUPS[s][game.battle.rc][rear], 6)
+	}
 
 	if (game.active === game.battle.conceded)
 		log("Pursuit halved hits")
@@ -7983,6 +7956,8 @@ function end_battle_round() {
 	}
 
 	game.battle.round ++
+
+	game.battle.ambush = 0
 
 	if (game.battle.storm) {
 		if (game.battle.round > count_siege_markers(game.battle.where)) {
