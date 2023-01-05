@@ -6390,6 +6390,13 @@ function could_play_card(c) {
 	return true
 }
 
+function has_lords_in_battle() {
+	for (let p = 0; p < 12; ++p)
+		if (is_friendly_lord(game.battle.array[p]))
+			return true
+	return has_reserves()
+}
+
 function can_play_battle_events() {
 	if (!game.battle.storm) {
 		if (game.active === TEUTONS) {
@@ -6429,7 +6436,7 @@ function can_play_battle_events() {
 	// Battle or Storm
 	if (game.active === TEUTONS) {
 		if (could_play_card(EVENT_TEUTONIC_FIELD_ORGAN))
-			if (has_reserves())
+			if (has_lords_in_battle())
 				return true
 	}
 
@@ -6444,7 +6451,8 @@ function prompt_battle_events() {
 			if (!is_winter())
 				gen_action_card_if_held(EVENT_TEUTONIC_BRIDGE)
 		}
-		gen_action_card_if_held(EVENT_TEUTONIC_FIELD_ORGAN)
+		if (has_lords_in_battle())
+			gen_action_card_if_held(EVENT_TEUTONIC_FIELD_ORGAN)
 	}
 
 	if (game.active === RUSSIANS) {
