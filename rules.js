@@ -8053,8 +8053,14 @@ function goto_sack() {
 	add_conquered_marker(game.battle.where)
 	remove_walls(game.battle.where)
 
-	if (here === LOC_NOVGOROD)
+	if (here === LOC_NOVGOROD) {
+		if (game.pieces.veche_coin > 0) {
+			add_spoils(COIN, game.pieces.veche_coin)
+			log(`Awarded ${game.pieces.veche_coin} Coin from Veche.`)
+			game.pieces.veche_coin = 0
+		}
 		award_spoils(3)
+	}
 	else if (is_city(here))
 		award_spoils(2)
 	else if (is_fort(here))
