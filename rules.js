@@ -5194,12 +5194,16 @@ function filter_reachable_supply_sources(sources, boats, carts, sleds) {
 				_supply_stop[here] = 1
 	}
 
+	// NOTE: Impossible situation
+	if (_supply_stop[get_lord_locale(game.command)])
+		return []
+
 	switch (current_season()) {
 		case SUMMER:
 			_supply_seen.fill(0)
 			_supply_boats.fill(0)
 			_supply_carts.fill(0)
-			search_supply_reachable_summer(sources, get_lord_locale(game.command), boats, carts)
+			search_supply_reachable_summer(get_lord_locale(game.command), boats, carts)
 			break
 		case EARLY_WINTER:
 		case LATE_WINTER:
@@ -5214,55 +5218,50 @@ function filter_reachable_supply_sources(sources, boats, carts, sleds) {
 	for (let here of sources)
 		if (_supply_reached[here])
 			set_add(result, here)
-	console.log("SUPPLY SEARCH", _supply_stat, sources, result, _supply_reached.join(""))
+	console.log("SUPPLY SEARCH", _supply_stat, sources.join(","), result.join(","), _supply_reached.join(""))
 	return result
 }
 
-function has_reached_all_supply_sources(sources) {
-	for (let loc of sources)
-		if (!_supply_reached[loc])
-			return false
-	return true
-}
-
-function search_supply_reachable_summer(sources, here, boats, carts) {
-	if (_supply_seen[here])
-		return
-	if (_supply_stop[here])
+function search_supply_reachable_summer(here, boats, carts) {
+	// Been here before with same or more transports remaining
+	//if (_supply_boats[here] >= boats && _supply_carts[here] >= carts)
+	if (_supply_boats[here] >= boats && _supply_carts[here] >= carts)
 		return
 
-	_supply_stat++
+	// First time here with this many transports remaining
+	if (_supply_boats[here] <= boats && _supply_carts[here] <= carts) {
+		_supply_boats[here] = boats
+		_supply_carts[here] = carts
+	}
 
 	_supply_reached[here] = 1
 
-	if (has_reached_all_supply_sources(sources))
-		return
-
+	_supply_stat++
 	_supply_seen[here] = 1
-
 	if (boats > 0)
 		for (let next of data.locales[here].adjacent_by_waterway)
-			search_supply_reachable_summer(sources, next, boats - 1, carts)
+			if (!_supply_seen[next] && !_supply_stop[next])
+				search_supply_reachable_summer(next, boats - 1, carts)
 	if (carts > 0)
 		for (let next of data.locales[here].adjacent_by_trackway)
-			search_supply_reachable_summer(sources, next, boats, carts - 1)
-
+			if (!_supply_seen[next] && !_supply_stop[next])
+				search_supply_reachable_summer(next, boats, carts - 1)
 	_supply_seen[here] = 0
 }
 
 function search_supply_reachable_winter(start, sleds) {
-	if (_supply_stop[start])
-		return
-	let queue = [[start, 0]]
 	_supply_reached[start] = 1
 	if (0 < sleds) {
+		let queue = [ start ]
 		while (queue.length > 0) {
-			let [ here, d ] = queue.shift()
+			let item = queue.shift()
+			let here = item & 63
+			let used = item >> 6
 			for (let next of data.locales[here].adjacent) {
 				if (!_supply_reached[next] && !_supply_stop[next]) {
 					_supply_reached[next] = 1
-					if (d + 1 < sleds)
-						queue.push([ next, d + 1 ])
+					if (used + 1 < sleds)
+						queue.push(next | ((used + 1) << 6))
 				}
 			}
 		}
@@ -5270,18 +5269,18 @@ function search_supply_reachable_winter(start, sleds) {
 }
 
 function search_supply_reachable_rasputitsa(start, boats) {
-	if (_supply_stop[start])
-		return
-	let queue = [[start, 0]]
 	_supply_reached[start] = 1
 	if (0 < boats) {
+		let queue = [ start ]
 		while (queue.length > 0) {
-			let [ here, d ] = queue.shift()
+			let item = queue.shift()
+			let here = item & 63
+			let used = item >> 6
 			for (let next of data.locales[here].adjacent_by_waterway) {
 				if (!_supply_reached[next] && !_supply_stop[next]) {
 					_supply_reached[next] = 1
-					if (d + 1 < boats)
-						queue.push([ next, d + 1 ])
+					if (used + 1 < boats)
+						queue.push(next | ((used + 1) << 6))
 				}
 			}
 		}
