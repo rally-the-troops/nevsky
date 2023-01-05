@@ -12,6 +12,7 @@
 // FIXME: lift_sieges / besieged needs checking!
 // FIXME: remove_legate_if_endangered needs checking!
 
+// GUI: show sally/relief sally as unbesieged on map
 // GUI: show siegeworks + walls on battle mat for protection indication
 // GUI: show feed x2 on lord mats with > 6 units
 // GUI: battle mat - optional - either mat in middle, or garrison + siegeworks display
@@ -6392,6 +6393,8 @@ function could_play_card(c) {
 function can_play_battle_events() {
 	if (!game.battle.storm) {
 		if (game.active === TEUTONS) {
+			if (could_play_card(EVENT_TEUTONIC_AMBUSH))
+				return true
 			if (game.active !== game.battle.attacker) {
 				if (could_play_card(EVENT_TEUTONIC_HILL))
 					return true
@@ -6405,6 +6408,8 @@ function can_play_battle_events() {
 		}
 
 		if (game.active === RUSSIANS) {
+			if (could_play_card(EVENT_RUSSIAN_AMBUSH))
+				return true
 			if (game.active !== game.battle.attacker) {
 				if (could_play_card(EVENT_RUSSIAN_HILL))
 					return true
@@ -6435,6 +6440,7 @@ function prompt_battle_events() {
 	// both attacker and defender events
 	if (game.active === TEUTONS) {
 		if (!game.battle.storm) {
+			gen_action_card_if_held(EVENT_TEUTONIC_AMBUSH)
 			if (!is_winter())
 				gen_action_card_if_held(EVENT_TEUTONIC_BRIDGE)
 		}
@@ -6443,6 +6449,7 @@ function prompt_battle_events() {
 
 	if (game.active === RUSSIANS) {
 		if (!game.battle.storm) {
+			gen_action_card_if_held(EVENT_RUSSIAN_AMBUSH)
 			if (!is_winter())
 				gen_action_card_if_held(EVENT_RUSSIAN_BRIDGE)
 			if (is_summer())
@@ -6498,8 +6505,10 @@ function action_battle_events(c) {
 	set_delete(current_hand(), c)
 	set_add(game.events, c)
 	switch (c) {
+		case EVENT_TEUTONIC_AMBUSH:
 		case EVENT_TEUTONIC_HILL:
 		case EVENT_TEUTONIC_MARSH:
+		case EVENT_RUSSIAN_AMBUSH:
 		case EVENT_RUSSIAN_HILL:
 		case EVENT_RUSSIAN_MARSH:
 		case EVENT_RUSSIAN_RAVENS_ROCK:
@@ -7115,10 +7124,44 @@ function pack_battle_array_rear() {
 	return x
 }
 
+function clear_attacker_flank_bits(x, a, b) {
+	return x & ~(1<<A1) & ~(1<<A3)
+}
+
+function clear_defender_flank_bits(x, a, b) {
+	return x & ~(1<<D1) & ~(1<<D3)
+}
+
+function is_attacker_ambushed() {
+	if (game.battle.round === 1) {
+		if (game.battle.attacker === TEUTONS)
+			return is_event_in_play(EVENT_RUSSIAN_AMBUSH)
+		else
+			return is_event_in_play(EVENT_TEUTONIC_AMBUSH)
+	}
+	return false
+}
+
+function is_defender_ambushed() {
+	if (game.battle.round === 1) {
+		if (game.battle.attacker !== TEUTONS)
+			return is_event_in_play(EVENT_RUSSIAN_AMBUSH)
+		else
+			return is_event_in_play(EVENT_TEUTONIC_AMBUSH)
+	}
+	return false
+}
+
 function front_strike_choice() {
 	let s = game.battle.step & 1
-	let f = pack_battle_array_front()
-	if (GROUPS[s][1][f] !== 0) {
+	let x = pack_battle_array_front()
+
+	if (is_attacker_ambushed())
+		x = clear_attacker_flank_bits(x)
+	if (is_defender_ambushed())
+		x = clear_defender_flank_bits(x)
+
+	if (GROUPS[s][1][x] !== 0) {
 		// Choice only matters if the center Lord has strikes this step
 		if (has_center_strike(A2, D2))
 			game.battle.fc = -1
@@ -7131,14 +7174,21 @@ function front_strike_choice() {
 
 function rear_strike_choice() {
 	if (has_sa_without_rd()) {
+		// TODO: ambush!
 		if (has_sa_strike())
 			game.battle.rc = select_lone_defender()
 		else
 			game.battle.rc = 0
 	} else {
 		let s = game.battle.step & 1
-		let r = pack_battle_array_rear()
-		if (GROUPS[s][1][r] !== 0) {
+		let x = pack_battle_array_rear()
+
+		if (is_attacker_ambushed())
+			x = clear_attacker_flank_bits(x)
+		if (is_defender_ambushed())
+			x = clear_defender_flank_bits(x)
+
+		if (GROUPS[s][1][x] !== 0) {
 			// Choice only matters if the center Lord has strikes this step
 			if (has_center_strike(SA2, RD2))
 				game.battle.fc = -1
