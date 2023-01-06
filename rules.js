@@ -1,7 +1,6 @@
 "use strict"
 
 // TODO: Strike hit overflow
-// TODO: Ambush - battle
 // TODO: Ransom - sack
 // TODO: Ransom - battle
 
@@ -4406,7 +4405,7 @@ function toggle_legate_selected() {
 
 function release_besieged_lords(loc) {
 	for (let lord = 0; lord < lord_count; ++lord)
-		if (get_lord_locale(loc) === loc && is_lord_besieged(lord))
+		if (get_lord_locale(lord) === loc && is_lord_besieged(lord))
 			set_lord_besieged(lord, 0)
 }
 

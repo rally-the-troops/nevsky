@@ -194,7 +194,11 @@ function pack4_get(word, n) {
 }
 
 function is_lord_besieged(lord) {
-	return pack1_get(view.pieces.besieged, lord)
+	let besieged = pack1_get(view.pieces.besieged, lord)
+	// show sallying lords as not besieged
+	if (view.battle && view.battle.reserves.includes(lord))
+		return false
+	return besieged
 }
 
 function is_lord_moved(lord) {
