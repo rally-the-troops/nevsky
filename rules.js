@@ -9680,6 +9680,11 @@ function gen_action_card_if_held(c) {
 		gen_action_card(c)
 }
 
+function gen_action_select_lord(lord) {
+	if (game.who !== lord)
+		gen_action("lord", lord)
+}
+
 function gen_action_lord_on_calendar(lord) {
 	if (lord !== game.who) {
 		if (is_lord_on_calendar(lord))
