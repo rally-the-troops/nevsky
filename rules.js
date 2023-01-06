@@ -1960,8 +1960,10 @@ function is_event_in_play(c) {
 }
 
 function is_ravens_rock_in_play() {
-	if (game.active === RUSSIANS)
-		return is_event_in_play(EVENT_RUSSIAN_RAVENS_ROCK)
+	if (game.battle.round <= 1) {
+		if (game.active === RUSSIANS)
+			return is_event_in_play(EVENT_RUSSIAN_RAVENS_ROCK)
+	}
 	return false
 }
 
@@ -6429,7 +6431,7 @@ function can_play_battle_events() {
 			if (!is_winter())
 				if (could_play_card(EVENT_RUSSIAN_BRIDGE))
 					return true
-			if (is_summer())
+			if (!is_summer())
 				if (could_play_card(EVENT_RUSSIAN_RAVENS_ROCK))
 					return true
 		}
@@ -6462,7 +6464,7 @@ function prompt_battle_events() {
 			gen_action_card_if_held(EVENT_RUSSIAN_AMBUSH)
 			if (!is_winter())
 				gen_action_card_if_held(EVENT_RUSSIAN_BRIDGE)
-			if (is_summer())
+			if (!is_summer())
 				gen_action_card_if_held(EVENT_RUSSIAN_RAVENS_ROCK)
 		}
 	}
