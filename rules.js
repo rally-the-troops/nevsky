@@ -1,15 +1,12 @@
 "use strict"
 
 // TODO: Strike hit overflow
-// TODO: Ransom - sack
-// TODO: Ransom - battle
-
 // TODO: Bridge - kn, sgt, 1x lh, maa, militia, serf, lh, ah
 // TODO: Lodya capability during supply!
 // TODO: 2nd edition supply rule - no reuse of transports
 
-// FIXME: lift_sieges / besieged needs checking!
-// FIXME: remove_legate_if_endangered needs checking!
+// FIXME: lift_sieges / besieged needs checking! (automatic after disband_lord, manual after move/sail, extra careful manual after battle)
+// FIXME: remove_legate_if_endangered needs checking! (automatic after disband_lord, manual after move/sail, manual after battle)
 
 // GUI: show sally/relief sally as unbesieged on map
 // GUI: show siegeworks + walls on battle mat for protection indication
@@ -1523,8 +1520,10 @@ function disband_vassal(vassal) {
 
 	game.pieces.vassals[vassal] = VASSAL_READY
 
-	if (!lord_has_unrouted_units(lord))
+	if (!lord_has_unrouted_units(lord)) {
 		disband_lord(lord)
+		lift_sieges()
+	}
 }
 
 function muster_vassal(lord, vassal) {
@@ -1899,8 +1898,9 @@ function setup_pleskau_quickstart() {
 }
 
 function setup_test() {
-	setup_crusade_on_novgorod()
-	muster_lord(LORD_HEINRICH, LOC_WESENBERG)
+	setup_pleskau_quickstart()
+	set_add(game.capabilities, AOW_TEUTONIC_RANSOM)
+	set_add(game.capabilities, AOW_RUSSIAN_RANSOM)
 	for (let c = first_p1_card; c <= last_p1_card; ++c)
 		if (data.cards[c].when === "hold")
 			game.hand1.push(c)
@@ -2764,6 +2764,7 @@ states.heinrich_sees_the_curia = {
 	},
 	lord(_) {
 		disband_lord(LORD_HEINRICH)
+		lift_sieges()
 		game.state = "heinrich_sees_the_curia_1"
 		game.who = NOBODY
 		game.count = 0
@@ -8071,16 +8072,14 @@ function goto_sack() {
 	else if (is_castle(here))
 		award_spoils(1)
 
-	game.state = "sack"
-	resume_sack()
+	goto_sack()
 }
 
-function resume_sack() {
-	let here = game.battle.where
-	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-		if (get_lord_locale(lord) === here)
-			return
-	goto_battle_losses()
+function goto_sack() {
+	if (has_friendly_lord(game.battle.where))
+		game.state = "sack"
+	else
+		goto_battle_losses()
 }
 
 states.sack = {
@@ -8094,9 +8093,15 @@ states.sack = {
 	lord(lord) {
 		log(`Disbanded L${lord}.`)
 		transfer_assets_except_ships(lord)
-		disband_lord(lord, true)
-		resume_sack()
+		if (can_ransom_lord_battle(lord))
+			goto_ransom(lord)
+		else
+			disband_lord(lord, true)
 	},
+}
+
+function end_ransom_sack() {
+	goto_sack()
 }
 
 // === ENDING THE BATTLE: WITHDRAW ===
@@ -8171,7 +8176,7 @@ states.battle_withdraw = {
 		}
 	},
 	end_withdraw() {
-		push_undo()
+		clear_undo()
 		end_battle_withdraw()
 	},
 }
@@ -8400,47 +8405,38 @@ function goto_battle_remove() {
 	if (count_unbesieged_friendly_lords(game.battle.where) > 0)
 		game.state = "battle_remove"
 	else
-		end_battle_remove()
-}
-
-function end_battle_remove() {
-	clear_undo()
-	goto_battle_losses()
+		goto_battle_losses()
 }
 
 states.battle_remove = {
 	prompt() {
-		view.prompt = "Battle: Remove losing lords who cannot Retreat or Withdraw."
+		view.prompt = "Battle: Remove losing Lords who cannot Retreat or Withdraw."
 		let here = game.battle.where
-		let done = true
-		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
-			if (get_lord_locale(lord) === here && is_lord_unbesieged(lord)) {
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+			if (get_lord_locale(lord) === here && is_lord_unbesieged(lord))
 				gen_action_lord(lord)
-				done = false
-			}
-		}
-		if (done)
-			view.actions.end_remove = 1
 	},
 	lord(lord) {
-		push_undo()
 		transfer_assets_except_ships(lord)
-		disband_lord(lord, true)
-		remove_legate_if_endangered(game.battle.where)
-		lift_sieges()
+		if (can_ransom_lord_battle(lord)) {
+			goto_ransom(lord)
+		} else {
+			disband_lord(lord, true)
+			remove_legate_if_endangered(game.battle.where)
+			lift_sieges()
+		}
+		goto_battle_remove()
 	},
-	end_remove() {
-		push_undo()
-		end_battle_remove()
-	},
+}
+
+function end_ransom_battle_remove() {
+	goto_battle_remove()
 }
 
 // === ENDING THE BATTLE: LOSSES ===
 
-// TODO: disband vassal service markers once enough forces are lost?
-
 function goto_battle_losses() {
-	set_active_loser() // loser first, to save time
+	set_active(P1)
 	resume_battle_losses()
 }
 
@@ -8449,24 +8445,7 @@ function resume_battle_losses() {
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 		if (lord_has_routed_units(lord))
 			return
-	resume_battle_losses_remove()
-}
-
-function resume_battle_losses_remove() {
-	game.state = "battle_losses_remove"
-	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-		if (is_lord_on_map(lord) && !lord_has_unrouted_units(lord))
-			return
-	end_battle_losses()
-}
-
-function end_battle_losses() {
-	if (game.active === game.battle.loser) {
-		set_active_victor()
-		resume_battle_losses()
-	} else {
-		goto_battle_spoils()
-	}
+	goto_battle_losses_remove()
 }
 
 function action_losses(lord, type) {
@@ -8545,19 +8524,45 @@ states.battle_losses = {
 	},
 }
 
+// === ENDING THE BATTLE: LOSSES (REMOVE LORDS) ===
+
+function goto_battle_losses_remove() {
+	game.state = "battle_losses_remove"
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (is_lord_on_map(lord) && !lord_has_unrouted_units(lord))
+			return
+	end_battle_losses_remove()
+}
+
+function end_battle_losses_remove() {
+	set_active_enemy()
+	if (game.active === P2)
+		resume_battle_losses()
+	else
+		goto_battle_spoils()
+}
+
 states.battle_losses_remove = {
 	prompt() {
-		view.prompt = "Losses: Remove lords who lost all their forces."
+		view.prompt = "Losses: Remove Lords who lost all their forces."
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 			if (is_lord_on_map(lord) && !lord_has_unrouted_units(lord))
 				gen_action_lord(lord)
 	},
 	lord(lord) {
 		set_delete(game.battle.retreated, lord)
-		disband_lord(lord, true)
-		resume_battle_losses_remove()
-		lift_sieges()
+		if (can_ransom_lord_battle(lord)) {
+			goto_ransom(lord)
+		} else {
+			disband_lord(lord, true)
+			lift_sieges()
+			goto_battle_losses_remove()
+		}
 	},
+}
+
+function end_ransom_battle_losses_remove() {
+	goto_battle_losses_remove()
 }
 
 // === ENDING THE BATTLE: SPOILS ===
@@ -9074,15 +9079,22 @@ states.disband = {
 		this.lord(lord)
 	},
 	lord(lord) {
-		push_undo()
-		if (can_ransom_besieged_lord(lord))
-			goto_ransom_besieged_lord(lord)
-		else
+		if (is_lord_besieged(lord) && can_ransom_lord_siege(lord)) {
+			clear_undo()
+			goto_ransom(lord)
+		} else {
+			push_undo()
 			disband_lord(lord)
+			lift_sieges()
+		}
 	},
 	end_disband() {
 		end_disband()
 	},
+}
+
+function end_ransom_disband() {
+	// do nothing
 }
 
 function end_disband() {
@@ -9105,56 +9117,76 @@ function end_disband() {
 	}
 }
 
-// === LEVY & CAMPAIGN: RANSOM BESIEGED LORD WHO DISBANDS (CAPABILITY)
+// === LEVY & CAMPAIGN: RANSOM ===
 
-function can_ransom_besieged_lord(lord) {
-	if (is_lord_besieged(lord)) {
-		if (game.active === TEUTONS && has_global_capability(AOW_RUSSIAN_RANSOM))
+function enemy_has_ransom() {
+	if (game.active === TEUTONS)
+		return has_global_capability(AOW_RUSSIAN_RANSOM)
+	else
+		return has_global_capability(AOW_TEUTONIC_RANSOM)
+}
+
+function can_ransom_lord_siege(lord) {
+	return enemy_has_ransom() && has_enemy_lord(get_lord_locale(lord))
+}
+
+function has_enemy_lord_in_battle() {
+	for (let lord = first_enemy_lord; lord <= last_enemy_lord; ++lord)
+		if (get_lord_moved(lord))
 			return true
-		if (game.active === RUSSIANS && has_global_capability(AOW_TEUTONIC_RANSOM))
-			return true
-	}
 	return false
 }
 
-function goto_ransom_besieged_lord(lord) {
+function can_ransom_lord_battle() {
+	return enemy_has_ransom() && has_enemy_lord_in_battle()
+}
+
+function goto_ransom(lord) {
 	clear_undo()
 	set_active_enemy()
-	game.state = "ransom_besieged_lord"
-	game.count = data.lords[lord].service
+	push_state(state)
 	game.who = lord
-	log(`Ransom L${lord}`)
+	game.count = data.lords[lord].service
+	log(`Ransomed L${lord}`)
 }
 
-function end_ransom_besieged_lord() {
+function end_ransom() {
+	let here = get_lord_locale(game.who)
+	if (game.battle)
+		disband_lord(game.who, true)
+	else
+		disband_lord(game.who, false)
+	remove_legate_if_endangered(here)
+	lift_sieges()
+	pop_state()
+
 	set_active_enemy()
-	disband_lord(game.who)
-	game.state = "disband"
-	game.who = NOBODY
+	switch (game.state) {
+		case "disband": return end_ransom_disband()
+		case "sack": return end_ransom_sack()
+		case "battle_remove": return end_ransom_battle_remove()
+		case "battle_losses_remove": return end_ransom_battle_losses_remove()
+	}
 }
 
-states.ransom_besieged_lord = {
+states.ransom = {
 	prompt() {
-		if (game.count > 0) {
-			view.prompt = `Ransom ${lord_name[game.who]}: Add ${game.count} Coin to a friendly Lord.`
+		view.prompt = `Ransom ${lord_name[game.who]}: Add ${game.count} Coin to a friendly Lord.`
+		if (game.battle) {
+			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+				if (get_lord_moved(lord))
+					gen_action_lord(lord)
+		} else {
 			let here = get_lord_locale(game.who)
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 				if (get_lord_locale(lord) === here)
 					gen_action_lord(lord)
-		} else {
-			view.prompt = `Ransom ${lord_name[game.who]}: All done.`
-			view.actions.end_ransom = 1
 		}
 	},
 	lord(lord) {
-		push_undo()
 		logi(`Coin to L${lord}.`)
-		add_lord_assets(lord, COIN, 1)
-		game.count--
-	},
-	end_ransom() {
-		clear_undo()
-		end_ransom_besieged_lord()
+		add_lord_assets(lord, COIN, game.count)
+		end_ransom()
 	},
 }
 
@@ -9672,11 +9704,6 @@ function gen_action(action, argument) {
 function gen_action_card_if_held(c) {
 	if (has_card_in_hand(c))
 		gen_action_card(c)
-}
-
-function gen_action_select_lord(lord) {
-	if (game.who !== lord)
-		gen_action("lord", lord)
 }
 
 function prompt_select_lord_on_calendar(lord) {

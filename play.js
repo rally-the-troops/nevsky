@@ -1586,6 +1586,7 @@ function on_update() {
 	action_button("end_ransom", "End ransom")
 	action_button("end_remove", "End remove")
 	action_button("end_reposition", "End reposition")
+	action_button("end_sack", "End sack")
 	action_button("end_sally", "End sally")
 	action_button("end_setup", "End setup")
 	action_button("end_spoils", "End spoils")
