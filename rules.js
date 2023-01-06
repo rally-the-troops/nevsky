@@ -2285,11 +2285,11 @@ states.pope_gregory = {
 		view.prompt = "Pope Gregory: On Calendar, slide 1 Teuton cylinder 1 box left."
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 			if (is_lord_on_calendar(lord))
-				gen_action_lord_on_calendar(lord)
+				prompt_select_lord(lord)
 		if (game.who !== NOBODY)
 			gen_action_calendar(get_lord_calendar(game.who) - 1)
 	},
-	lord(lord) { game.who = lord },
+	lord: action_select_lord,
 	calendar(turn) {
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
@@ -2381,8 +2381,8 @@ states.grand_prince = {
 			gen_action_calendar(get_lord_calendar(game.who) + 2)
 		}
 	},
-	lord(lord) { game.who = lord },
-	service(lord) { game.who = lord },
+	lord: action_select_lord,
+	service: action_select_lord,
 	calendar(turn) {
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
@@ -2401,16 +2401,16 @@ states.khan_baty = {
 	prompt() {
 		view.prompt = "Khan Baty: On Calendar, shift Aleksandr or Andrey or service of either 2 boxes."
 		if (is_lord_in_play(LORD_ALEKSANDR))
-			gen_action_lord_on_calendar(LORD_ALEKSANDR)
+			prompt_select_lord_on_calendar(LORD_ALEKSANDR)
 		if (is_lord_in_play(LORD_ANDREY))
-			gen_action_lord_on_calendar(LORD_ANDREY)
+			prompt_select_lord_on_calendar(LORD_ANDREY)
 		if (game.who !== NOBODY) {
 			gen_action_calendar(get_lord_calendar(game.who) - 2)
 			gen_action_calendar(get_lord_calendar(game.who) + 2)
 		}
 	},
-	lord(lord) { game.who = lord },
-	service(lord) { game.who = lord },
+	lord: action_select_lord,
+	service: action_select_lord,
 	calendar(turn) {
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
@@ -2435,16 +2435,16 @@ states.swedish_crusade = {
 	prompt() {
 		view.prompt = "Swedish Crusade: On Calendar, shift Vladislav and Karelians each 1 box."
 		if (game.count & (1 << LORD_VLADISLAV))
-			gen_action_lord_on_calendar(LORD_VLADISLAV)
+			prompt_select_lord_on_calendar(LORD_VLADISLAV)
 		if (game.count & (1 << LORD_KARELIANS))
-			gen_action_lord_on_calendar(LORD_KARELIANS)
+			prompt_select_lord_on_calendar(LORD_KARELIANS)
 		if (game.who !== NOBODY) {
 			gen_action_calendar(get_lord_calendar(game.who) - 1)
 			gen_action_calendar(get_lord_calendar(game.who) + 1)
 		}
 	},
-	lord(lord) { game.who = lord },
-	service(lord) { game.who = lord },
+	lord: action_select_lord,
+	service: action_select_lord,
 	calendar(turn) {
 		game.count ^= (1 << game.who)
 		set_lord_calendar(game.who, turn)
@@ -2470,8 +2470,8 @@ states.valdemar = {
 		gen_action_calendar(get_lord_calendar(game.who) + 1)
 		view.actions.pass = 1 // up to
 	},
-	lord(lord) { game.who = lord },
-	service(lord) { game.who = lord },
+	lord: action_select_lord,
+	service: action_select_lord,
 	calendar(turn) {
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
@@ -2496,14 +2496,14 @@ states.osilian_revolt = {
 	prompt() {
 		view.prompt = "Osilian Revolt: On Calendar, shift Service of Andreas or Heinrich 2 boxes left."
 		// Note: Service only!
-		if (is_lord_on_map(LORD_ANDREAS))
+		if (is_lord_on_map(LORD_ANDREAS) && game.who !== LORD_ANDREAS)
 			gen_action_service(LORD_ANDREAS)
-		if (is_lord_on_map(LORD_HEINRICH))
+		if (is_lord_on_map(LORD_HEINRICH) && game.who !== LORD_HEINRICH)
 			gen_action_service(LORD_HEINRICH)
 		if (game.who !== NOBODY)
 			gen_action_calendar(get_lord_calendar(game.who) - 2)
 	},
-	service(lord) { game.who = lord },
+	service: action_select_lord,
 	calendar(turn) {
 		set_active_enemy()
 		set_lord_calendar(game.who, turn)
@@ -2530,8 +2530,8 @@ states.batu_khan = {
 		gen_action_calendar(get_lord_calendar(game.who) + 2)
 		view.actions.pass = 1 // up to
 	},
-	lord(lord) { game.who = lord },
-	service(lord) { game.who = lord },
+	lord: action_select_lord,
+	service: action_select_lord,
 	calendar(turn) {
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
@@ -2550,16 +2550,16 @@ states.russian_dietrich_von_gruningen = {
 	prompt() {
 		view.prompt = "Dietrich von Grüningen: On Calendar, shift Andreas or Rudolf 1 box."
 		if (is_lord_in_play(LORD_ANDREAS))
-			gen_action_lord_on_calendar(LORD_ANDREAS)
+			prompt_select_lord_on_calendar(LORD_ANDREAS)
 		if (is_lord_in_play(LORD_RUDOLF))
-			gen_action_lord_on_calendar(LORD_RUDOLF)
+			prompt_select_lord_on_calendar(LORD_RUDOLF)
 		if (game.who !== NOBODY) {
 			gen_action_calendar(get_lord_calendar(game.who) - 1)
 			gen_action_calendar(get_lord_calendar(game.who) + 1)
 		}
 	},
-	lord(lord) { game.who = lord },
-	service(lord) { game.who = lord },
+	lord: action_select_lord,
+	service: action_select_lord,
 	calendar(turn) {
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
@@ -2744,6 +2744,16 @@ states.vodian_treachery = {
 	},
 }
 
+// === EVENTS: HEINRICH SEES THE CURIA ===
+
+function count_set_bits(x) {
+	let n = 0
+	for (let i = 0; i < lord_count; ++i)
+		if (x & (1 << i))
+			++n
+	return n
+}
+
 function can_play_heinrich_sees_the_curia() {
 	return is_lord_on_map(LORD_HEINRICH)
 }
@@ -2757,29 +2767,36 @@ states.heinrich_sees_the_curia = {
 		disband_lord(LORD_HEINRICH)
 		game.state = "heinrich_sees_the_curia_1"
 		game.who = NOBODY
-		game.count = 2
+		game.count = 0
 	},
 }
 
 states.heinrich_sees_the_curia_1 = {
 	prompt() {
-		view.prompt = `Heinrich Sees the Curia: Add 4 Assets each to ${game.count} Lords.`
-		if (game.count > 0) {
+		let n = 2 - count_set_bits(game.count)
+		view.prompt = `Heinrich Sees the Curia: Add 4 Assets each to ${n} Lords.`
+		if (n > 0) {
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 				if (is_lord_on_map(lord))
-					gen_action_lord(lord)
+					if ((game.count & (1 << lord)) === 0)
+						gen_action_lord(lord)
 		}
 		view.actions.done = 1
 	},
 	lord(lord) {
 		push_undo()
+		game.count |= (1 << lord)
 		push_state("heinrich_sees_the_curia_2")
 		game.count = 4
 		game.who = lord
 	},
-	done() {
+	done: end_heinrich_sees_the_curia,
+}
+
+function resume_heinrich_sees_the_curia() {
+	pop_state()
+	if (count_set_bits(game.count) === 2)
 		end_heinrich_sees_the_curia()
-	},
 }
 
 states.heinrich_sees_the_curia_2 = {
@@ -2801,21 +2818,14 @@ states.heinrich_sees_the_curia_2 = {
 	take_boat() { take_asset(BOAT) },
 	take_cart() { take_asset(CART) },
 	take_sled() { take_asset(SLED) },
-	done() {
-		pop_state()
-		if (--game.count === 0)
-			end_heinrich_sees_the_curia()
-	},
+	done: resume_heinrich_sees_the_curia,
 }
 
 function take_asset(type) {
 	log(`L${game.who} took ${ASSET_TYPE_NAME[type]}.`)
 	add_lord_assets(game.who, type, 1)
-	if (--game.count === 0) {
-		pop_state()
-		if (--game.count === 0)
-			end_heinrich_sees_the_curia()
-	}
+	if (--game.count === 0)
+		resume_heinrich_sees_the_curia()
 }
 
 function end_heinrich_sees_the_curia() {
@@ -2908,8 +2918,8 @@ function prompt_shift_cylinder(list, boxes) {
 			view.prompt += " or +2 Lordship"
 			view.actions.lordship = 1
 		}
-		if (is_lord_on_calendar(lord) && lord !== game.who)
-			gen_action_lord(lord)
+		if (is_lord_on_calendar(lord))
+			prompt_select_lord(lord)
 	}
 
 	view.prompt += "."
@@ -2918,10 +2928,6 @@ function prompt_shift_cylinder(list, boxes) {
 		gen_action_calendar(get_lord_calendar(game.who) - boxes)
 		gen_action_calendar(get_lord_calendar(game.who) + boxes)
 	}
-}
-
-function action_shift_cylinder_lord(lord) {
-	game.who = lord
 }
 
 function action_shift_cylinder_calendar(turn) {
@@ -2938,21 +2944,21 @@ function action_shift_cylinder_lordship() {
 
 states.tverdilo = {
 	prompt() { prompt_shift_cylinder([ LORD_HERMANN, LORD_YAROSLAV ], 2) },
-	lord: action_shift_cylinder_lord,
+	lord: action_select_lord,
 	calendar: action_shift_cylinder_calendar,
 	lordship: action_shift_cylinder_lordship,
 }
 
 states.teutonic_fervor = {
 	prompt() { prompt_shift_cylinder([ LORD_RUDOLF ], 2) },
-	lord: action_shift_cylinder_lord,
+	lord: action_select_lord,
 	calendar: action_shift_cylinder_calendar,
 	lordship: action_shift_cylinder_lordship,
 }
 
 states.teutonic_dietrich_von_gruningen = {
 	prompt() { prompt_shift_cylinder([ LORD_ANDREAS, LORD_RUDOLF ], 2) },
-	lord: action_shift_cylinder_lord,
+	lord: action_select_lord,
 	calendar: action_shift_cylinder_calendar,
 	lordship: action_shift_cylinder_lordship,
 }
@@ -2963,14 +2969,14 @@ states.prince_of_polotsk = {
 			LORD_ALEKSANDR, LORD_ANDREY, LORD_DOMASH, LORD_GAVRILO, LORD_KARELIANS, LORD_VLADISLAV
 		], 1)
 	},
-	lord: action_shift_cylinder_lord,
+	lord: action_select_lord,
 	calendar: action_shift_cylinder_calendar,
 	lordship: action_shift_cylinder_lordship,
 }
 
 states.pelgui = {
 	prompt() { prompt_shift_cylinder([ LORD_VLADISLAV, LORD_KARELIANS ], 2) },
-	lord: action_shift_cylinder_lord,
+	lord: action_select_lord,
 	calendar: action_shift_cylinder_calendar,
 	lordship: action_shift_cylinder_lordship,
 }
@@ -5015,8 +5021,7 @@ states.spoils_after_avoid_battle = {
 			view.prompt = "Spoils: Divide " + list_spoils() + "."
 			// only moving lords get to divide the spoils
 			for (let lord of game.group)
-				if (lord !== game.who)
-					gen_action_lord(lord)
+				prompt_select_lord(lord)
 			if (game.who !== NOBODY)
 				prompt_spoils()
 		} else {
@@ -5024,9 +5029,7 @@ states.spoils_after_avoid_battle = {
 			view.actions.end_spoils = 1
 		}
 	},
-	lord(lord) {
-		game.who = lord
-	},
+	lord: action_select_lord,
 	take_prov: take_spoils_prov,
 	take_loot: take_spoils_loot,
 	end_spoils() {
@@ -8599,8 +8602,7 @@ states.battle_spoils = {
 			let here = game.battle.where
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 				if (get_lord_locale(lord) === here)
-					if (lord !== game.who)
-						gen_action_lord(lord)
+					prompt_select_lord(lord)
 			if (game.who !== NOBODY)
 				prompt_spoils()
 		} else {
@@ -8608,9 +8610,7 @@ states.battle_spoils = {
 			view.actions.end_spoils = 1
 		}
 	},
-	lord(lord) {
-		game.who = lord
-	},
+	lord: action_select_lord,
 	take_prov: take_spoils_prov,
 	take_loot: take_spoils_loot,
 	take_coin: take_spoils_coin,
@@ -8928,8 +8928,7 @@ states.pay = {
 	prompt() {
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 			if (is_lord_on_map(lord) && can_pay_lord(lord))
-				if (lord !== game.who)
-					gen_action_lord(lord)
+				prompt_select_lord(lord)
 
 		prompt_held_event()
 
@@ -8962,9 +8961,7 @@ states.pay = {
 
 		view.actions.end_pay = 1
 	},
-	lord(lord) {
-		game.who = lord
-	},
+	lord: action_select_lord,
 	loot(lord) {
 		push_undo_without_who()
 		if (game.who === lord)
@@ -9685,13 +9682,26 @@ function gen_action_select_lord(lord) {
 		gen_action("lord", lord)
 }
 
-function gen_action_lord_on_calendar(lord) {
+function prompt_select_lord_on_calendar(lord) {
 	if (lord !== game.who) {
 		if (is_lord_on_calendar(lord))
 			gen_action_lord(lord)
 		else
 			gen_action_service(lord)
 	}
+}
+
+function prompt_select_lord(lord) {
+	if (lord !== game.who) {
+		gen_action_lord(lord)
+	}
+}
+
+function action_select_lord(lord) {
+	if (game.who === lord)
+		game.who = NOBODY
+	else
+		game.who = lord
 }
 
 function gen_action_calendar(calendar) {
