@@ -2024,7 +2024,7 @@ function goto_immediate_event(c) {
 
 		// Add to capabilities...
 		case EVENT_TEUTONIC_POPE_GREGORY:
-			set_add(game.capabilities, c)
+			deploy_global_capability(c)
 			return goto_teutonic_event_pope_gregory()
 
 		// Discard
@@ -3024,6 +3024,7 @@ function discard_global_capability(c) {
 	}
 
 	if (c === AOW_TEUTONIC_CRUSADE) {
+		// TODO: make disband vassals manual state?
 		for (let v of data.summer_crusaders) {
 			if (is_vassal_mustered(v))
 				disband_vassal(v)
@@ -3036,6 +3037,7 @@ function discard_global_capability(c) {
 	}
 
 	if (c === AOW_RUSSIAN_STEPPE_WARRIORS) {
+		// TODO: make disband vassals manual state?
 		for (let v of data.steppe_warriors) {
 			if (is_vassal_mustered(v))
 				disband_vassal(v)
