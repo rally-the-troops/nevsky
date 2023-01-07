@@ -3051,9 +3051,33 @@ function draw_two_cards() {
 	return [ draw_card(deck), draw_card(deck) ]
 }
 
+function discard_card_capability(c) {
+	if (is_no_event_card(c) && should_remove_no_event_card()) {
+		logi(`C${c} - removed`)
+		if (game.active === P1)
+			game.no1--
+		else
+			game.no2--
+	} else {
+		logi(`C${c} - discarded`)
+	}
+}
+
+function discard_card_event(c) {
+	if (is_no_event_card(c) && should_remove_no_event_card()) {
+		log(`Removed E${c}`)
+		if (game.active === P1)
+			game.no1--
+		else
+			game.no2--
+	} else {
+		log(`Discarded E${c}`)
+	}
+}
+
 function goto_levy_arts_of_war_first() {
 	log_br()
-	log(game.active)
+	log_h3(game.active)
 	game.state = "levy_arts_of_war_first"
 	game.what = draw_two_cards()
 }
@@ -3104,20 +3128,11 @@ states.levy_arts_of_war_first = {
 	discard() {
 		push_undo()
 		let c = game.what.shift()
-
-		if (is_no_event_card(c) && should_remove_no_event_card()) {
-			logi(`C${c} - removed`)
-			if (game.active === P1)
-				game.no1--
-			else
-				game.no2--
-		} else {
-			logi(`C${c} - discarded`)
-		}
-
+		discard_card_capability(c)
 		resume_levy_arts_of_war_first()
 	},
 }
+
 
 function end_levy_arts_of_war_first() {
 	clear_undo()
@@ -3133,7 +3148,7 @@ function end_levy_arts_of_war_first() {
 
 function goto_levy_arts_of_war() {
 	log_br()
-	log(game.active)
+	log_h3(game.active)
 	game.what = draw_two_cards()
 	resume_levy_arts_of_war()
 }
@@ -3173,7 +3188,7 @@ states.levy_arts_of_war = {
 	},
 	hold() {
 		let c = game.what.shift()
-		log(`Held event card.`)
+		log(`Held.`)
 		if (game.active === P1)
 			set_add(game.hand1, c)
 		else
@@ -3182,7 +3197,7 @@ states.levy_arts_of_war = {
 	},
 	discard() {
 		let c = game.what.shift()
-		log(`Discarded E${c}.`)
+		discard_card_event(c)
 		resume_levy_arts_of_war()
 	},
 }
