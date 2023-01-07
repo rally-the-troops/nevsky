@@ -1,6 +1,5 @@
 "use strict"
 
-// TODO: Strike hit overflow
 // TODO: Bridge - kn, sgt, 1x lh, maa, militia, serf, lh, ah
 // TODO: Lodya capability during supply!
 // TODO: 2nd edition supply rule - no reuse of transports
@@ -25,11 +24,6 @@
 // drop game.who from push_state
 
 const data = require("./data.js")
-
-// Packed strike and hit group lookup table.
-const GROUPS = [[[0,0,0,0,0,0,0,0,0,[[8,1]],[[8,2]],[[8,3]],[[8,4]],[[8,5]],[[8,2]],[[8,7]],0,[[16,1]],[[16,2]],[[16,3]],[[16,4]],[[16,1]],[[16,6]],[[16,7]],0,[[24,1]],[[24,2]],[[8,1],[16,2]],[[24,4]],[[24,1]],[[24,2]],[[8,1],[16,6]],0,[[32,1]],[[32,2]],[[32,2]],[[32,4]],[[32,5]],[[32,6]],[[32,7]],0,[[40,1]],[[40,2]],[[8,3],[32,2]],[[40,4]],[[8,1],[32,4]],[[8,2],[32,6]],[[8,3],[32,6]],0,[[48,1]],[[48,2]],[[48,2]],[[48,4]],[[16,1],[32,4]],[[16,2],[32,4]],[[16,3],[32,4]],0,[[56,1]],[[56,2]],[[8,1],[48,2]],[[56,4]],[[24,1],[32,4]],[[24,2],[32,4]],[[8,1],[16,2],[32,4]]],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,[[16,4]],0,0,0,0,0,0,0,[[8,1],[16,4]],0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,[[48,4]],0,0,0,0,0,0,0,[[8,1],[48,4]],0,0]],[[0,0,0,0,0,0,0,0,0,[[1,8]],[[2,8]],[[3,8]],[[4,8]],[[5,8]],[[6,8]],[[7,8]],0,[[1,16]],[[2,16]],[[3,16]],[[4,16]],[[5,16]],[[6,16]],[[7,16]],0,[[1,24]],[[2,24]],[[1,8],[2,16]],[[4,16]],[[1,24],[4,16]],[[6,16]],[[1,8],[6,16]],0,[[1,32]],[[2,32]],[[3,32]],[[4,32]],[[5,32]],[[6,32]],[[7,32]],0,[[1,40]],[[2,8]],[[3,8]],[[4,40]],[[1,8],[4,32]],[[2,8],[4,32]],[[3,8],[4,32]],0,[[1,16]],[[2,48]],[[3,16]],[[4,48]],[[1,16],[4,48]],[[2,16],[4,32]],[[3,16],[4,32]],0,[[1,56]],[[2,56]],[[1,8],[2,48]],[[4,56]],[[1,24],[4,48]],[[2,24],[4,32]],[[1,8],[2,16],[4,32]]],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,[[2,32]],[[1,8],[2,32]],0,0,[[6,32]],[[1,8],[6,32]],0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]]
-
-const TODO = false
 
 const BOTH = "Both"
 const TEUTONS = "Teutons"
@@ -81,9 +75,7 @@ const scenario_last_turn = {
 }
 
 function should_remove_no_event_card() {
-	if (game.scenario === "Crusade on Novgorod")
-		return current_turn() >= 9
-	return true
+	return game.scenario !== "Crusade on Novgorod"
 }
 
 // unit types
@@ -124,11 +116,11 @@ const RD1 = 9 // relief sally: reserve defenders
 const RD2 = 10
 const RD3 = 11
 
-const battle_array_name = [
-	"A1", "A2", "A3",
-	"D1", "D2", "D3",
-	"SA1", "SA2", "SA3",
-	"RD1", "RD2", "RD3",
+const ARRAY_FLANKS = [
+	[ A2, A3 ], [ A1, A3 ], [ A1, A2 ],
+	[ D2, D3 ], [ D1, D3 ], [ D1, D2 ],
+	[ SA2, SA3 ], [ SA1, SA3 ], [ SA1, SA2 ],
+	[ RD2, RD3 ], [ RD1, RD3 ], [ RD1, RD2 ],
 ]
 
 function find_card(name) {
@@ -1901,6 +1893,14 @@ function setup_test() {
 	setup_pleskau_quickstart()
 	set_add(game.capabilities, AOW_TEUTONIC_RANSOM)
 	set_add(game.capabilities, AOW_RUSSIAN_RANSOM)
+
+	set_lord_locale(LORD_KNUD_ABEL, LOC_ODENPAH)
+	set_lord_locale(LORD_HERMANN, LOC_ODENPAH)
+	set_lord_locale(LORD_RUDOLF, LOC_ODENPAH)
+
+	set_lord_locale(LORD_DOMASH, LOC_PSKOV)
+	set_lord_locale(LORD_VLADISLAV, LOC_IZBORSK)
+
 	for (let c = first_p1_card; c <= last_p1_card; ++c)
 		if (data.cards[c].when === "hold")
 			game.hand1.push(c)
@@ -1930,7 +1930,7 @@ states.setup_lords = {
 		push_undo()
 		log(`L${lord} at %${get_lord_locale(lord)}`)
 
-		// TODO: clean up these transitions
+		// FIXME: clean up these transitions
 		push_state("muster_lord_transport")
 		set_lord_moved(lord, 1)
 		game.who = lord
@@ -3399,7 +3399,7 @@ states.muster_lord_at_seat = {
 		push_undo()
 		logii(`at %${loc}`)
 
-		// TODO: clean up these transitions
+		// FIXME: clean up these transitions
 		set_lord_moved(game.who, 1)
 		muster_lord(game.who, loc)
 		game.state = "muster_lord_transport"
@@ -3692,7 +3692,7 @@ states.papal_legate_active = {
 			log(`Mustered L${lord}`)
 			logii(`at %${here}`)
 
-			// TODO: clean up these transitions
+			// FIXME: clean up these transitions
 			muster_lord(lord, here)
 			push_state("muster_lord_transport")
 			game.who = lord
@@ -3879,6 +3879,8 @@ states.novgorod_veche = {
 			if (game.pieces.veche_vp < 8)
 				view.actions.delay = 1
 		}
+
+		// TODO: 2E 3.5.2 Shift all Russian cylinders at once
 
 		if (game.pieces.veche_vp > 0) {
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
@@ -4682,7 +4684,7 @@ function select_all_lords(here) {
 	game.group = []
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 		if (get_lord_locale(lord) === here)
-			game.group.push(lord)
+			set_add(game.group, lord)
 }
 
 function goto_avoid_battle() {
@@ -4841,7 +4843,7 @@ function avoid_battle_2() {
 		log(`Avoided Battle to %${to}.`)
 
 	for (let lord of game.group) {
-		game.march.ambush_lords.push(lord)
+		set_add(game.march.ambush_lords, lord)
 		set_lord_locale(lord, to)
 		set_lord_moved(lord, 1)
 	}
@@ -5494,7 +5496,7 @@ function can_action_forage() {
 		return false
 	if (is_summer())
 		return true
-	if (is_friendly_stronghold_locale(here)) // TODO: simpler check?
+	if (is_friendly_stronghold_locale(here)) // FIXME: simpler check?
 		return true
 	return false
 }
@@ -6018,7 +6020,6 @@ function init_battle(here, is_storm, is_sally) {
 		reserves: [],
 		retreated: 0,
 		strikers: 0,
-		targets: 0,
 		warrior_monks: 0,
 		hits: 0,
 		xhits: 0,
@@ -6077,7 +6078,6 @@ function start_storm() {
 
 	init_battle(here, 1, 0)
 
-	// TODO: 2nd edition garrison forces
 	if (here === LOC_NOVGOROD)
 		init_garrison(0, 3)
 	else if (is_city(here))
@@ -6391,7 +6391,7 @@ function end_defender_events() {
 
 function resume_battle_events() {
 	game.what = -1
-	if (game.active === game.battle.attacker)
+	if (is_attacker())
 		goto_attacker_events()
 	else
 		goto_defender_events()
@@ -6423,7 +6423,7 @@ function can_play_battle_events() {
 		if (game.active === TEUTONS) {
 			if (could_play_card(EVENT_TEUTONIC_AMBUSH))
 				return true
-			if (game.active !== game.battle.attacker) {
+			if (is_defender()) {
 				if (could_play_card(EVENT_TEUTONIC_HILL))
 					return true
 				if (!is_winter())
@@ -6438,7 +6438,7 @@ function can_play_battle_events() {
 		if (game.active === RUSSIANS) {
 			if (could_play_card(EVENT_RUSSIAN_AMBUSH))
 				return true
-			if (game.active !== game.battle.attacker) {
+			if (is_defender()) {
 				if (could_play_card(EVENT_RUSSIAN_HILL))
 					return true
 				if (!is_winter())
@@ -6546,7 +6546,7 @@ function action_battle_events(c) {
 		case EVENT_TEUTONIC_AMBUSH:
 		case EVENT_RUSSIAN_AMBUSH:
 			log(`Played E${c}.`)
-			if (game.active === game.battle.attacker)
+			if (is_attacker())
 				game.battle.ambush |= 2
 			else
 				game.battle.ambush |= 1
@@ -6567,7 +6567,7 @@ states.bridge = {
 	prompt() {
 		view.prompt = "Bridge: Play on a Center Lord."
 		let array = game.battle.array
-		if (game.active === game.battle.attacker) {
+		if (is_attacker()) {
 			if (array[D2] !== NOBODY)
 				gen_action_lord(array[D2])
 			if (array[RD2] !== NOBODY)
@@ -6591,7 +6591,7 @@ states.field_organ = {
 	prompt() {
 		view.prompt = "Field Organ: Play on a Lord."
 		let array = game.battle.array
-		if (game.active === game.battle.attacker) {
+		if (is_attacker()) {
 			for (let pos of battle_attacking_positions)
 				if (array[pos] !== NOBODY)
 					gen_action_lord(array[pos])
@@ -6621,7 +6621,7 @@ function goto_concede() {
 	if (game.battle.storm) {
 		log_h3(`Storm Round ${game.battle.round} / ${count_siege_markers(game.battle.where)}`)
 		if (game.battle.round === 1)
-			goto_start_strike()
+			goto_first_strike()
 		else
 			game.state = "concede_storm"
 	} else {
@@ -6643,7 +6643,7 @@ states.concede_battle = {
 	},
 	battle() {
 		set_active_enemy()
-		if (game.active === game.battle.attacker)
+		if (is_attacker())
 			goto_reposition_battle()
 	},
 }
@@ -6683,35 +6683,49 @@ function goto_reposition_battle() {
 
 	// If all SA routed, send RD to reserve (end relief sally)
 	if (array[SA1] === NOBODY && array[SA2] === NOBODY && array[SA3] === NOBODY) {
-		send_to_reserve(RD1)
-		send_to_reserve(RD2)
-		send_to_reserve(RD3)
+		if (array[RD1] !== NOBODY || array[RD2] !== NOBODY || array[RD3] !== NOBODY) {
+			log("Ended relief sally.")
+			send_to_reserve(RD1)
+			send_to_reserve(RD2)
+			send_to_reserve(RD3)
+		}
 	}
 
 	// If all D routed, advance RD to front
 	if (array[D1] === NOBODY && array[D2] === NOBODY && array[D3] === NOBODY) {
-		slide_array(RD1, D1)
-		slide_array(RD2, D2)
-		slide_array(RD3, D3)
+		if (array[RD1] !== NOBODY || array[RD2] !== NOBODY || array[RD3] !== NOBODY) {
+			log("Reserve defenders to front.")
+			slide_array(RD1, D1)
+			slide_array(RD2, D2)
+			slide_array(RD3, D3)
+		}
 	}
 
 	// If all A routed, flip the battle field around:
 	if (array[A1] === NOBODY && array[A2] === NOBODY && array[A3] === NOBODY) {
-		// Become a regular sally situation (siegeworks still count for defender)
-		game.battle.sally = 1
-		// Advance SA to front (to regular sally)
-		slide_array(SA1, A1)
-		slide_array(SA2, A2)
-		slide_array(SA3, A3)
-		// then D back to reserve
-		send_to_reserve(D1)
-		send_to_reserve(D2)
-		send_to_reserve(D3)
-		// then RD to D
-		slide_array(RD1, D1)
-		slide_array(RD2, D2)
-		slide_array(RD3, D3)
-		// and during the advance D may come back out from reserve
+		if (array[SA1] !== NOBODY || array[SA2] !== NOBODY || array[SA3] !== NOBODY) {
+			log("Attackers routed.")
+
+			// Become a regular sally situation (siegeworks still count for defender)
+			game.battle.sally = 1
+
+			// Advance SA to front (to regular sally)
+			slide_array(SA1, A1)
+			slide_array(SA2, A2)
+			slide_array(SA3, A3)
+
+			// then D back to reserve
+			send_to_reserve(D1)
+			send_to_reserve(D2)
+			send_to_reserve(D3)
+
+			// then RD to D
+			slide_array(RD1, D1)
+			slide_array(RD2, D2)
+			slide_array(RD3, D3)
+
+			// and during the advance D may come back out from reserve
+		}
 	}
 
 	set_active_attacker()
@@ -6728,7 +6742,7 @@ function goto_reposition_advance() {
 function end_reposition_advance() {
 	game.who = NOBODY
 	set_active_enemy()
-	if (game.active === game.battle.attacker)
+	if (is_attacker())
 		goto_reposition_center()
 	else
 		goto_reposition_advance()
@@ -6744,8 +6758,8 @@ function goto_reposition_center() {
 function end_reposition_center() {
 	game.who = NOBODY
 	set_active_enemy()
-	if (game.active === game.battle.attacker)
-		goto_start_strike()
+	if (is_attacker())
+		goto_first_strike()
 	else
 		goto_reposition_center()
 }
@@ -6753,10 +6767,9 @@ function end_reposition_center() {
 function can_reposition_advance() {
 	if (has_reserves()) {
 		let array = game.battle.array
-		if (game.active === game.battle.attacker) {
+		if (is_attacker()) {
 			if (array[A1] === NOBODY || array[A2] === NOBODY || array[A3] === NOBODY)
 				return true
-			// TODO: sally more lords from castle?
 		} else {
 			if (array[D1] === NOBODY || array[D2] === NOBODY || array[D3] === NOBODY)
 				return true
@@ -6778,7 +6791,7 @@ states.reposition_advance = {
 				gen_action_lord(lord)
 
 		if (game.who !== NOBODY) {
-			if (game.active === game.battle.attacker) {
+			if (is_attacker()) {
 				if (array[A1] === NOBODY) gen_action_array(A1)
 				if (array[A2] === NOBODY) gen_action_array(A2)
 				if (array[A3] === NOBODY) gen_action_array(A3)
@@ -6798,6 +6811,7 @@ states.reposition_advance = {
 		game.who = lord
 	},
 	array(pos) {
+		set_delete(game.battle.reserves, game.who)
 		game.battle.array[pos] = game.who
 		game.who = NOBODY
 		goto_reposition_advance()
@@ -6806,7 +6820,7 @@ states.reposition_advance = {
 
 function can_reposition_center() {
 	let array = game.battle.array
-	if (game.active === game.battle.attacker) {
+	if (is_attacker()) {
 		if (array[A2] === NOBODY && (array[A1] !== NOBODY || array[A3] !== NOBODY))
 			return true
 		if (array[SA2] === NOBODY && (array[SA1] !== NOBODY || array[SA3] !== NOBODY))
@@ -6825,7 +6839,7 @@ states.reposition_center = {
 		view.prompt = "Reposition: Slide to Center."
 		let array = game.battle.array
 
-		if (game.active === game.battle.attacker) {
+		if (is_attacker()) {
 			if (array[A2] === NOBODY) {
 				if (array[A1] !== NOBODY) gen_action_lord(game.battle.array[A1])
 				if (array[A3] !== NOBODY) gen_action_lord(game.battle.array[A3])
@@ -6880,8 +6894,8 @@ function goto_reposition_storm() {
 function end_reposition_storm() {
 	game.who = NOBODY
 	set_active_enemy()
-	if (game.active === game.battle.attacker)
-		goto_start_strike()
+	if (is_attacker())
+		goto_first_strike()
 	else
 		goto_reposition_storm()
 }
@@ -6897,7 +6911,7 @@ states.reposition_storm = {
 	lord(lord) {
 		log(`Swapped in L${lord}.`)
 		set_delete(game.battle.reserves, lord)
-		if (game.active === game.battle.attacker) {
+		if (is_attacker()) {
 			if (game.battle.array[A2] !== NOBODY)
 				set_add(game.battle.reserves, game.battle.array[A2])
 			game.battle.array[A2] = lord
@@ -6913,7 +6927,20 @@ states.reposition_storm = {
 	},
 }
 
-// === BATTLE: TOTAL HITS ===
+// === BATTLE: STRIKE ===
+
+/*
+
+Strike groups:
+	Strike opposing lord
+	Strike closest flanked lord (choice left/right) if not directly opposed
+	Combine strikes with lords targeting same position
+
+Target groups:
+	If any striker is flanking target, single target.
+	If any other lords flank all strikers, add them to target group.
+
+*/
 
 function get_battle_array(pos) {
 	if (game.battle.ambush & 1)
@@ -6937,19 +6964,19 @@ const battle_defending_positions = [ D1, D2, D3, RD1, RD2, RD3 ]
 const battle_attacking_positions = [ A1, A2, A3, SA1, SA2, SA3 ]
 
 const battle_steps = [
-	{ name: "Defending Archery", hits: count_archery_hits, xhits: count_archery_xhits, archery: 1 },
-	{ name: "Attacking Archery", hits: count_archery_hits, xhits: count_archery_xhits, archery: 1 },
-	{ name: "Defending Horse", hits: count_horse_hits, xhits: count_zero_hits, archery: 0 },
-	{ name: "Attacking Horse", hits: count_horse_hits, xhits: count_zero_hits, archery: 0 },
-	{ name: "Defending Foot", hits: count_foot_hits, xhits: count_zero_hits, archery: 0 },
-	{ name: "Attacking Foot", hits: count_foot_hits, xhits: count_zero_hits, archery: 0 },
+	{ name: "Defending Archery", hits: count_archery_hits, xhits: count_archery_xhits },
+	{ name: "Attacking Archery", hits: count_archery_hits, xhits: count_archery_xhits },
+	{ name: "Defending Horse", hits: count_horse_hits, xhits: count_zero_hits },
+	{ name: "Attacking Horse", hits: count_horse_hits, xhits: count_zero_hits },
+	{ name: "Defending Foot", hits: count_foot_hits, xhits: count_zero_hits },
+	{ name: "Attacking Foot", hits: count_foot_hits, xhits: count_zero_hits },
 ]
 
 const storm_steps = [
-	{ name: "Defending Archery", hits: count_archery_hits, xhits: count_archery_xhits, archery: 1 },
-	{ name: "Attacking Archery", hits: count_archery_hits, xhits: count_archery_xhits, archery: 1 },
-	{ name: "Defending Melee", hits: count_melee_hits, xhits: count_zero_hits, archery: 0 },
-	{ name: "Attacking Melee", hits: count_melee_hits, xhits: count_zero_hits, archery: 0 },
+	{ name: "Defending Archery", hits: count_archery_hits, xhits: count_archery_xhits },
+	{ name: "Attacking Archery", hits: count_archery_hits, xhits: count_archery_xhits },
+	{ name: "Defending Melee", hits: count_melee_hits, xhits: count_zero_hits },
+	{ name: "Attacking Melee", hits: count_melee_hits, xhits: count_zero_hits },
 ]
 
 function count_zero_hits(_) {
@@ -7014,13 +7041,13 @@ function count_foot_hits(lord) {
 }
 
 function count_garrison_xhits() {
-	if (storm_steps[game.battle.step].archery)
+	if (is_archery_step())
 		return game.battle.garrison.men_at_arms
 	return 0
 }
 
 function count_garrison_hits() {
-	if (!storm_steps[game.battle.step].archery)
+	if (is_melee_step())
 		return (game.battle.garrison.knights << 1) + (game.battle.garrison.men_at_arms << 1)
 	return 0
 }
@@ -7035,85 +7062,6 @@ function count_lord_hits(lord) {
 	if (game.battle.storm)
 		return storm_steps[game.battle.step].hits(lord)
 	return battle_steps[game.battle.step].hits(lord)
-}
-
-function has_lord_strike(lord) {
-	if (lord !== NOBODY)
-		return count_lord_hits(lord) + count_lord_xhits(lord) > 0
-	return false
-}
-
-function has_center_strike(AX, DX) {
-	if (game.active === game.battle.attacker)
-		return has_lord_strike(get_battle_array(AX))
-	else
-		return has_lord_strike(get_battle_array(DX))
-}
-
-function has_sa_strike() {
-	return (
-		has_lord_strike(get_battle_array(SA1)) ||
-		has_lord_strike(get_battle_array(SA2)) ||
-		has_lord_strike(get_battle_array(SA3))
-	)
-}
-
-// === BATTLE: STRIKE ===
-
-// Segment strikers and targets into groups according to flanking situation (front/rear choice).
-// S picks group to strike.
-// Roll for walls or siegeworks.
-// T applies hits.
-// Rolls for armor.
-// If any routed, recalculate target group for current strike group (front/rear choice again).
-
-function format_strike_step() {
-	// TODO: format strike group and target groups too?
-	if (game.battle.storm)
-		return storm_steps[game.battle.step].name
-	return battle_steps[game.battle.step].name
-}
-
-function goto_start_strike() {
-	game.battle.step = 0
-	goto_strike()
-}
-
-function goto_next_strike() {
-	let end = game.battle.storm ? 4 : 6
-	game.battle.step++
-	if (game.battle.step >= end)
-		end_battle_round()
-	else
-		goto_strike()
-}
-
-function goto_strike() {
-	// Exit early if one side is completely routed
-	if (is_battle_over()) {
-		goto_next_strike()
-		return
-	}
-
-	if (game.battle.step & 1)
-		set_active_attacker()
-	else
-		set_active_defender()
-
-	// Once per Archery and once per Melee.
-	if (game.battle.step === 0 || game.battle.step === 2) {
-		game.battle.warrior_monks = 0
-		for (let p = 0; p < 12; ++p) {
-			let lord = game.battle.array[p]
-			if (lord !== NOBODY && lord_has_capability(lord, AOW_TEUTONIC_WARRIOR_MONKS))
-				game.battle.warrior_monks |= (1 << lord)
-		}
-	}
-
-	if (game.battle.storm)
-		goto_strike_storm()
-	else
-		goto_strike_battle()
 }
 
 function is_battle_over() {
@@ -7134,233 +7082,459 @@ function has_no_unrouted_forces() {
 	for (let lord of game.battle.reserves)
 		if (is_friendly_lord(lord))
 			return false
-	if (game.battle.storm && game.active !== game.battle.attacker)
+	if (game.battle.storm && is_defender())
 		if (game.battle.garrison)
 			return false
 	return true
 }
 
-function has_sa_without_rd() {
-	if (game.active === game.battle.attacker)
-		if (filled(SA1) || filled(SA2) || filled(SA3))
-			if (empty(RD1) && empty(RD2) && empty(RD3))
-				return true
+function is_attacker() {
+	return game.active === game.battle.attacker
+}
+
+function is_defender() {
+	return game.active !== game.battle.attacker
+}
+
+function is_attacker_step() {
+	return (game.battle.step & 1) === 1
+}
+
+function is_defender_step() {
+	return (game.battle.step & 1) === 0
+}
+
+function is_archery_step() {
+	return game.battle.step < 2
+}
+
+function is_melee_step() {
+	return game.battle.step >= 2
+}
+
+function did_concede() {
+	return game.active === game.battle.conceded
+}
+
+function did_not_concede() {
+	return game.active !== game.battle.conceded
+}
+
+function has_strike(pos) {
+	return game.battle.ah[pos] + game.battle.ahx[pos] > 0
+}
+
+function current_strike_positions() {
+	if (game.battle.storm)
+		return is_attacker_step() ? [ A2 ] : [ D2 ]
+	else
+		return is_attacker_step() ? battle_attacking_positions : battle_defending_positions
+}
+
+function find_closest_target(A, B, C) {
+	if (filled(A)) return A
+	if (filled(B)) return B
+	if (filled(C)) return C
+	return -1
+}
+
+function find_closest_target_center(T2) {
+	if (game.battle.fc < 0) throw Error("unset front l/r choice")
+	if (game.battle.rc < 0) throw Error("unset rear l/r choice")
+	if (filled(T2))
+		return T2
+	if (T2 >= A1 && T2 <= D3)
+		return game.battle.fc
+	return game.battle.rc
+}
+
+function find_strike_target(S) {
+	switch (S) {
+	case A1: return find_closest_target(D1, D2, D3)
+	case A2: return find_closest_target_center(D2)
+	case A3: return find_closest_target(D3, D2, D1)
+	case D1: return find_closest_target(A1, A2, A3)
+	case D2: return find_closest_target_center(A2)
+	case D3: return find_closest_target(A3, A2, A1)
+	case SA1: return find_closest_target(RD1, RD2, RD3)
+	case SA2: return find_closest_target_center(RD2)
+	case SA3: return find_closest_target(RD3, RD2, RD1)
+	case RD1: return find_closest_target(SA1, SA2, SA3)
+	case RD2: return find_closest_target_center(SA2)
+	case RD3: return find_closest_target(SA3, SA2, SA1)
+	}
+}
+
+function has_strike_target(S) {
+	if (is_attacker_step() && game.battle.storm && game.battle.garrison)
+		return true
+	if (S === A1 || S === A2 || S === A3)
+		return filled(D1) || filled(D2) || filled(D3)
+	if (S === D1 || S === D2 || S === D3)
+		return filled(A1) || filled(A2) || filled(A3)
+	if (S === SA1 || S === SA2 || S === SA3)
+		return filled(RD1) || filled(RD2) || filled(RD3) || filled(D1) || filled(D2) || filled(D3)
+	if (S === RD1 || S === RD2 || S === RD3)
+		return filled(SA1) || filled(SA2) || filled(SA3)
+}
+
+function has_no_strike_targets() {
+	for (let striker of game.battle.strikers)
+		if (has_strike_target(striker))
+			return false
+	return true
+}
+
+function has_no_strikers_and_strike_targets() {
+	for (let pos of current_strike_positions())
+		if (has_strike(pos) && has_strike_target(pos))
+			return false
+	return true
+}
+
+function create_strike_group(start) {
+	let strikers = [ start ]
+	let target = find_strike_target(start)
+	for (let pos of current_strike_positions())
+		if (pos !== start && filled(pos) && find_strike_target(pos) === target)
+			set_add(strikers, pos)
+	return strikers
+}
+
+function flanks_position_row(S, T, S1, S2, S3, T1, T2, T3) {
+	// S and T are not empty
+	switch (S) {
+		case S1:
+			switch (T) {
+				case T1: return false
+				case T2: return empty(T1)
+				case T3: return empty(T1) && empty(T2)
+			}
+			break
+		case S2:
+			return empty(T2)
+		case S3:
+			switch (T) {
+				case T1: return empty(T3) && empty(T2)
+				case T2: return empty(T3)
+				case T3: return false
+			}
+			break
+	}
 	return false
 }
 
-function select_lone_defender() {
+function flanks_position(S, T) {
+	if (S === A1 || S === A2 || S === A3)
+		return flanks_position_row(S, T, A1, A2, A3, D1, D2, D3)
+	if (S === D1 || S === D2 || S === D3)
+		return flanks_position_row(S, T, D1, D2, D3, A1, A2, A3)
+	if (S === SA1 || S === SA2 || S === SA3)
+		return flanks_position_row(S, T, SA1, SA2, SA3, RD1, RD2, RD3)
+	if (S === RD1 || S === RD2 || S === RD3)
+		return flanks_position_row(S, T, RD1, RD2, RD3, SA1, SA2, SA3)
+}
+
+function flanks_all_positions(S, TT) {
+	for (let T of TT)
+		if (!flanks_position(S, T))
+			return false
+	return true
+}
+
+function strike_left_or_right(gate, S2, T1, T2, T3) {
+	if (gate(S2)) {
+		if (filled(T2))
+			return T2
+		let has_t1 = filled(T1)
+		let has_t3 = filled(T3)
+		if (has_t1 && has_t3)
+			return -1
+		if (has_t1)
+			return T1
+		if (has_t3)
+			return T3
+	}
+	return T2 // No target - safe default
+}
+
+function strike_reserve_defender() {
 	let has_d1 = filled(D1)
 	let has_d2 = filled(D2)
 	let has_d3 = filled(D3)
-	if (has_d1 && !has_d2 && !has_d3)
-		return D1
-	if (!has_d1 && has_d2 && !has_d3)
-		return D2
-	if (!has_d1 && !has_d2 && has_d3)
-		return D3
-	if (!has_d1 && !has_d2 && !has_d3)
-		return 0 // no target!
-	return -1 // choice of target
+	if (has_d1 && !has_d2 && !has_d3) return D1
+	if (!has_d1 && has_d2 && !has_d3) return D2
+	if (!has_d1 && !has_d2 && has_d3) return D3
+	return -1
 }
 
-function pack_battle_array_front() {
-	let x = 0
-	for (let i = 0; i < 6; ++i)
-		if (filled(i))
-			x |= (1 << i)
-	return x
-}
+// === BATTLE: STRIKE ===
 
-function pack_battle_array_rear() {
-	let x = 0
-	for (let i = 0; i < 6; ++i)
-		if (filled(i+6))
-			x |= (1 << i)
-	return x
-}
+/*
 
-function front_strike_choice() {
-	let s = game.battle.step & 1
-	let x = pack_battle_array_front()
-	if (GROUPS[s][1][x] !== 0) {
-		// Choice only matters if the center Lord has strikes this step
-		if (has_center_strike(A2, D2))
-			game.battle.fc = -1
-		else
-			game.battle.fc = 0
-	} else {
-		game.battle.fc = 0
-	}
-}
+for each battle step:
+	generate strikes for each lord
+	while strikes remain:
+		create list of strike groups (choose left/right both rows)
+		select strike group
+		create target group (choose if sally)
+		total strikes and roll for walls
+		while hits remain:
+			assign hit to unit in target group
+			if lord routs:
+				forget choice of left/right strike group in current row
+				create new target group (choose if left/right/sally)
 
-function rear_strike_choice() {
-	if (has_sa_without_rd()) {
-		if (has_sa_strike())
-			game.battle.rc = select_lone_defender()
-		else
-			game.battle.rc = 0
-	} else {
-		let s = game.battle.step & 1
-		let x = pack_battle_array_rear()
-		if (GROUPS[s][1][x] !== 0) {
-			// Choice only matters if the center Lord has strikes this step
-			if (has_center_strike(SA2, RD2))
-				game.battle.fc = -1
-			else
-				game.battle.rc = 0
-		} else {
-			game.battle.rc = 0
-		}
-	}
-}
-
-function unpack_group(g, offset) {
-	let list = []
-	for (let i = 0; i < 6; ++i)
-		if ((g >> i) & 1)
-			list.push(i + offset)
-	return list
-}
-
-function create_battle_group(list, targets) {
-	let strikers = []
-	let hits = 0
-	let xhits = 0
-
-	for (let pos of list) {
-		let lord = game.battle.array[pos]
-		let lord_hits = count_lord_hits(lord)
-		let lord_xhits = count_lord_xhits(lord)
-		if (lord_hits + lord_xhits > 0) {
-			strikers.push(pos)
-			if (lord_xhits > 0)
-				log(`L${lord} ${lord_xhits/2} crossbow hits`)
-			if (lord_hits > 0)
-				log(`L${lord} ${lord_hits/2} hits`)
-			hits += lord_hits
-			xhits += lord_xhits
-		}
-	}
-
-	if (strikers.length > 0) {
-		// Round in favor of crossbow hits.
-		if (xhits & 1) {
-			hits = (hits >> 1)
-			xhits = (xhits >> 1) + 1
-		} else {
-			if (hits & 1)
-				hits = (hits >> 1) + 1
-			else
-				hits = (hits >> 1)
-			xhits = (xhits >> 1)
-		}
-
-		// Conceding side halves its total Hits, rounded up.
-		if (game.active === game.battle.conceded) {
-			hits = (hits + 1) >> 1
-			xhits = (xhits + 1) >> 1
-		}
-
-		game.battle.groups.push([ strikers, targets, hits, xhits ])
-	}
-}
-
-function create_battle_groups_from_array(list, offset) {
-	if (list)
-		for (let [ s, t ] of list)
-			create_battle_group(unpack_group(s, offset), unpack_group(t, offset))
-}
+*/
 
 function format_group(g) {
 	return g.map(p=>lord_name[game.battle.array[p]]).join(", ")
 }
 
-function debug_group(g) {
-	return g.map(p=>battle_array_name[p]).join("+")
+function format_strike_step() {
+	// TODO: format strike group and target groups too?
+	if (game.battle.storm)
+		return storm_steps[game.battle.step].name
+	return battle_steps[game.battle.step].name
 }
 
-function debug_group_list(list) {
-	for (let [strikers,targets,hits,xhits] of list)
-		console.log(debug_group(strikers), "strike", debug_group(targets), "for", hits, "+", xhits)
+function format_hits() {
+	if (game.battle.xhits > 0 && game.battle.hits > 0)
+		return `${game.battle.xhits} crossbow hits and ${game.battle.hits} hits`
+	else if (game.battle.xhits > 0)
+		return `${game.battle.xhits} crossbow hits`
+	else
+		return `${game.battle.hits} hits`
 }
 
-function debug_battle_array(f, r) {
-	for (let row = 0; row < 6; row += 3) {
-		let x = ""
-		for (let col = 0; col < 3; ++col) {
-			let b = row + col
-			if ((f >> b) & 1)
-				x += battle_array_name[b] + "  "
-			else
-				x += "--- "
-		}
-		console.log(x)
+function goto_first_strike() {
+	game.battle.step = 0
+	goto_strike()
+}
+
+function goto_next_strike() {
+	let end = game.battle.storm ? 4 : 6
+	game.battle.step++
+	if (game.battle.step >= end)
+		end_battle_round()
+	else
+		goto_strike()
+}
+
+function goto_strike() {
+	// Exit early if one side is completely routed
+	if (is_battle_over()) {
+		end_battle_round()
+		return
 	}
-	for (let row = 3; row >= 0; row -= 3) {
-		let x = ""
-		for (let col = 0; col < 3; ++col) {
-			let b = row + col
-			if ((r >> b) & 1)
-				x += battle_array_name[b+6] + " "
-			else
-				x += "--- "
+
+	if (is_attacker_step())
+		set_active_attacker()
+	else
+		set_active_defender()
+
+	if (game.battle.storm)
+		log_h4(storm_steps[game.battle.step].name)
+	else
+		log_h4(battle_steps[game.battle.step].name)
+
+	// Once per Archery and once per Melee.
+	if (game.battle.step === 0 || game.battle.step === 2) {
+		game.battle.warrior_monks = 0
+		for (let p = 0; p < 12; ++p) {
+			let lord = game.battle.array[p]
+			if (lord !== NOBODY && lord_has_capability(lord, AOW_TEUTONIC_WARRIOR_MONKS))
+				game.battle.warrior_monks |= 1 << lord
 		}
-		console.log(x)
+	}
+
+	if (is_marsh_in_play())
+		log("Marsh")
+
+	if (is_archery_step() && is_hill_in_play())
+		log("Hill")
+
+	if (is_melee_step() && game.battle.bridge)
+		log("TODO: Bridge")
+
+	// Generate hits
+	if (!game.battle.storm) {
+		game.battle.ah = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+		game.battle.ahx = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+	} else {
+		game.battle.ah = [ 0, 0, 0, 0, 0, 0 ]
+		game.battle.ahx = [ 0, 0, 0, 0, 0, 0 ]
+	}
+
+	for (let pos of current_strike_positions()) {
+		let lord = get_battle_array(pos)
+		if (lord !== NOBODY) {
+			let hits = (game.battle.ah[pos] = count_lord_hits(lord))
+			let xhits = (game.battle.ahx[pos] = count_lord_xhits(lord))
+
+			// STORM: Max 6 hits per lord in melee (12 since we count half-hits).
+			if (game.battle.storm) {
+				if (is_melee_step() && hits > 12)
+					hits = 12
+			}
+
+			if (xhits > 0)
+				log(`L${lord} ${xhits / 2} crossbow hits`)
+			if (hits > 0)
+				log(`L${lord} ${hits / 2} hits`)
+		}
+	}
+
+	if (did_concede())
+		log("Pursuit halved hits")
+
+	// Strike left or right or reserve defender
+	if (is_attacker_step())
+		game.battle.fc = strike_left_or_right(has_strike, A2, D1, D2, D3)
+	else
+		game.battle.fc = strike_left_or_right(has_strike, D2, A1, A2, A3)
+
+	if (is_sa_without_rd()) {
+		// NOTE: striking reserve defenders is handled in strike_group and assign_hits
+		game.battle.rc = RD2
+	} else {
+		if (is_attacker_step())
+			game.battle.rc = strike_left_or_right(has_strike, SA2, RD1, RD2, RD3)
+		else
+			game.battle.rc = strike_left_or_right(has_strike, RD2, SA1, SA2, SA3)
+	}
+
+	if (game.battle.storm) {
+		if (is_attacker_step())
+			game.battle.strikers = [ A2 ]
+		else
+			game.battle.strikers = [ D2 ]
+		goto_strike_total_hits()
+	} else {
+		if (has_no_strikers_and_strike_targets())
+			log("No targets.")
+		resume_strike()
 	}
 }
 
-function goto_strike_storm() {
-	log_h4(storm_steps[game.battle.step].name)
+function resume_strike() {
+	if (game.battle.storm)
+		goto_next_strike() // NOTE: only one strike group in a storm
+	else if (has_no_strikers_and_strike_targets())
+		goto_next_strike()
+	else if (game.battle.fc < 0 || game.battle.rc < 0)
+		game.state = "strike_left_right"
+	else
+		// TODO: auto-strike if only one group?
+		game.state = "strike_group"
+}
 
-	let strikers = []
-	let targets = []
+function prompt_target_2(S1, T1, T3) {
+	view.who = game.battle.array[S1]
+	gen_action_lord(game.battle.array[T1])
+	gen_action_lord(game.battle.array[T3])
+}
+
+function is_sa_without_rd() {
+	return (filled(SA1) || filled(SA2) || filled(SA3)) && empty(RD1) && empty(RD2) && empty(RD3)
+}
+
+function prompt_left_right() {
+	if (game.battle.fc < 0) {
+		view.prompt = `${format_strike_step()}: Strike left or right?`
+		if (is_attacker_step())
+			prompt_target_2(A2, D1, D3)
+		else
+			prompt_target_2(D2, A1, A3)
+	} else {
+		if (is_sa_without_rd()) {
+			view.prompt = `${format_strike_step()}: Strike which reserve defender?`
+			view.group = []
+			if (filled(SA1)) view.group.push(SA1)
+			if (filled(SA2)) view.group.push(SA2)
+			if (filled(SA3)) view.group.push(SA3)
+			if (filled(D1)) gen_action_lord(game.battle.array[D1])
+			if (filled(D2)) gen_action_lord(game.battle.array[D2])
+			if (filled(D3)) gen_action_lord(game.battle.array[D3])
+		} else {
+			view.prompt = `${format_strike_step()}: Strike left or right?`
+			if (is_attacker_step())
+				prompt_target_2(SA2, RD1, RD3)
+			else
+				prompt_target_2(RD2, SA1, SA3)
+		}
+	}
+}
+
+function action_left_right(lord) {
+	log(`Targeted L${lord}`)
+	let pos = get_lord_array_position(lord)
+	if (game.battle.fc < 0)
+		game.battle.fc = pos
+	else
+		game.battle.rc = pos
+}
+
+states.strike_left_right = {
+	prompt: prompt_left_right,
+	lord(lord) {
+		action_left_right(lord)
+		resume_strike()
+	},
+}
+
+states.assign_left_right = {
+	prompt: prompt_left_right,
+	lord(lord) {
+		action_left_right(lord)
+		set_active_enemy()
+		goto_assign_hits()
+	},
+}
+
+states.strike_group = {
+	prompt() {
+		view.prompt = `${format_strike_step()}: Strike with a Lord.`
+		for (let pos of current_strike_positions())
+			if (has_strike(pos))
+				gen_action_lord(game.battle.array[pos])
+	},
+	lord(lord) {
+		let pos = get_lord_array_position(lord)
+		if ((pos === SA1 || pos === SA2 || pos === SA3) && is_sa_without_rd()) {
+			game.battle.strikers = [ SA1, SA2, SA3 ]
+			game.battle.rc = strike_reserve_defender()
+		} else {
+			game.battle.strikers = create_strike_group(pos)
+		}
+		goto_strike_total_hits()
+	},
+}
+
+// === BATTLE: TOTAL HITS (ROUND UP) ===
+
+function goto_strike_total_hits() {
 	let hits = 0
 	let xhits = 0
 
-	function add_lord_strike(pos) {
-		let lord = game.battle.array[pos]
-		let lord_hits = count_lord_hits(lord)
-		let lord_xhits = count_lord_xhits(lord)
-
-		// Max 6 hits per lord in melee (12 since we count half-hits).
-		if (game.battle.step >= 2)
-			if (lord_hits > 12)
-				lord_hits = 12
-
-		if (lord_hits + lord_xhits > 0) {
-			strikers.push(pos)
-			if (lord_xhits > 0)
-				log(`L${lord} ${lord_xhits/2} crossbow hits`)
-			if (lord_hits > 0)
-				log(`L${lord} ${lord_hits/2} hits`)
-			hits += lord_hits
-			xhits += lord_xhits
-		}
+	// STORM: Garrison strikes
+	if (is_defender_step() && game.battle.storm && game.battle.garrison) {
+		let garr_hits = count_garrison_hits()
+		let garr_xhits = count_garrison_xhits()
+		if (garr_xhits > 0)
+			log(`Garrison ${garr_xhits/2} crossbow hits`)
+		if (garr_hits > 0)
+			log(`Garrison ${garr_hits/2} hits`)
+		hits += garr_hits
+		xhits += garr_xhits
 	}
 
-	if (game.active === game.battle.attacker) {
-		add_lord_strike(A2)
-		if (game.battle.array[D2] !== NOBODY)
-			targets.push(D2)
-	} else {
-		if (game.battle.garrison) {
-			let garr_hits = count_garrison_hits()
-			let garr_xhits = count_garrison_xhits()
-			if (garr_xhits > 0)
-				log(`Garrison ${garr_xhits/2} crossbow hits`)
-			if (garr_hits > 0)
-				log(`Garrison ${garr_hits/2} hits`)
-			hits += garr_hits
-			xhits += garr_xhits
-		}
-		add_lord_strike(D2)
-		targets.push(A2)
-	}
-
-	if (hits + xhits === 0) {
-		log("No hits.")
-		goto_next_strike()
-		return
+	// Total hits
+	for (let pos of game.battle.strikers) {
+		hits += game.battle.ah[pos]
+		xhits += game.battle.ahx[pos]
+		game.battle.ah[pos] = 0
+		game.battle.ahx[pos] = 0
 	}
 
 	// Round in favor of crossbow hits.
@@ -7375,250 +7549,32 @@ function goto_strike_storm() {
 		xhits = (xhits >> 1)
 	}
 
-	game.battle.groups = []
-	game.battle.strikers = strikers
-	game.battle.targets = targets
+	// Conceding side halves its total Hits, rounded up.
+	if (did_concede()) {
+		hits = (hits + 1) >> 1
+		xhits = (xhits + 1) >> 1
+	}
+
 	game.battle.hits = hits
 	game.battle.xhits = xhits
 
-	// TODO: "select_strike_group" w/ garrison?
+	log(format_group(game.battle.strikers) + " struck")
 
-	goto_assign_hits()
+	goto_strike_roll_walls()
 }
 
-function goto_strike_battle() {
-	log_h4(battle_steps[game.battle.step].name)
+// === BATTLE: ROLL WALLS ===
 
-	if (is_marsh_in_play())
-		log("Marsh")
-
-	if (is_hill_in_play() && game.battle.step < 2)
-		log("Hill")
-
-	if (game.battle.step >= 2) // Melee Step
-		if (game.battle.bridge)
-			log("TODO: Bridge")
-
-	front_strike_choice()
-	rear_strike_choice()
-
-	goto_strike_choice()
-}
-
-function goto_strike_choice() {
-	if (game.battle.fc === -1)
-		game.state = "front_strike_choice"
-	else if (game.battle.rc === -1)
-		game.state = "rear_strike_choice"
-	else
-		end_strike_choice()
-}
-
-function prompt_strike_choice(X1, X2, X3, Y2) {
-	if (empty(X2) && filled(Y2)) {
-		view.who = game.battle.array[Y2]
-		if (filled(X1))
-			gen_action_lord(game.battle.array[X1])
-		if (filled(X3))
-			gen_action_lord(game.battle.array[X3])
-	}
-}
-
-states.front_strike_choice = {
-	prompt() {
-		view.prompt = `${format_strike_step()}: Strike who?`
-		if (game.active === game.battle.attacker)
-			prompt_strike_choice(D1, D2, D3, A2)
-		else
-			prompt_strike_choice(A1, A2, A3, D2)
-	},
-	lord(lord) {
-		let pos = get_lord_array_position(lord)
-		if (pos === A1 || pos === D1)
-			game.battle.fc = 0
-		if (pos === A3 || pos === D3)
-			game.battle.fc = 1
-		goto_strike_choice()
-	},
-}
-
-states.rear_strike_choice = {
-	prompt() {
-		view.prompt = `${format_strike_step()}: Strike who?`
-		if (has_sa_without_rd()) {
-			if (has_sa_strike()) {
-				view.group = []
-				if (filled(SA1)) view.group.push(SA1)
-				if (filled(SA2)) view.group.push(SA2)
-				if (filled(SA3)) view.group.push(SA3)
-				if (filled(D1)) gen_action_lord(game.battle.array[D1])
-				if (filled(D2)) gen_action_lord(game.battle.array[D2])
-				if (filled(D3)) gen_action_lord(game.battle.array[D3])
-			}
-		} else {
-			if (game.active === game.battle.attacker)
-				prompt_strike_choice(RD1, RD2, RD3, SA2)
-			else
-				prompt_strike_choice(SA1, SA2, SA3, RD2)
-		}
-	},
-	lord(lord) {
-		let pos = get_lord_array_position(lord)
-		if (has_sa_without_rd()) {
-			game.battle.rc = pos
-		} else {
-			if (pos === SA1 || pos === RD1)
-				game.battle.rc = 0
-			if (pos === SA3 || pos === RD3)
-				game.battle.rc = 1
-		}
-		goto_strike_choice()
-	},
-}
-
-function end_strike_choice() {
-	let s = game.battle.step & 1
-	let front = pack_battle_array_front()
-	let rear = pack_battle_array_rear()
-
-	console.log("STRIKE")
-
-	debug_battle_array(front, rear)
-
-	game.battle.groups = []
-
-	create_battle_groups_from_array(GROUPS[s][game.battle.fc][front], 0)
-	if (has_sa_without_rd()) {
-		if (game.battle.rc === D1 || game.battle.rc === D2 || game.battle.rc === D3)
-			create_battle_group([ SA1, SA2, SA3 ], [ game.battle.rc ])
-	} else {
-		create_battle_groups_from_array(GROUPS[s][game.battle.rc][rear], 6)
-	}
-
-	if (game.active === game.battle.conceded)
-		log("Pursuit halved hits")
-
-	debug_group_list(game.battle.groups)
-
-	goto_select_strike_group()
-}
-
-
-function goto_select_strike_group() {
-	if (game.battle.groups.length === 0)
-		goto_next_strike()
-	/* TODO auto select is too abrupt, maybe option?
-	else if (game.battle.groups.length === 1)
-		select_strike_group(0)
-	*/
-	else
-		game.state = "select_strike_group"
-}
-
-states.select_strike_group = {
-	prompt() {
-		view.prompt = `${format_strike_step()}: Select Striking Lord or Group.`
-		for (let [strikers] of game.battle.groups) {
-			for (let p of strikers)
-				gen_action_lord(game.battle.array[p])
-		}
-	},
-	lord(lord) {
-		for (let i = 0; i < game.battle.groups.length; ++i) {
-			for (let p of game.battle.groups[i][0])
-				if (game.battle.array[p] === lord)
-					select_strike_group(i)
-		}
-	},
-}
-
-function select_strike_group(i) {
-	;[ game.battle.strikers, game.battle.targets, game.battle.hits, game.battle.xhits ] = game.battle.groups[i]
-	array_remove(game.battle.groups, i)
-	goto_assign_hits()
-}
-
-// === BATTLE: APPLY HITS / PROTECTION / ROLL WALLS ===
-
-function format_hits() {
-	if (game.battle.xhits > 0 && game.battle.hits > 0)
-		return `${game.battle.xhits} crossbow hits and ${game.battle.hits} hits`
-	else if (game.battle.xhits > 0)
-		return `${game.battle.xhits} crossbow hits`
-	else
-		return `${game.battle.hits} hits`
-}
-
-function has_unrouted_forces_in_target() {
-	if (game.battle.storm && game.active !== game.battle.attacker)
-		if (game.battle.garrison)
-			return true
-	for (let p of game.battle.targets) {
-		let lord = game.battle.array[p]
-		if (lord_has_unrouted_units(lord))
-			return true
-	}
-	return false
-}
-
-function is_flanked_target() {
-	if (game.battle.targets.length === 1) {
-		let pos = game.battle.targets[0]
-		let has_d1 = filled(D1) && empty(A1)
-		let has_d2 = filled(D2) && empty(A2)
-		let has_d3 = filled(D3) && empty(A3)
-		let has_a2 = filled(A2)
-		switch (pos) {
-		case A1:
-			return has_d2 || (has_d3 && !has_a2)
-		case A2:
-			return has_d1 || has_d3
-		case A3:
-			return has_d2 || (has_d1 && !has_a2)
-		}
-	}
-	return false
-}
-
-function has_valid_target() {
-	if (game.battle.storm && game.active !== game.battle.attacker && game.battle.garrison)
-		return true
-	return game.battle.targets.length > 0
-}
-
-function goto_assign_hits() {
+function goto_strike_roll_walls() {
 	set_active_enemy()
 
-	if (!has_valid_target()) {
-		end_assign_hits()
-		return
-	}
-
-	if (game.battle.storm && game.active !== game.battle.attacker && game.battle.garrison)
-		log("Garrison")
-	else
-		log(`${format_group(game.battle.targets)}`)
-
-	if (has_sa_without_rd()) {
-		console.log("SA without RD (getting hit)")
-		if (!is_flanked_target()) {
-			console.log("  unflanked, SA added to hit group")
-			if (filled(SA1))
-				game.battle.targets.push(SA1)
-			if (filled(SA2))
-				game.battle.targets.push(SA2)
-			if (filled(SA3))
-				game.battle.targets.push(SA3)
-		}
-	}
-
 	if (game.battle.storm) {
-		if (game.active === game.battle.attacker)
-			roll_for_siegeworks()
-		else
+		if (is_attacker_step())
 			roll_for_walls()
+		else
+			roll_for_siegeworks()
 	} else if (game.battle.sally) {
-		if (game.active !== game.battle.attacker) {
+		if (is_attacker_step()) {
 			if (is_ravens_rock_in_play() && count_siege_markers(game.battle.where) < 2)
 				roll_for_ravens_rock()
 			else
@@ -7641,36 +7597,13 @@ function goto_assign_hits() {
 	}
 
 	if (game.battle.xhits > 0)
-		logi(`Took ${game.battle.xhits} crossbow hits`)
+		logi(`${game.battle.xhits} crossbow hits`)
 	if (game.battle.hits > 0)
-		logi(`Took ${game.battle.hits} hits`)
+		logi(`${game.battle.hits} hits`)
 	if (game.battle.hits + game.battle.xhits === 0)
-		logi(`Took no hits`)
+		logi(`No hits`)
 
-	resume_assign_hits()
-}
-
-function resume_assign_hits() {
-	if (game.battle.hits + game.battle.xhits === 0) {
-		end_assign_hits()
-	} else if (!has_unrouted_forces_in_target()) {
-		log("TODO: remaining hits!")
-		// TODO: calculate new hit group for the current striking group, and resume or end if no valid targets
-		end_assign_hits()
-	} else {
-		game.state = "assign_hits"
-	}
-}
-
-function end_assign_hits() {
-	game.battle.strikers = 0
-	game.battle.targets = 0
-
-	set_active_enemy()
-	if (game.battle.storm)
-		goto_next_strike()
-	else
-		goto_select_strike_group()
+	goto_assign_hits()
 }
 
 function enemy_has_trebuchets() {
@@ -7749,30 +7682,215 @@ function roll_for_protection(name, prot, n) {
 
 // === BATTLE: ASSIGN HITS TO UNITS / ROLL BY HIT / ROUT ===
 
+function goto_assign_hits() {
+	if (game.battle.hits + game.battle.xhits === 0)
+		return end_assign_hits()
+
+	if (has_no_strike_targets()) {
+		log("Lost " + format_hits())
+		return end_assign_hits()
+	}
+
+	if (is_attacker_step()) {
+		if (game.battle.fc < 0 && set_has(game.battle.strikers, A2))
+			return goto_assign_left_right()
+		if (game.battle.rc < 0 && set_has(game.battle.strikers, SA2))
+			return goto_assign_left_right()
+	} else {
+		if (game.battle.fc < 0 && set_has(game.battle.strikers, D2))
+			return goto_assign_left_right()
+		if (game.battle.rc < 0 && set_has(game.battle.strikers, RD2))
+			return goto_assign_left_right()
+	}
+
+	game.state = "assign_hits"
+}
+
+function goto_assign_left_right() {
+	set_active_enemy()
+	game.state = "assign_left_right"
+}
+
+function end_assign_hits() {
+	game.battle.strikers = 0
+	game.battle.hits = 0
+	game.battle.xhits = 0
+	set_active_enemy()
+	if (game.battle.storm)
+		goto_next_strike()
+	else
+		resume_strike()
+}
+
+function for_each_target(fn) {
+	let start = game.battle.strikers[0]
+
+	// SA without RD striking D, target is always flanked
+	if ((start === SA1 || start === SA2 || start === SA3) && is_sa_without_rd()) {
+		fn(game.battle.array[game.battle.rc])
+		return
+	}
+
+	let target = find_strike_target(start)
+
+	fn(game.battle.array[target])
+
+	// If strikers flank target, target must take all hits
+	for (let striker of game.battle.strikers)
+		if (flanks_position(striker, target))
+			return
+
+	// If other lord flanks all strikers, he may take hits instead
+	for (let flanker of ARRAY_FLANKS[target])
+		if (filled(flanker) && flanks_all_positions(flanker, game.battle.strikers))
+			fn(game.battle.array[flanker])
+
+	// SA without RD flank all D equally closely
+	if ((target === A1 || target === A2 || target === A3) && is_sa_without_rd()) {
+		if (filled(SA1)) fn(game.battle.array[SA1])
+		if (filled(SA2)) fn(game.battle.array[SA2])
+		if (filled(SA3)) fn(game.battle.array[SA3])
+	}
+}
+
+function prompt_hit_armored_forces() {
+	let has_armored = false
+	for_each_target(lord => {
+		if (get_lord_forces(lord, KNIGHTS) > 0) {
+			gen_action_knights(lord)
+			has_armored = true
+		}
+		if (get_lord_forces(lord, SERGEANTS) > 0) {
+			gen_action_sergeants(lord)
+			has_armored = true
+		}
+		if (get_lord_forces(lord, MEN_AT_ARMS) > 0) {
+			gen_action_men_at_arms(lord)
+			has_armored = true
+		}
+	})
+	return has_armored
+}
+
+function prompt_hit_unarmored_forces() {
+	for_each_target(lord => {
+		if (get_lord_forces(lord, LIGHT_HORSE) > 0)
+			gen_action_light_horse(lord)
+		if (get_lord_forces(lord, ASIATIC_HORSE) > 0)
+			gen_action_asiatic_horse(lord)
+		if (get_lord_forces(lord, MILITIA) > 0)
+			gen_action_militia(lord)
+		if (get_lord_forces(lord, SERFS) > 0)
+			gen_action_serfs(lord)
+	})
+}
+
+function prompt_hit_forces() {
+	for_each_target(lord => {
+		if (get_lord_forces(lord, KNIGHTS) > 0)
+			gen_action_knights(lord)
+		if (get_lord_forces(lord, SERGEANTS) > 0)
+			gen_action_sergeants(lord)
+		if (get_lord_forces(lord, LIGHT_HORSE) > 0)
+			gen_action_light_horse(lord)
+		if (get_lord_forces(lord, ASIATIC_HORSE) > 0)
+			gen_action_asiatic_horse(lord)
+		if (get_lord_forces(lord, MEN_AT_ARMS) > 0)
+			gen_action_men_at_arms(lord)
+		if (get_lord_forces(lord, MILITIA) > 0)
+			gen_action_militia(lord)
+		if (get_lord_forces(lord, SERFS) > 0)
+			gen_action_serfs(lord)
+	})
+}
+
+states.assign_hits = {
+	prompt() {
+		view.prompt = `${format_strike_step()}: Assign ${format_hits()} to units.`
+
+		view.group = game.battle.strikers.map(p => game.battle.array[p])
+
+		// TODO: hits or xhits choice
+
+		if (game.battle.storm) {
+			if (is_attacker()) {
+				// Storm - attacker must apply hits to armored first
+				let has_armored = prompt_hit_armored_forces()
+				if (!has_armored)
+					prompt_hit_unarmored_forces()
+			} else {
+				// Storm - defender must apply hits to garrison first
+				if (game.battle.garrison) {
+					if (game.battle.garrison.knights > 0)
+						gen_action_knights(GARRISON)
+					if (game.battle.garrison.men_at_arms > 0)
+						gen_action_men_at_arms(GARRISON)
+				} else {
+					prompt_hit_forces()
+				}
+			}
+		} else {
+			prompt_hit_forces()
+		}
+	},
+	knights(lord) {
+		action_assign_hits(lord, KNIGHTS)
+	},
+	sergeants(lord) {
+		action_assign_hits(lord, SERGEANTS)
+	},
+	light_horse(lord) {
+		action_assign_hits(lord, LIGHT_HORSE)
+	},
+	asiatic_horse(lord) {
+		action_assign_hits(lord, ASIATIC_HORSE)
+	},
+	men_at_arms(lord) {
+		action_assign_hits(lord, MEN_AT_ARMS)
+	},
+	militia(lord) {
+		action_assign_hits(lord, MILITIA)
+	},
+	serfs(lord) {
+		action_assign_hits(lord, SERFS)
+	},
+}
+
+function is_striking(pos) {
+	// Future strikes
+	if (has_strike(pos))
+		return true
+	// Remaining hits in current group
+	if (set_has(game.battle.strikers, pos) && game.battle.hits + game.battle.xhits > 0) {
+		let lord = game.battle.array[pos]
+		return count_lord_hits(lord) + count_lord_xhits(lord) > 0
+	}
+	return false
+}
+
 function rout_lord(lord) {
 	log(`L${lord} routed!`)
 
-	let p = get_lord_array_position(lord)
+	let pos = get_lord_array_position(lord)
 
-	// remove from battle array
-	game.battle.array[p] = NOBODY
+	// Remove from battle array
+	game.battle.array[pos] = NOBODY
 
-	// FIXME cleanup TODO, removing from which groups
-
-	// remove from current hit group
-	array_remove_item(game.battle.targets, p)
-
-	for (let i = 0; i < game.battle.groups; ) {
-		let targets = game.battle.groups[i][1]
-
-		// remove from other hit groups
-		array_remove_item(targets, p)
-
-		// remove strike groups with no remaining targets
-		if (targets.length === 0)
-			array_remove(game.battle.groups, i)
+	// Strike left or right or reserve defender
+	if (pos >= A1 && pos <= D3) {
+		if (is_attacker_step())
+			game.battle.fc = strike_left_or_right(is_striking, A2, D1, D2, D3)
 		else
-			++i
+			game.battle.fc = strike_left_or_right(is_striking, D2, A1, A2, A3)
+	} else {
+		if (is_sa_without_rd()) {
+			game.battle.rc = strike_reserve_defender()
+		} else {
+			if (is_attacker_step())
+				game.battle.rc = strike_left_or_right(is_striking, SA2, RD1, RD2, RD3)
+			else
+				game.battle.rc = strike_left_or_right(is_striking, RD2, SA1, SA2, SA3)
+		}
 	}
 }
 
@@ -7810,14 +7928,12 @@ function action_assign_hits(lord, type) {
 	// TODO: manual choice of hit type
 	let ap = (is_armored_force(type) && game.battle.xhits > 0) ? 2 : 0
 
-	// TODO: which lord? summarize?
-
 	if (type === SERGEANTS || type === MEN_AT_ARMS)
 		if (lord_has_capability(lord, AOW_TEUTONIC_HALBBRUDER))
 			protection += 1
 
 	// Evade only in Battle Melee steps
-	if (evade > 0 && !game.battle.storm && game.battle.step >= 2) {
+	if (evade > 0 && !game.battle.storm && is_melee_step()) {
 		let die = roll_die()
 		if (die <= evade) {
 			logi(`${FORCE_TYPE_NAME[type]} ${die} <= ${evade}`)
@@ -7854,116 +7970,10 @@ function action_assign_hits(lord, type) {
 		game.battle.hits--
 
 	if (!lord_has_unrouted_units(lord))
+		// TODO: log list of new targets... after assign left/right
 		rout_lord(lord)
 
-	resume_assign_hits()
-}
-
-function prompt_hit_armored_forces() {
-	let has_armored = false
-	for (let p of game.battle.targets) {
-		let lord = game.battle.array[p]
-		if (get_lord_forces(lord, KNIGHTS) > 0) {
-			gen_action_knights(lord)
-			has_armored = true
-		}
-		if (get_lord_forces(lord, SERGEANTS) > 0) {
-			gen_action_sergeants(lord)
-			has_armored = true
-		}
-		if (get_lord_forces(lord, MEN_AT_ARMS) > 0) {
-			gen_action_men_at_arms(lord)
-			has_armored = true
-		}
-	}
-	return has_armored
-}
-
-function prompt_hit_unarmored_forces() {
-	for (let p of game.battle.targets) {
-		let lord = game.battle.array[p]
-		if (get_lord_forces(lord, LIGHT_HORSE) > 0)
-			gen_action_light_horse(lord)
-		if (get_lord_forces(lord, ASIATIC_HORSE) > 0)
-			gen_action_asiatic_horse(lord)
-		if (get_lord_forces(lord, MILITIA) > 0)
-			gen_action_militia(lord)
-		if (get_lord_forces(lord, SERFS) > 0)
-			gen_action_serfs(lord)
-	}
-}
-
-function prompt_hit_forces() {
-	for (let p of game.battle.targets) {
-		let lord = game.battle.array[p]
-		if (get_lord_forces(lord, KNIGHTS) > 0)
-			gen_action_knights(lord)
-		if (get_lord_forces(lord, SERGEANTS) > 0)
-			gen_action_sergeants(lord)
-		if (get_lord_forces(lord, LIGHT_HORSE) > 0)
-			gen_action_light_horse(lord)
-		if (get_lord_forces(lord, ASIATIC_HORSE) > 0)
-			gen_action_asiatic_horse(lord)
-		if (get_lord_forces(lord, MEN_AT_ARMS) > 0)
-			gen_action_men_at_arms(lord)
-		if (get_lord_forces(lord, MILITIA) > 0)
-			gen_action_militia(lord)
-		if (get_lord_forces(lord, SERFS) > 0)
-			gen_action_serfs(lord)
-	}
-}
-
-states.assign_hits = {
-	prompt() {
-		view.prompt = `${format_strike_step()}: Assign ${format_hits()} to units.`
-
-		view.group = game.battle.strikers.map(p => game.battle.array[p])
-
-		// TODO: hits or xhits choice
-
-		if (game.battle.storm) {
-			if (game.active === game.battle.attacker) {
-				// Storm - attacker must apply hits to armored first
-				let has_armored = prompt_hit_armored_forces()
-				if (!has_armored)
-					prompt_hit_unarmored_forces()
-			} else {
-				// Storm - defender must apply hits to garrison first
-				if (game.battle.garrison) {
-					if (game.battle.garrison.knights > 0)
-						gen_action_knights(GARRISON)
-					if (game.battle.garrison.men_at_arms > 0)
-						gen_action_men_at_arms(GARRISON)
-				} else {
-					prompt_hit_forces()
-				}
-			}
-
-		} else {
-			prompt_hit_forces()
-		}
-	},
-	knights(lord) {
-		action_assign_hits(lord, KNIGHTS)
-	},
-	sergeants(lord) {
-		action_assign_hits(lord, SERGEANTS)
-	},
-	light_horse(lord) {
-		action_assign_hits(lord, LIGHT_HORSE)
-	},
-	asiatic_horse(lord) {
-		action_assign_hits(lord, ASIATIC_HORSE)
-	},
-	men_at_arms(lord) {
-		action_assign_hits(lord, MEN_AT_ARMS)
-	},
-	militia(lord) {
-		action_assign_hits(lord, MILITIA)
-	},
-	serfs(lord) {
-		action_assign_hits(lord, SERFS)
-	},
+	goto_assign_hits()
 }
 
 // === BATTLE: NEW ROUND ===
@@ -8238,7 +8248,7 @@ function can_retreat_to(to) {
 function can_retreat() {
 	if (game.march) {
 		// Battle after March
-		if (game.active === game.battle.attacker)
+		if (is_attacker())
 			return can_retreat_to(game.march.from)
 		for (let [to, way] of data.locales[game.battle.where].ways)
 			if (way !== game.march.approach && can_retreat_to(to))
@@ -8276,7 +8286,7 @@ states.retreat = {
 		view.group = game.battle.retreated
 		if (game.march) {
 			// after March
-			if (game.active === game.battle.attacker) {
+			if (is_attacker()) {
 				gen_action_locale(game.march.from)
 			} else {
 				for (let [to, way] of data.locales[game.battle.where].ways)
@@ -8293,7 +8303,7 @@ states.retreat = {
 	locale(to) {
 		push_undo()
 		if (game.march) {
-			if (game.active === game.battle.attacker) {
+			if (is_attacker()) {
 				game.battle.retreat_to = to
 				game.battle.retreat_way = game.march.approach
 				retreat_1()
@@ -8340,7 +8350,7 @@ states.retreat_way = {
 
 function retreat_1() {
 	// Retreated without having conceded the Field
-	if (game.battle.conceded !== game.active) {
+	if (did_not_concede()) {
 		for (let lord of game.battle.retreated)
 			transfer_assets_except_ships(lord)
 		retreat_2()
@@ -8473,11 +8483,12 @@ function action_losses(lord, type) {
 
 	if (game.battle.storm) {
 		// Attackers in a Storm always roll vs 1
-		if (game.active === game.battle.attacker)
+		if (is_attacker())
 			target = 1
 	} else {
-		// Losers in a Battle roll vs 1 if they did not concede (unless they Withdrew)
-		if (game.active === game.battle.loser && game.active !== game.battle.conceded)
+		// Losers in a Battle roll vs 1 if they did not concede
+		if (game.active === game.battle.loser && did_not_concede())
+			// unless they withdrow
 			if (is_lord_unbesieged(lord))
 				target = 1
 	}

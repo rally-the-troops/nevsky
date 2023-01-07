@@ -1,6 +1,9 @@
 "use strict"
 
-// TODO: Feed x2 markers on lord mats with >6 units
+// Feed x2 on lords with >6 units
+// End marker on Calendar
+// Remove battle mat.
+// Siege/Walls/Garrison display in battle array.
 
 // TODO: show sg and hg highlighting on battle mat (separate from view.group)
 
@@ -1508,7 +1511,12 @@ function on_update() {
 
 	if (view.battle && view.battle.array) {
 		ui.battle_panel.classList.remove("hide")
-		ui.battle_header.textContent = "~ Battle at " + data.locales[view.battle.where].name + " ~"
+		if (view.battle.storm)
+			ui.battle_header.textContent = "Storm at " + data.locales[view.battle.where].name
+		else if (view.battle.sally)
+			ui.battle_header.textContent = "Sally at " + data.locales[view.battle.where].name
+		else
+			ui.battle_header.textContent = "Battle at " + data.locales[view.battle.where].name
 		if (view.battle.attacker === player) {
 			ui.battle_grid.className = "attacker"
 		} else {
