@@ -5569,7 +5569,7 @@ function can_action_ravage() {
 	}
 
 	if (this_lord_has_russian_raiders()) {
-		for (let there of data.locales[here].adjacent_by_trackway)
+		for (let there of data.locales[here].adjacent)
 			// XXX has_enemy_lord redundant with is_friendly_locale in can_ravage_locale
 			if (can_ravage_locale(there) && !has_enemy_lord(there))
 				return true
