@@ -8089,10 +8089,10 @@ function goto_sack() {
 	else if (is_castle(here))
 		award_spoils(1)
 
-	goto_sack()
+	resume_sack()
 }
 
-function goto_sack() {
+function resume_sack() {
 	if (has_friendly_lord(game.battle.where))
 		game.state = "sack"
 	else
@@ -8114,11 +8114,12 @@ states.sack = {
 			goto_ransom(lord)
 		else
 			disband_lord(lord, true)
+		resume_sack()
 	},
 }
 
 function end_ransom_sack() {
-	goto_sack()
+	resume_sack()
 }
 
 // === ENDING THE BATTLE: WITHDRAW ===
