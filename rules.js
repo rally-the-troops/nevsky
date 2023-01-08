@@ -9301,9 +9301,10 @@ function check_campaign_victory() {
 function goto_end_campaign() {
 	log_h1("End Campaign")
 
+	set_active(P1)
+
 	if (game.scenario === "Crusade on Novgorod") {
 		if (game.turn === 8 || game.turn === 16) {
-			set_active(P1)
 			log_h2("Growth")
 			goto_growth()
 			return
