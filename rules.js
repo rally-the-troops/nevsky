@@ -4966,7 +4966,6 @@ states.march_ambush = {
 		goto_march_withdraw()
 	},
 	pass() {
-		set_active_enemy()
 		game.march.ambush_lords = 0
 		game.march.ambush_assets = 0
 		game.march.ambush_besieged = 0
