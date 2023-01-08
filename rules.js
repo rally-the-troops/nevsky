@@ -8109,11 +8109,12 @@ states.sack = {
 	lord(lord) {
 		log(`Disbanded L${lord}.`)
 		transfer_assets_except_ships(lord)
-		if (can_ransom_lord_battle(lord))
+		if (can_ransom_lord_battle(lord)) {
 			goto_ransom(lord)
-		else
+		} else {
 			disband_lord(lord, true)
-		resume_sack()
+			resume_sack()
+		}
 	},
 }
 
@@ -9161,7 +9162,7 @@ function can_ransom_lord_battle() {
 function goto_ransom(lord) {
 	clear_undo()
 	set_active_enemy()
-	push_state(state)
+	push_state("ransom")
 	game.who = lord
 	game.count = data.lords[lord].service
 	log(`Ransomed L${lord}`)
