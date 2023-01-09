@@ -2354,6 +2354,23 @@ states.prussian_revolt = {
 
 // === EVENTS: SHIFT LORD OR SERVICE (IMMEDIATE) ===
 
+function prompt_shift_lord_on_calendar(boxes) {
+	if (game.who !== NOBODY) {
+		// Shift in direction beneficial to active player.
+		if (is_friendly_lord(game.who)) {
+			if (is_lord_on_calendar(game.who))
+				gen_action_calendar(get_lord_calendar(game.who) - boxes)
+			else
+				gen_action_calendar(get_lord_calendar(game.who) + boxes)
+		} else {
+			if (is_lord_on_calendar(game.who))
+				gen_action_calendar(get_lord_calendar(game.who) + boxes)
+			else
+				gen_action_calendar(get_lord_calendar(game.who) - boxes)
+		}
+	}
+}
+
 function goto_teutonic_event_grand_prince() {
 	if (is_lord_in_play(LORD_ALEKSANDR) || is_lord_in_play(LORD_ANDREY))
 		game.state = "grand_prince"
@@ -2384,10 +2401,7 @@ states.grand_prince = {
 			gen_action_service(LORD_ANDREY)
 		}
 
-		if (game.who !== NOBODY) {
-			gen_action_calendar(get_lord_calendar(game.who) - 2)
-			gen_action_calendar(get_lord_calendar(game.who) + 2)
-		}
+		prompt_shift_lord_on_calendar(2)
 	},
 	lord: action_select_lord,
 	service: action_select_lord,
@@ -2412,10 +2426,7 @@ states.khan_baty = {
 			prompt_select_lord_on_calendar(LORD_ALEKSANDR)
 		if (is_lord_in_play(LORD_ANDREY))
 			prompt_select_lord_on_calendar(LORD_ANDREY)
-		if (game.who !== NOBODY) {
-			gen_action_calendar(get_lord_calendar(game.who) - 2)
-			gen_action_calendar(get_lord_calendar(game.who) + 2)
-		}
+		prompt_shift_lord_on_calendar(2)
 	},
 	lord: action_select_lord,
 	service: action_select_lord,
@@ -2446,10 +2457,7 @@ states.swedish_crusade = {
 			prompt_select_lord_on_calendar(LORD_VLADISLAV)
 		if (game.count & (1 << LORD_KARELIANS))
 			prompt_select_lord_on_calendar(LORD_KARELIANS)
-		if (game.who !== NOBODY) {
-			gen_action_calendar(get_lord_calendar(game.who) - 1)
-			gen_action_calendar(get_lord_calendar(game.who) + 1)
-		}
+		prompt_shift_lord_on_calendar(1)
 	},
 	lord: action_select_lord,
 	service: action_select_lord,
@@ -2474,18 +2482,13 @@ function goto_russian_event_valdemar() {
 states.valdemar = {
 	prompt() {
 		view.prompt = "Valdemar: On Calendar, shift Knud & Abel up to 1 box."
-		gen_action_calendar(get_lord_calendar(game.who) - 1)
-		gen_action_calendar(get_lord_calendar(game.who) + 1)
-		view.actions.pass = 1 // up to
+		prompt_shift_lord_on_calendar(1)
 	},
 	lord: action_select_lord,
 	service: action_select_lord,
 	calendar(turn) {
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
-		end_immediate_event()
-	},
-	pass() {
 		end_immediate_event()
 	},
 }
@@ -2532,11 +2535,7 @@ function goto_russian_event_batu_khan() {
 states.batu_khan = {
 	prompt() {
 		view.prompt = "Batu Khan: On Calendar, shift Andreas up to 2 boxes."
-		gen_action_calendar(get_lord_calendar(game.who) - 2)
-		gen_action_calendar(get_lord_calendar(game.who) - 1)
-		gen_action_calendar(get_lord_calendar(game.who) + 1)
-		gen_action_calendar(get_lord_calendar(game.who) + 2)
-		view.actions.pass = 1 // up to
+		prompt_shift_lord_on_calendar(2)
 	},
 	lord: action_select_lord,
 	service: action_select_lord,
@@ -2561,10 +2560,7 @@ states.russian_dietrich_von_gruningen = {
 			prompt_select_lord_on_calendar(LORD_ANDREAS)
 		if (is_lord_in_play(LORD_RUDOLF))
 			prompt_select_lord_on_calendar(LORD_RUDOLF)
-		if (game.who !== NOBODY) {
-			gen_action_calendar(get_lord_calendar(game.who) - 1)
-			gen_action_calendar(get_lord_calendar(game.who) + 1)
-		}
+		prompt_shift_lord_on_calendar(1)
 	},
 	lord: action_select_lord,
 	service: action_select_lord,
@@ -2933,10 +2929,7 @@ function prompt_shift_cylinder(list, boxes) {
 
 	view.prompt += "."
 
-	if (game.who !== NOBODY) {
-		gen_action_calendar(get_lord_calendar(game.who) - boxes)
-		gen_action_calendar(get_lord_calendar(game.who) + boxes)
-	}
+	prompt_shift_lord_on_calendar(boxes)
 }
 
 function action_shift_cylinder_calendar(turn) {
