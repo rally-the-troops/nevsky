@@ -7,11 +7,12 @@
 // FIXME: lift_sieges / besieged needs checking! (automatic after disband_lord, manual after move/sail, extra careful manual after battle)
 // FIXME: remove_legate_if_endangered needs checking! (automatic after disband_lord, manual after move/sail, manual after battle)
 
+// GUI: Remove battle mat.
+// GUI: tucked map capabilities pop up on shift key
+// GUI: show moved/fought markers on mats during Feed phase
 // GUI: show sally/relief sally as unbesieged on map
 // GUI: show siegeworks + walls on battle mat for protection indication
 // GUI: show feed x2 on lord mats with > 6 units
-// GUI: battle mat - optional - either mat in middle, or garrison + siegeworks display
-// GUI: array position - click on mat grid as well
 // GUI: battle event on lord mat (at top) - in client for Bridge and Field Organs
 
 // WONTFIX: choose crossbow/normal hit application order
@@ -672,6 +673,14 @@ function get_lord_array_position(lord) {
 		if (game.battle.array[p] === lord)
 			return p
 	return -1
+}
+
+function add_veche_vp(amount) {
+	game.pieces.veche_vp += amount
+	if (game.pieces.veche_vp < 0)
+		game.pieces.veche_vp = 0
+	if (game.pieces.veche_vp > 8)
+		game.pieces.veche_vp = 8
 }
 
 // === GAME STATE HELPERS ===
@@ -2181,7 +2190,7 @@ states.tempest = {
 		logi(`Removed ships from L${lord}.`)
 		let n = 0
 		if (lord_has_capability(lord, AOW_TEUTONIC_COGS))
-			n = Math.ceil(get_lord_assets(lord, SHIP) / 2)
+			n = get_lord_assets(lord, SHIP) >> 1
 		set_lord_assets(lord, SHIP, n)
 		end_immediate_event()
 	},
@@ -3897,10 +3906,10 @@ states.novgorod_veche = {
 
 		if (game.scenario === "Watland") {
 			log("Decline of Andrey: Added 2VP to Veche.")
-			game.pieces.veche_vp += 2
+			add_veche_vp(2)
 		} else {
 			log("Added 1VP to Veche.")
-			game.pieces.veche_vp += 1
+			add_veche_vp(1)
 		}
 
 		if (is_lord_ready(LORD_ALEKSANDR)) {
@@ -3915,7 +3924,7 @@ states.novgorod_veche = {
 	lord(lord) {
 		push_undo()
 		log("Removed 1VP from Veche.")
-		game.pieces.veche_vp -= 1
+		add_veche_vp(-1)
 		game.state = "novgorod_veche_done"
 
 		if (is_lord_ready(lord)) {

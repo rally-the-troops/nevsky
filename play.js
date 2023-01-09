@@ -1554,9 +1554,9 @@ function on_update() {
 	action_button("storm", "Storm")
 	action_button("sally", "Sally")
 	action_button("sail", "Sail")
-	action_button("supply", "Supply")
-	action_button("forage", "Forage")
 	action_button("ravage", "Ravage")
+	action_button("forage", "Forage")
+	action_button("supply", "Supply")
 
 	// Muster & Spoils
 	action_button("take_prov", "Prov")
