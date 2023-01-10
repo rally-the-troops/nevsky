@@ -6743,7 +6743,8 @@ function goto_reposition_battle() {
 	// If all SA routed, send RD to reserve (end relief sally)
 	if (array[SA1] === NOBODY && array[SA2] === NOBODY && array[SA3] === NOBODY) {
 		if (array[RD1] !== NOBODY || array[RD2] !== NOBODY || array[RD3] !== NOBODY) {
-			log("Ended relief sally.")
+			log("Sallying routed.")
+			log("Rearguard to reserve.")
 			send_to_reserve(RD1)
 			send_to_reserve(RD2)
 			send_to_reserve(RD3)
@@ -6752,8 +6753,9 @@ function goto_reposition_battle() {
 
 	// If all D routed, advance RD to front
 	if (array[D1] === NOBODY && array[D2] === NOBODY && array[D3] === NOBODY) {
+		log("Defenders routed.")
 		if (array[RD1] !== NOBODY || array[RD2] !== NOBODY || array[RD3] !== NOBODY) {
-			log("Reserve defenders to front.")
+			log("Rearguard to front.")
 			slide_array(RD1, D1)
 			slide_array(RD2, D2)
 			slide_array(RD3, D3)
@@ -6769,19 +6771,27 @@ function goto_reposition_battle() {
 			game.battle.sally = 1
 
 			// Advance SA to front (to regular sally)
+			log("Sallying to front.")
 			slide_array(SA1, A1)
 			slide_array(SA2, A2)
 			slide_array(SA3, A3)
 
 			// then D back to reserve
-			send_to_reserve(D1)
-			send_to_reserve(D2)
-			send_to_reserve(D3)
+			if (array[RD1] !== NOBODY || array[RD2] !== NOBODY || array[RD3] !== NOBODY) {
+				log("Rearguard to front.")
 
-			// then RD to D
-			slide_array(RD1, D1)
-			slide_array(RD2, D2)
-			slide_array(RD3, D3)
+				if (array[D1] !== NOBODY || array[D2] !== NOBODY || array[D3] !== NOBODY) {
+					log("Defenders to reserve.")
+					send_to_reserve(D1)
+					send_to_reserve(D2)
+					send_to_reserve(D3)
+				}
+
+				// then RD to D
+				slide_array(RD1, D1)
+				slide_array(RD2, D2)
+				slide_array(RD3, D3)
+			}
 
 			// and during the advance D may come back out from reserve
 		}
