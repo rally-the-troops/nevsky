@@ -4,6 +4,8 @@
 // TODO: Lodya capability during supply!
 // TODO: 2nd edition supply rule - no reuse of transports
 
+// TODO: s/RD/RG/ (rearguard)
+
 // FIXME: lift_sieges / besieged needs checking! (automatic after disband_lord, manual after move/sail, extra careful manual after battle)
 // FIXME: remove_legate_if_endangered needs checking! (automatic after disband_lord, manual after move/sail, manual after battle)
 
@@ -4626,7 +4628,6 @@ function march_with_group_3() {
 
 	if (is_unbesieged_enemy_stronghold(here)) {
 		add_siege_marker(here)
-		log(`Encamped.`)
 		spend_all_actions() // ENCAMP
 	}
 
@@ -6696,7 +6697,7 @@ states.concede_battle = {
 		view.actions.battle = 1
 	},
 	concede() {
-		log(game.active + " concede.")
+		log(game.active + " conceded.")
 		game.battle.conceded = game.active
 		goto_reposition_battle()
 	},
@@ -6714,7 +6715,7 @@ states.concede_storm = {
 		view.actions.battle = 1
 	},
 	concede() {
-		log(game.active + " concede.")
+		log(game.active + " conceded.")
 		game.battle.conceded = game.active
 		end_battle()
 	},
@@ -7368,12 +7369,27 @@ function format_strike_step() {
 }
 
 function format_hits() {
-	if (game.battle.xhits > 0 && game.battle.hits > 0)
+	if (game.battle.xhits > 0 && game.battle.hits > 0) {
 		return `${game.battle.xhits} crossbow hits and ${game.battle.hits} hits`
-	else if (game.battle.xhits > 0)
-		return `${game.battle.xhits} crossbow hits`
-	else
-		return `${game.battle.hits} hits`
+		if (game.battle.xhits > 1 && game.battle.hits > 1)
+			return `${game.battle.xhits} crossbow hits and ${game.battle.hits} hits`
+		else if (game.battle.xhits > 1)
+			return `${game.battle.xhits} crossbow hits and ${game.battle.hits} hit`
+		else if (game.battle.hits > 1)
+			return `${game.battle.xhits} crossbow hit and ${game.battle.hits} hits`
+		else
+			return `${game.battle.xhits} crossbow hit and ${game.battle.hits} hit`
+	} else if (game.battle.xhits > 0) {
+		if (game.battle.xhits > 1)
+			return `${game.battle.xhits} crossbow hits`
+		else
+			return `${game.battle.xhits} crossbow hit`
+	} else {
+		if (game.battle.hits > 1)
+			return `${game.battle.hits} hits`
+		else
+			return `${game.battle.hits} hit`
+	}
 }
 
 function goto_first_strike() {
@@ -7451,15 +7467,19 @@ function goto_strike() {
 					hits = 12
 			}
 
-			if (xhits > 0)
+			if (xhits > 2)
 				log(`L${lord} ${xhits / 2} crossbow hits`)
-			if (hits > 0)
+			else if (xhits > 0)
+				log(`L${lord} ${xhits / 2} crossbow hit`)
+			if (hits > 2)
 				log(`L${lord} ${hits / 2} hits`)
+			else if (hits > 0)
+				log(`L${lord} ${hits / 2} hit`)
 		}
 	}
 
 	if (did_concede())
-		log("Pursuit halved hits")
+		log("Pursuit halved hits.")
 
 	// Strike left or right or reserve defender
 	if (is_attacker_step())
@@ -7590,24 +7610,36 @@ function goto_strike_total_hits() {
 	let hits = 0
 	let xhits = 0
 
+	let slist = []
+	let tlist = []
+
 	// STORM: Garrison strikes
 	if (is_defender_step() && game.battle.storm && game.battle.garrison) {
 		let garr_hits = count_garrison_hits()
 		let garr_xhits = count_garrison_xhits()
-		if (garr_xhits > 0)
+		if (garr_hits + garr_xhits > 0)
+			slist.push("Garrison")
+		if (garr_xhits > 2)
 			log(`Garrison ${garr_xhits/2} crossbow hits`)
-		if (garr_hits > 0)
+		else if (garr_xhits > 0)
+			log(`Garrison ${garr_xhits/2} crossbow hit`)
+		if (garr_hits > 2)
 			log(`Garrison ${garr_hits/2} hits`)
+		else if (garr_hits > 0)
+			log(`Garrison ${garr_hits/2} hit`)
 		hits += garr_hits
 		xhits += garr_xhits
 	}
 
 	// Total hits
 	for (let pos of game.battle.strikers) {
-		hits += game.battle.ah[pos]
-		xhits += game.battle.ahx[pos]
-		game.battle.ah[pos] = 0
-		game.battle.ahx[pos] = 0
+		if (game.battle.ah[pos] + game.battle.ahx[pos] > 0) {
+			slist.push(lord_name[game.battle.array[pos]])
+			hits += game.battle.ah[pos]
+			xhits += game.battle.ahx[pos]
+			game.battle.ah[pos] = 0
+			game.battle.ahx[pos] = 0
+		}
 	}
 
 	// Round in favor of crossbow hits.
@@ -7631,7 +7663,11 @@ function goto_strike_total_hits() {
 	game.battle.hits = hits
 	game.battle.xhits = xhits
 
-	log(format_group(game.battle.strikers) + " struck")
+	tlist = []
+	for_each_target(lord => tlist.push(lord_name[lord]))
+
+	log_br()
+	log(slist.join(" and ") + " struck " + tlist.join(" and ") + " for " + format_hits() + ".")
 
 	goto_strike_roll_walls()
 }
@@ -7669,13 +7705,6 @@ function goto_strike_roll_walls() {
 		}
 	}
 
-	if (game.battle.xhits > 0)
-		logi(`${game.battle.xhits} crossbow hits`)
-	if (game.battle.hits > 0)
-		logi(`${game.battle.hits} hits`)
-	if (game.battle.hits + game.battle.xhits === 0)
-		logi(`No hits`)
-
 	goto_assign_hits()
 }
 
@@ -7700,8 +7729,8 @@ function roll_for_walls() {
 		prot--
 	}
 	if (prot > 0) {
-		game.battle.xhits = roll_for_protection(`Walls 1-${prot} vs crossbow`, prot, game.battle.xhits)
-		game.battle.hits = roll_for_protection(`Walls 1-${prot}`, prot, game.battle.hits)
+		game.battle.xhits = roll_for_protection(`Walls 1-${prot}`, true, prot, game.battle.xhits)
+		game.battle.hits = roll_for_protection(`Walls 1-${prot}`, false, prot, game.battle.hits)
 	} else {
 		logi("No walls.")
 	}
@@ -7714,8 +7743,8 @@ function roll_for_siegeworks() {
 		prot--
 	}
 	if (prot > 0) {
-		game.battle.xhits = roll_for_protection(`Siegeworks 1-${prot} vs crossbow`, prot, game.battle.xhits)
-		game.battle.hits = roll_for_protection(`Siegeworks 1-${prot}`, prot, game.battle.hits)
+		game.battle.xhits = roll_for_protection(`Siegeworks 1-${prot}`, true, prot, game.battle.xhits)
+		game.battle.hits = roll_for_protection(`Siegeworks 1-${prot}`, false, prot, game.battle.hits)
 	} else {
 		logi("No siegeworks.")
 	}
@@ -7728,14 +7757,14 @@ function roll_for_ravens_rock() {
 		prot--
 	}
 	if (prot > 0) {
-		game.battle.xhits = roll_for_protection(`Raven's Rock 1-${prot} vs crossbow`, prot, game.battle.xhits)
-		game.battle.hits = roll_for_protection(`Raven's Rock 1-${prot}`, prot, game.battle.hits)
+		game.battle.xhits = roll_for_protection(`Raven's Rock 1-${prot}`, true, prot, game.battle.xhits)
+		game.battle.hits = roll_for_protection(`Raven's Rock 1-${prot}`, false, prot, game.battle.hits)
 	} else {
 		logi("No Raven's Rock.")
 	}
 }
 
-function roll_for_protection(name, prot, n) {
+function roll_for_protection(name, crossbow, prot, n) {
 	let total = 0
 	if (n > 0) {
 		let rolls = []
@@ -7748,7 +7777,26 @@ function roll_for_protection(name, prot, n) {
 				total++
 			}
 		}
-		logi(name + ": " + rolls.join(", "))
+		if (crossbow)
+			logi(name + " vs crossbow:")
+		else
+			logi(name + ":")
+		logii(rolls.join(", "))
+		if (crossbow) {
+			if (total > 0)
+				logi(`${total} crossbow hits`)
+			else if (total === 1)
+				logi(`${total} crossbow hit`)
+			else
+				logi(`No crossbow hits`)
+		} else {
+			if (total > 1)
+				logi(`${total} hits`)
+			else if (total === 1)
+				logi(`${total} hit`)
+			else
+				logi(`No hits`)
+		}
 	}
 	return total
 }
