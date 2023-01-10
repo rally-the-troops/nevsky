@@ -6021,6 +6021,7 @@ function init_battle(here, is_storm, is_sally) {
 		garrison: 0,
 		reserves: [],
 		retreated: 0,
+		rearguard: 0,
 		strikers: 0,
 		warrior_monks: 0,
 		hits: 0,
@@ -7260,7 +7261,7 @@ function strike_left_or_right(gate, S2, T1, T2, T3) {
 	return T2 // No target - safe default
 }
 
-function strike_reserve_defender() {
+function strike_defender_row() {
 	let has_d1 = filled(D1)
 	let has_d2 = filled(D2)
 	let has_d3 = filled(D3)
@@ -7311,6 +7312,10 @@ function format_hits() {
 
 function goto_first_strike() {
 	game.battle.step = 0
+	if (filled(RD1) || filled(RD2) || filled(RD3))
+		game.battle.rearguard = 1
+	else
+		game.battle.rearguard = 0
 	goto_strike()
 }
 
@@ -7438,7 +7443,7 @@ function prompt_target_2(S1, T1, T3) {
 }
 
 function is_sa_without_rd() {
-	return (filled(SA1) || filled(SA2) || filled(SA3)) && empty(RD1) && empty(RD2) && empty(RD3)
+	return !game.battle.rearguard && (filled(SA1) || filled(SA2) || filled(SA3))
 }
 
 function prompt_left_right() {
@@ -7450,7 +7455,7 @@ function prompt_left_right() {
 			prompt_target_2(D2, A1, A3)
 	} else {
 		if (is_sa_without_rd()) {
-			view.prompt = `${format_strike_step()}: Strike which reserve defender?`
+			view.prompt = `${format_strike_step()}: Strike which defender?`
 			view.group = []
 			if (filled(SA1)) view.group.push(SA1)
 			if (filled(SA2)) view.group.push(SA2)
@@ -7505,7 +7510,7 @@ states.strike_group = {
 		let pos = get_lord_array_position(lord)
 		if ((pos === SA1 || pos === SA2 || pos === SA3) && is_sa_without_rd()) {
 			game.battle.strikers = [ SA1, SA2, SA3 ]
-			game.battle.rc = strike_reserve_defender()
+			game.battle.rc = strike_defender_row()
 		} else {
 			game.battle.strikers = create_strike_group(pos)
 		}
@@ -7886,7 +7891,7 @@ function rout_lord(lord) {
 	else if (pos >= D1 && pos <= D3) {
 		game.battle.fc = strike_left_or_right(is_striking, A2, D1, D2, D3)
 		if (is_sa_without_rd())
-			game.battle.rc = strike_reserve_defender()
+			game.battle.rc = strike_defender_row()
 	}
 
 	else if (pos >= SA1 && pos <= SA3) {
@@ -7895,9 +7900,6 @@ function rout_lord(lord) {
 
 	else if (pos >= RD1 && pos <= RD3) {
 		game.battle.rc = strike_left_or_right(is_striking, SA2, RD1, RD2, RD3)
-		// TODO: not until after reposition!
-		if (is_sa_without_rd())
-			game.battle.rc = strike_reserve_defender()
 	}
 }
 
