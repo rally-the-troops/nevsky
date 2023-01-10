@@ -6254,7 +6254,7 @@ function goto_array_rearguard() {
 	set_active_defender()
 	game.state = "array_rearguard"
 	game.who = NOBODY
-	if (!has_friendly_reserves())
+	if (!has_friendly_reserves() || empty(SA2))
 		end_array_rearguard()
 }
 
@@ -7243,7 +7243,7 @@ function has_strike_target(S) {
 	if (S === D1 || S === D2 || S === D3)
 		return filled(A1) || filled(A2) || filled(A3)
 	if (S === SA1 || S === SA2 || S === SA3)
-		return filled(RD1) || filled(RD2) || filled(RD3) || filled(D1) || filled(D2) || filled(D3)
+		return filled(RD1) || filled(RD2) || filled(RD3) || (!game.battle.rearguard && (filled(D1) || filled(D2) || filled(D3)))
 	if (S === RD1 || S === RD2 || S === RD3)
 		return filled(SA1) || filled(SA2) || filled(SA3)
 }
