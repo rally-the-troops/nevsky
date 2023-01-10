@@ -7879,20 +7879,25 @@ function rout_lord(lord) {
 	game.battle.array[pos] = NOBODY
 
 	// Strike left or right or reserve defender
-	if (pos >= A1 && pos <= D3) {
-		if (is_attacker_step())
-			game.battle.fc = strike_left_or_right(is_striking, A2, D1, D2, D3)
-		else
-			game.battle.fc = strike_left_or_right(is_striking, D2, A1, A2, A3)
-	} else {
-		if (is_sa_without_rd()) {
+	if (pos >= A1 && pos <= A3) {
+		game.battle.fc = strike_left_or_right(is_striking, D2, A1, A2, A3)
+	}
+
+	else if (pos >= D1 && pos <= D3) {
+		game.battle.fc = strike_left_or_right(is_striking, A2, D1, D2, D3)
+		if (is_sa_without_rd())
 			game.battle.rc = strike_reserve_defender()
-		} else {
-			if (is_attacker_step())
-				game.battle.rc = strike_left_or_right(is_striking, SA2, RD1, RD2, RD3)
-			else
-				game.battle.rc = strike_left_or_right(is_striking, RD2, SA1, SA2, SA3)
-		}
+	}
+
+	else if (pos >= SA1 && pos <= SA3) {
+		game.battle.rc = strike_left_or_right(is_striking, RD2, SA1, SA2, SA3)
+	}
+
+	else if (pos >= RD1 && pos <= RD3) {
+		game.battle.rc = strike_left_or_right(is_striking, SA2, RD1, RD2, RD3)
+		// TODO: not until after reposition!
+		if (is_sa_without_rd())
+			game.battle.rc = strike_reserve_defender()
 	}
 }
 
