@@ -6147,14 +6147,35 @@ states.relief_sally = {
 
 // === BATTLE: BATTLE ARRAY ===
 
-function has_reserves() {
+// 0) Defender decides to stand for Battle, not Avoid.
+// 1) Attacker decides which Lords will relief sally, if any.
+// 2) Attacker positions front A.
+// 3) Defender positions front D.
+// 4) Attacker positions SA.
+// 5) Defender positions reaguard RD.
+
+function has_friendly_reserves() {
 	for (let lord of game.battle.reserves)
 		if (is_friendly_lord(lord))
 			return true
 	return false
 }
 
-function count_reserves() {
+function has_friendly_attacking_reserves() {
+	for (let lord of game.battle.reserves)
+		if (is_friendly_lord(lord) && (game.battle.sally || is_lord_unbesieged(lord)))
+			return true
+	return false
+}
+
+function has_friendly_sallying_reserves() {
+	for (let lord of game.battle.reserves)
+		if (is_friendly_lord(lord) && is_lord_besieged(lord))
+			return true
+	return false
+}
+
+function count_friendly_reserves() {
 	let n = 0
 	for (let lord of game.battle.reserves)
 		if (is_friendly_lord(lord))
@@ -6172,108 +6193,7 @@ function pop_first_reserve() {
 	return NOBODY
 }
 
-function action_array_place(pos) {
-	push_undo_without_who()
-	game.battle.array[pos] = game.who
-	set_delete(game.battle.reserves, game.who)
-	game.who = NOBODY
-}
-
-function goto_array_attacker() {
-	set_active_attacker()
-	game.state = "array_attacker"
-	game.who = NOBODY
-	if (!has_reserves())
-		goto_array_defender()
-}
-
-states.array_attacker = {
-	prompt() {
-		view.prompt = "Battle Array: Position your attacking lords."
-		let array = game.battle.array
-
-		let done = true
-
-		if (game.battle.sally) {
-			if (array[A1] === NOBODY || array[A2] === NOBODY || array[A3] === NOBODY) {
-				for (let lord of game.battle.reserves) {
-					if (lord !== game.who && is_friendly_lord(lord)) {
-						gen_action_lord(lord)
-						done = false
-					}
-				}
-			}
-		} else {
-			// Select front Lord
-			if (array[A1] === NOBODY || array[A2] === NOBODY || array[A3] === NOBODY) {
-				for (let lord of game.battle.reserves) {
-					if (lord !== game.who && is_friendly_lord(lord) && is_lord_unbesieged(lord)) {
-						gen_action_lord(lord)
-						done = false
-					}
-				}
-			}
-
-			// Select sallying Lord
-			if (array[SA1] === NOBODY || array[SA2] === NOBODY || array[SA3] === NOBODY) {
-				for (let lord of game.battle.reserves) {
-					if (lord !== game.who && is_friendly_lord(lord) && is_lord_besieged(lord)) {
-						gen_action_lord(lord)
-						done = false
-					}
-				}
-			}
-		}
-
-		if (game.who === NOBODY && done)
-			view.actions.end_array = 1
-
-		if (game.who !== NOBODY) {
-			// Place front Lord
-			if (game.battle.sally || is_lord_unbesieged(game.who)) {
-				// A2 is already filled by command lord!
-				if (array[A1] === NOBODY)
-					gen_action_array(A1)
-				if (array[A3] === NOBODY)
-					gen_action_array(A3)
-			} else {
-				// Place rear Lord
-				if (array[SA2] === NOBODY) {
-					gen_action_array(SA2)
-				} else {
-					if (array[SA1] === NOBODY)
-						gen_action_array(SA1)
-					if (array[SA3] === NOBODY)
-						gen_action_array(SA3)
-				}
-			}
-		}
-	},
-	array: action_array_place,
-	lord(lord) {
-		game.who = lord
-	},
-	end_array() {
-		goto_array_defender()
-	},
-}
-
-function goto_array_defender() {
-	clear_undo()
-	set_active_defender()
-	game.state = "array_defender"
-	game.who = NOBODY
-	let n = count_reserves()
-	if (n === 1) {
-		game.battle.array[D2] = pop_first_reserve()
-		end_array_defender()
-	}
-	if (n === 0) {
-		end_array_defender()
-	}
-}
-
-function prompt_array_place_defender(X1, X2, X3, Y1, Y3) {
+function prompt_array_place_opposed(X1, X2, X3, Y1, Y3) {
 	let array = game.battle.array
 	if (array[X2] === NOBODY) {
 		gen_action_array(X2)
@@ -6289,17 +6209,140 @@ function prompt_array_place_defender(X1, X2, X3, Y1, Y3) {
 	}
 }
 
+function action_array_place(pos) {
+	push_undo_without_who()
+	game.battle.array[pos] = game.who
+	set_delete(game.battle.reserves, game.who)
+	game.who = NOBODY
+}
+
+function goto_array_attacker() {
+	clear_undo()
+	set_active_attacker()
+	game.state = "array_attacker"
+	game.who = NOBODY
+	if (!has_friendly_attacking_reserves())
+		end_array_attacker()
+}
+
+function goto_array_defender() {
+	clear_undo()
+	set_active_defender()
+	game.state = "array_defender"
+	game.who = NOBODY
+	let n = count_friendly_reserves()
+	if (n === 1) {
+		game.battle.array[D2] = pop_first_reserve()
+		end_array_defender()
+	}
+	if (n === 0)
+		end_array_defender()
+}
+
+function goto_array_sally() {
+	clear_undo()
+	set_active_attacker()
+	game.state = "array_sally"
+	game.who = NOBODY
+	if (!has_friendly_sallying_reserves())
+		end_array_sally()
+}
+
+function goto_array_rearguard() {
+	clear_undo()
+	set_active_defender()
+	game.state = "array_rearguard"
+	game.who = NOBODY
+	if (!has_friendly_reserves())
+		end_array_rearguard()
+}
+
+// NOTE: The order here can be easily change to attacker/sally/defender/rearguard if desired.
+
+function end_array_attacker() {
+	goto_array_defender()
+}
+
+function end_array_defender() {
+	goto_array_sally()
+}
+
+function end_array_sally() {
+	goto_array_rearguard()
+}
+
+function end_array_rearguard() {
+	goto_attacker_events()
+}
+
+states.array_attacker = {
+	prompt() {
+		view.prompt = "Battle Array: Position your attacking lords."
+		let array = game.battle.array
+		let done = true
+		if (array[A1] === NOBODY || array[A2] === NOBODY || array[A3] === NOBODY) {
+			for (let lord of game.battle.reserves) {
+				if (lord !== game.who && is_friendly_lord(lord)) {
+					if (game.battle.sally || is_lord_unbesieged(lord)) {
+						gen_action_lord(lord)
+						done = false
+					}
+				}
+			}
+		}
+		if (game.who === NOBODY && done)
+			view.actions.end_array = 1
+		if (game.who !== NOBODY) {
+			// A2 is already filled by command lord!
+			if (array[A1] === NOBODY)
+				gen_action_array(A1)
+			if (array[A3] === NOBODY)
+				gen_action_array(A3)
+		}
+	},
+	array: action_array_place,
+	array: action_array_place,
+	lord: action_select_lord,
+	end_array: end_array_attacker,
+}
+
+states.array_sally = {
+	prompt() {
+		view.prompt = "Battle Array: Position your sallying lords."
+		let array = game.battle.array
+		let done = true
+		if (array[SA1] === NOBODY || array[SA2] === NOBODY || array[SA3] === NOBODY) {
+			for (let lord of game.battle.reserves) {
+				if (lord !== game.who && is_friendly_lord(lord) && is_lord_besieged(lord)) {
+					gen_action_lord(lord)
+					done = false
+				}
+			}
+		}
+		if (game.who === NOBODY && done)
+			view.actions.end_array = 1
+		if (game.who !== NOBODY) {
+			if (array[SA2] === NOBODY) {
+				gen_action_array(SA2)
+			} else {
+				if (array[SA1] === NOBODY)
+					gen_action_array(SA1)
+				if (array[SA3] === NOBODY)
+					gen_action_array(SA3)
+			}
+		}
+	},
+	array: action_array_place,
+	lord: action_select_lord,
+	end_array: end_array_sally,
+}
+
 states.array_defender = {
 	prompt() {
 		view.prompt = "Battle Array: Position your defending lords."
 		let array = game.battle.array
-
 		let done = true
-
-		let empty_front = array[D1] === NOBODY || array[D2] === NOBODY || array[D3] === NOBODY
-		let empty_rear = array[SA1] !== NOBODY && (array[RD1] === NOBODY || array[RD2] === NOBODY || array[RD3] === NOBODY)
-
-		if (empty_front || empty_rear) {
+		if (array[D1] === NOBODY || array[D2] === NOBODY || array[D3] === NOBODY) {
 			for (let lord of game.battle.reserves) {
 				if (lord !== game.who && is_friendly_lord(lord)) {
 					gen_action_lord(lord)
@@ -6307,29 +6350,37 @@ states.array_defender = {
 				}
 			}
 		}
-
 		if (done && game.who === NOBODY)
 			view.actions.end_array = 1
-
-		if (game.who !== NOBODY) {
-			if (empty_front)
-				prompt_array_place_defender(D1, D2, D3, A1, A3)
-			else if (empty_rear)
-				prompt_array_place_defender(RD1, RD2, RD3, SA1, SA3)
-		}
+		if (game.who !== NOBODY)
+			prompt_array_place_opposed(D1, D2, D3, A1, A3)
 	},
 	array: action_array_place,
-	lord(lord) {
-		game.who = lord
-	},
-	end_array() {
-		end_array_defender()
-	},
+	lord: action_select_lord,
+	end_array: end_array_defender,
 }
 
-function end_array_defender() {
-	clear_undo()
-	goto_attacker_events()
+states.array_rearguard = {
+	prompt() {
+		view.prompt = "Battle Array: Position your rearguard lords."
+		let array = game.battle.array
+		let done = true
+		if (array[RD1] === NOBODY || array[RD2] === NOBODY || array[RD3] === NOBODY) {
+			for (let lord of game.battle.reserves) {
+				if (lord !== game.who && is_friendly_lord(lord)) {
+					gen_action_lord(lord)
+					done = false
+				}
+			}
+		}
+		if (done && game.who === NOBODY)
+			view.actions.end_array = 1
+		if (game.who !== NOBODY)
+			prompt_array_place_opposed(RD1, RD2, RD3, SA1, SA3)
+	},
+	array: action_array_place,
+	lord: action_select_lord,
+	end_array: end_array_rearguard,
 }
 
 // === STORM: ARRAY ===
@@ -6339,13 +6390,13 @@ function goto_array_defender_storm() {
 	set_active_defender()
 	game.state = "array_defender_storm"
 	game.who = NOBODY
-	let n = count_reserves()
+	let n = count_friendly_reserves()
 	if (n === 1) {
 		game.battle.array[D2] = pop_first_reserve()
-		end_array_defender()
+		end_array_defender_storm()
 	}
 	if (n === 0) {
-		end_array_defender()
+		end_array_defender_storm()
 	}
 }
 
@@ -6360,13 +6411,18 @@ states.array_defender_storm = {
 	lord(lord) {
 		set_delete(game.battle.reserves, lord)
 		game.battle.array[D2] = lord
-		end_array_defender()
+		end_array_defender_storm()
 	},
+}
+
+function end_array_defender_storm() {
+	goto_attacker_events()
 }
 
 // === BATTLE: EVENTS ===
 
 function goto_attacker_events() {
+	clear_undo()
 	set_active_attacker()
 	log_br()
 	if (can_play_battle_events())
@@ -6418,7 +6474,7 @@ function has_lords_in_battle() {
 	for (let p = 0; p < 12; ++p)
 		if (is_friendly_lord(game.battle.array[p]))
 			return true
-	return has_reserves()
+	return has_friendly_reserves()
 }
 
 function can_play_battle_events() {
@@ -6768,7 +6824,7 @@ function end_reposition_center() {
 }
 
 function can_reposition_advance() {
-	if (has_reserves()) {
+	if (has_friendly_reserves()) {
 		let array = game.battle.array
 		if (is_attacker()) {
 			if (array[A1] === NOBODY || array[A2] === NOBODY || array[A3] === NOBODY)
@@ -6884,7 +6940,7 @@ states.reposition_center = {
 // === STORM: REPOSITION ===
 
 function can_reposition_storm() {
-	return has_reserves()
+	return has_friendly_reserves()
 }
 
 function goto_reposition_storm() {
