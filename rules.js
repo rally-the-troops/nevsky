@@ -1808,11 +1808,11 @@ function setup_return_of_the_prince() {
 	setup_lord_on_calendar(LORD_YAROSLAV, 9)
 	setup_lord_on_calendar(LORD_ANDREY, 9)
 	setup_lord_on_calendar(LORD_KARELIANS, 9)
+	setup_lord_on_calendar(LORD_GAVRILO, 9)
 	setup_lord_on_calendar(LORD_VLADISLAV, 10)
 	setup_lord_on_calendar(LORD_HEINRICH, 11)
 	setup_lord_on_calendar(LORD_KNUD_ABEL, 11)
 	setup_lord_on_calendar(LORD_DOMASH, 11)
-	setup_lord_on_calendar(LORD_GAVRILO, 13)
 }
 
 function setup_return_of_the_prince_nicolle() {
