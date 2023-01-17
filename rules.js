@@ -6638,6 +6638,7 @@ function action_battle_events(c) {
 states.bridge = {
 	prompt() {
 		view.prompt = "Bridge: Play on a Center Lord."
+		view.what = game.what
 		let array = game.battle.array
 		if (is_attacker()) {
 			if (array[D2] !== NOBODY)
@@ -6662,6 +6663,7 @@ states.bridge = {
 states.field_organ = {
 	prompt() {
 		view.prompt = "Field Organ: Play on a Lord."
+		view.what = game.what
 		let array = game.battle.array
 		if (is_attacker()) {
 			for (let pos of battle_attacking_positions)

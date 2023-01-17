@@ -137,11 +137,10 @@ body.Teutons #plan_actions .russian { display: none }
 
 #battle_grid #grid_ga {
 	width: 376px;
-	height: 48px;
-}
-
-#battle_grid #grid_ga > div {
-	margin: 0 auto;
+	height: 60px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 #grid_rd1:empty:not(.action), #grid_rd2:empty:not(.action), #grid_rd3:empty:not(.action),
@@ -281,11 +280,33 @@ body.Teutons #plan_actions .russian { display: none }
 	gap: 0px;
 }
 
-body.shift .capabilities {
-	z-index: 200;
+.mat .events {
+	position: absolute;
+	z-index: 3;
+	width: 372px;
+	height: 260px;
+	left: 2px;
+	top: -36px;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0px;
+	transition-property: top;
+	transition-duration: 100ms;
 }
 
-body.shift #capabilities1, body.shift #capabilities2 {
+.mat .events:hover {
+	top: -130px;
+}
+
+.mat .events:empty {
+	display: none;
+}
+
+body.shift .capabilities,
+body.shift .events,
+body.shift #capabilities1,
+body.shift #capabilities2 {
 	z-index: 200;
 }
 

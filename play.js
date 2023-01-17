@@ -25,6 +25,18 @@ const LORD_HERMANN = find_lord("Hermann")
 const LORD_ALEKSANDR = find_lord("Aleksandr")
 const LORD_ANDREY = find_lord("Andrey")
 
+function find_card(name) {
+	return data.cards.findIndex((x) => x.name === name)
+}
+
+const R1 = find_card("R1")
+const T4 = find_card("T4")
+const T10 = find_card("T10")
+
+const EVENT_RUSSIAN_BRIDGE = R1
+const EVENT_TEUTONIC_BRIDGE = T4
+const EVENT_TEUTONIC_FIELD_ORGAN = T10
+
 const MAP_DPI = 75
 
 const VASSAL_UNAVAILABLE = 0
@@ -40,6 +52,11 @@ const LEGATE_ARRIVED = -1
 const round = Math.round
 const floor = Math.floor
 const ceil = Math.ceil
+
+const first_p1_lord = 0
+const last_p1_lord = 5
+const first_p2_lord = 6
+const last_p2_lord = 11
 
 const first_p1_card = 0
 const last_p1_card = 20
@@ -202,6 +219,14 @@ function is_lord_besieged(lord) {
 	if (view.battle && view.battle.reserves.includes(lord))
 		return false
 	return besieged
+}
+
+function is_teutonic_lord(lord) {
+	return lord >= first_p1_lord && lord <= last_p1_lord
+}
+
+function is_russian_lord(lord) {
+	return lord >= first_p2_lord && lord <= last_p2_lord
 }
 
 function is_lord_moved(lord) {
@@ -488,6 +513,7 @@ const ui = {
 	ready_vassals: [],
 	mustered_vassals: [],
 	lord_capabilities: [],
+	lord_events: [],
 	cards: [],
 	boxes: {},
 	ways: [],
@@ -1360,6 +1386,16 @@ function update_cards() {
 		c = view.pieces.capabilities[(ix << 1) + 1]
 		if (c >= 0)
 			ui.lord_capabilities[ix].appendChild(ui.cards[c])
+
+		ui.lord_events[ix].replaceChildren()
+		if (view.battle && view.battle.field_organ === ix)
+			ui.lord_events[ix].appendChild(ui.cards[EVENT_TEUTONIC_FIELD_ORGAN])
+		if (view.battle && view.battle.bridge && set_has(view.battle.bridge, ix)) {
+			if (is_teutonic_lord(ix))
+				ui.lord_events[ix].appendChild(ui.cards[EVENT_RUSSIAN_BRIDGE])
+			else
+				ui.lord_events[ix].appendChild(ui.cards[EVENT_TEUTONIC_BRIDGE])
+		}
 	}
 }
 
@@ -1624,6 +1660,7 @@ function build_lord_mat(lord, ix, side, name) {
 	ui.mustered_vassals[ix] = build_div(bg, "mustered_vassals")
 	ui.lord_buttons[ix] = build_div(bg, "shield", ix, on_click_cylinder)
 	ui.lord_capabilities[ix] = build_div(mat, "capabilities")
+	ui.lord_events[ix] = build_div(mat, "events")
 	ui.lord_mat[ix] = mat
 }
 
