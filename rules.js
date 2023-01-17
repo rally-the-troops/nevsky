@@ -4862,6 +4862,8 @@ function avoid_battle_2() {
 		set_lord_moved(lord, 1)
 	}
 
+	lift_sieges()
+
 	game.march.avoid_to = 0
 	game.march.avoid_way = 0
 	resume_avoid_battle()
