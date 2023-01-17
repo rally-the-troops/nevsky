@@ -7862,17 +7862,21 @@ function for_each_target(fn) {
 
 	fn(game.battle.array[target])
 
-	// If strikers flank target, target must take all hits
+	// If any striker flanks target, target must take all hits
 	for (let striker of game.battle.strikers)
 		if (flanks_position(striker, target))
 			return
+
+	// SA without RD flank all D (target must take all hits)
+	if ((target === D1 || target === D2 || target === D3) && is_sa_without_rd())
+		return
 
 	// If other lord flanks all strikers, he may take hits instead
 	for (let flanker of ARRAY_FLANKS[target])
 		if (filled(flanker) && flanks_all_positions(flanker, game.battle.strikers))
 			fn(game.battle.array[flanker])
 
-	// SA without RD flank all D equally closely
+	// SA without RD flank all D (and can thus take hits from A)
 	if ((target === A1 || target === A2 || target === A3) && is_sa_without_rd()) {
 		if (filled(SA1)) fn(game.battle.array[SA1])
 		if (filled(SA2)) fn(game.battle.array[SA2])
