@@ -10083,6 +10083,10 @@ exports.action = function (state, current, action, arg) {
 	return game
 }
 
+exports.is_checkpoint = function (a, b) {
+	return a.turn !== b.turn
+}
+
 // === COMMON TEMPLATE ===
 
 // Packed array of small numbers in one word
