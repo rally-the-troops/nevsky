@@ -1448,12 +1448,12 @@ function is_lord_in_grid(lord) {
 }
 
 function update_court() {
-	let tcourt_hdr = (player === "Teutons") ? ui.court1_header : ui.court2_header
-	let rcourt_hdr = (player === "Teutons") ? ui.court2_header : ui.court1_header
+	let tcourt_hdr = (player === "Russians") ? ui.court2_header : ui.court1_header
+	let rcourt_hdr = (player === "Russians") ? ui.court1_header : ui.court2_header
 	tcourt_hdr.textContent = "Teutonic Lords"
 	rcourt_hdr.textContent = "Russian Lords"
-	let tcourt = (player === "Teutons") ? ui.court1 : ui.court2
-	let rcourt = (player === "Teutons") ? ui.court2 : ui.court1
+	let tcourt = (player === "Russians") ? ui.court2 : ui.court1
+	let rcourt = (player === "Russians") ? ui.court1 : ui.court2
 	tcourt.replaceChildren()
 	rcourt.replaceChildren()
 	for (let lord = 0; lord < 6; ++lord)
