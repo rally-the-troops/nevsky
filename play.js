@@ -1229,7 +1229,7 @@ function update_locale(loc) {
 	let sieges = map_get(view.pieces.sieges, loc)
 	if (sieges > 0) {
 		let cn
-		if (is_p1_locale(loc))
+		if (is_p1_locale(loc) || set_has(view.pieces.castles1, loc))
 			cn = "marker square siege russian"
 		else
 			cn = "marker square siege teutonic"
