@@ -7459,14 +7459,17 @@ function goto_strike() {
 	for (let pos of current_strike_positions()) {
 		let lord = get_battle_array(pos)
 		if (lord !== NOBODY) {
-			let hits = (game.battle.ah[pos] = count_lord_hits(lord))
-			let xhits = (game.battle.ahx[pos] = count_lord_xhits(lord))
+			let hits = count_lord_hits(lord)
+			let xhits = count_lord_xhits(lord)
 
 			// STORM: Max 6 hits per lord in melee (12 since we count half-hits).
 			if (game.battle.storm) {
 				if (is_melee_step() && hits > 12)
 					hits = 12
 			}
+
+			game.battle.ah[pos] = hits
+			game.battle.ahx[pos] = xhits
 
 			if (xhits > 2)
 				log(`L${lord} ${xhits / 2} crossbow hits`)
