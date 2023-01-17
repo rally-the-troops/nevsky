@@ -556,6 +556,12 @@ const ui = {
 		document.getElementById("grid_rd2"),
 		document.getElementById("grid_rd3"),
 	],
+	castles: [
+		document.getElementById("castle11"),
+		document.getElementById("castle12"),
+		document.getElementById("castle21"),
+		document.getElementById("castle22"),
+	],
 }
 
 let locale_layout = []
@@ -898,10 +904,10 @@ function layout_locale_cylinders(loc) {
 			nn = wrap
 		let x = xc + (i - (nn-1)/2) * 44 + k * 22
 		let y = yc + (k * 32) - m * 32
-		let z = 0
+		let z = 1
 		if (is_upper) {
 			y -= 18
-			z = 1
+			z = 2
 		}
 		if (e === ui.legate)
 			y -= 16
@@ -1182,6 +1188,27 @@ function update_veche() {
 		add_veche_vp(ui.veche)
 }
 
+function is_town_locale(loc) {
+	return data.locales[loc].type === "town"
+}
+
+function update_castle(elt, loc) {
+	if (loc === undefined) {
+		elt.classList.toggle("hide", true)
+	} else {
+		elt.classList.toggle("hide", false)
+		let [xc, yc] = locale_xy[loc]
+		if (is_town_locale(loc)) {
+			elt.style.top = (yc - 26) + "px"
+			elt.style.left = (xc - 49) + "px"
+		} else {
+			elt.style.top = (yc - 15) + "px"
+			elt.style.left = (xc - 49) + "px"
+		}
+		elt.style.zIndex = 0
+	}
+}
+
 function update_locale(loc) {
 	layout_locale_cylinders(loc)
 
@@ -1211,17 +1238,6 @@ function update_locale(loc) {
 			cn = "marker square conquered teutonic"
 		for (let i = 0; i < data.locales[loc].vp; ++i)
 			ui.locale_markers[loc].appendChild(get_cached_element(cn))
-	}
-
-	// TODO: max 2 castles - reuse elements
-	if (set_has(view.pieces.castles1, loc)) {
-		let cn = "marker rectangle castle teutonic"
-		ui.locale_markers[loc].appendChild(get_cached_element(cn))
-	}
-
-	if (set_has(view.pieces.castles2, loc)) {
-		let cn = "marker rectangle castle russian"
-		ui.locale_markers[loc].appendChild(get_cached_element(cn))
 	}
 
 	// TODO: max 4 walls - reuse elements
@@ -1478,6 +1494,11 @@ function on_update() {
 
 	for (let loc = 0; loc < data.locales.length; ++loc)
 		update_locale(loc)
+
+	update_castle(ui.castles[0], view.pieces.castles1[0])
+	update_castle(ui.castles[1], view.pieces.castles1[1])
+	update_castle(ui.castles[2], view.pieces.castles2[0])
+	update_castle(ui.castles[3], view.pieces.castles2[1])
 
 	update_current_card_display()
 
