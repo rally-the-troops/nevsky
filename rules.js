@@ -1241,11 +1241,11 @@ function has_castle_marker(loc) {
 
 function flip_castle(loc) {
 	if (game.active === P1) {
-		set_delete(game.pieces.castle2, loc)
-		set_add(game.pieces.castle1, loc)
+		set_delete(game.pieces.castles2, loc)
+		set_add(game.pieces.castles1, loc)
 	} else {
-		set_delete(game.pieces.castle1, loc)
-		set_add(game.pieces.castle2, loc)
+		set_delete(game.pieces.castles1, loc)
+		set_add(game.pieces.castles2, loc)
 	}
 }
 
