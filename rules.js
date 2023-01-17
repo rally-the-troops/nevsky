@@ -3895,8 +3895,6 @@ states.novgorod_veche = {
 				view.actions.delay = 1
 		}
 
-		// TODO: 2E 3.5.2 Shift all Russian cylinders at once
-
 		if (game.pieces.veche_vp > 0) {
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 				if (no_muster_of_or_by_lord(lord))
@@ -3940,8 +3938,9 @@ states.novgorod_veche = {
 		}
 
 		else if (is_lord_on_calendar(lord)) {
-			log(`Slid L${lord} one box left.`)
-			shift_lord_cylinder(lord, -1)
+			// NOTE: 2E 3.5.2 Shift one Russian cylinder two boxes (from one in 1E).
+			log(`Slid L${lord} two boxes left.`)
+			shift_lord_cylinder(lord, -2)
 		}
 
 		else {
