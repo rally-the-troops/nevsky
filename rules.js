@@ -4846,7 +4846,8 @@ function avoid_battle_2() {
 		log(`Avoided Battle to %${to}.`)
 
 	for (let lord of game.group) {
-		set_add(game.march.ambush_lords, lord)
+		if (game.march.ambush_lords)
+			set_add(game.march.ambush_lords, lord)
 		set_lord_locale(lord, to)
 		set_lord_moved(lord, 1)
 	}
