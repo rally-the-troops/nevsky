@@ -8569,6 +8569,9 @@ function retreat_2() {
 		set_lord_moved(lord, 1)
 	}
 
+	lift_sieges()
+	remove_legate_if_endangered(game.battle.where)
+
 	game.battle.retreat_to = 0
 	game.battle.retreat_way = 0
 	end_retreat()
