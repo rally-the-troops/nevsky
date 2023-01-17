@@ -35,14 +35,7 @@ const RUSSIANS = "Russians"
 const P1 = TEUTONS
 const P2 = RUSSIANS
 
-// NOTE: With Hidden Mats option, the player order of feed/pay may matter.
-const FEED_PAY_DISBAND = true // feed, pay, disband in one go
-const WASTAGE_DISCARD = true // wastage, discard in one go
-// option ACTIVE_FEED_FIRST // active card feeds first (instead of P1 always first)
-// option DELAY_PAY_IF_NO_FEED_OR_DISBAND
-// TODO service shift before spoils
-// option SERVICE_BEFORE_SPOILS
-// option AUTO_SELECT_STRIKE_GROUPS
+// TODO: service shift before spoils ?
 
 const DIE_HIT = "01234567"
 const DIE_MISS = "01234567"
@@ -4219,6 +4212,20 @@ function goto_command_activation() {
 
 // === CAMPAIGN: ACTIONS ===
 
+function set_active_command() {
+	if (game.command >= first_p1_lord && game.command <= last_p1_lord)
+		set_active(P1)
+	else
+		set_active(P2)
+}
+
+function is_active_command() {
+	if (game.command >= first_p1_lord && game.command <= last_p1_lord)
+		return game.active === P1
+	else
+		return game.active === P2
+}
+
 function is_first_action() {
 	return game.flags.first_action
 }
@@ -4286,8 +4293,6 @@ function spend_all_actions() {
 function end_actions() {
 	log_br()
 
-	set_active(P1)
-	game.command = NOBODY
 	game.group = 0
 	game.pieces.legate_selected = 0
 
@@ -4296,6 +4301,8 @@ function end_actions() {
 	game.flags.teutonic_raiders = 0
 	game.flags.famine = 0
 
+	// NOTE: Feed currently acting side first for expedience.
+	set_active_command()
 	goto_feed()
 }
 
@@ -9047,15 +9054,7 @@ states.feed_lord_shared = {
 
 function end_feed() {
 	clear_undo()
-	if (FEED_PAY_DISBAND) {
-		goto_pay()
-	} else {
-		set_active_enemy()
-		if (game.active === P2)
-			goto_feed()
-		else
-			goto_pay()
-	}
+	goto_pay()
 }
 
 // === LEVY & CAMPAIGN: PAY ===
@@ -9271,16 +9270,16 @@ function end_disband() {
 		return
 
 	set_active_enemy()
-	if (game.active === P2) {
-		if (FEED_PAY_DISBAND)
-			goto_feed()
+	if (is_campaign_phase()) {
+		if (is_active_command())
+			goto_remove_markers()
 		else
-			goto_pay()
+			goto_feed()
 	} else {
-		if (is_levy_phase())
+		if (game.active === P1)
 			goto_levy_muster()
 		else
-			goto_remove_markers()
+			goto_feed()
 	}
 }
 
@@ -9681,17 +9680,8 @@ states.wastage = {
 }
 
 function end_wastage() {
-	if (WASTAGE_DISCARD) {
-		push_undo()
-		goto_reset()
-	} else {
-		clear_undo()
-		set_active_enemy()
-		if (game.active === P2)
-			goto_plow_and_reap()
-		else
-			goto_reset()
-	}
+	push_undo()
+	goto_reset()
 }
 
 // === END CAMPAIGN: RESET (DISCARD ARTS OF WAR) ===
@@ -9757,21 +9747,12 @@ states.reset = {
 }
 
 function end_reset() {
-	if (WASTAGE_DISCARD) {
-		clear_undo()
-		set_active_enemy()
-		if (game.active === P2)
-			goto_plow_and_reap()
-		else
-			goto_advance_campaign()
-	} else {
-		clear_undo()
-		set_active_enemy()
-		if (game.active === P2)
-			goto_reset()
-		else
-			goto_advance_campaign()
-	}
+	clear_undo()
+	set_active_enemy()
+	if (game.active === P2)
+		goto_plow_and_reap()
+	else
+		goto_advance_campaign()
 }
 
 // === END CAMPAIGN: RESET (ADVANCE CAMPAIGN) ===
