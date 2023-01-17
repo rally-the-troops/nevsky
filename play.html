@@ -129,12 +129,25 @@ body.Teutons #plan_actions .russian { display: none }
 	padding: 12px;
 }
 
-#battle_grid #grid_bm {
-	width: 376px;
-	height: 376px;
+#battle_grid .grid_array.action {
+	background-image: url("images/battle_array_action.svg");
+	background-repeat: no-repeat;
+	background-position: top center;
 }
 
-#grid_rd1:empty, #grid_rd2:empty, #grid_rd3:empty, #grid_sa1:empty, #grid_sa2:empty, #grid_sa3:empty { display: none; }
+#battle_grid #grid_ga {
+	width: 376px;
+	height: 48px;
+}
+
+#battle_grid #grid_ga > div {
+	margin: 0 auto;
+}
+
+#grid_rd1:empty:not(.action), #grid_rd2:empty:not(.action), #grid_rd3:empty:not(.action),
+#grid_sa1:empty:not(.action), #grid_sa2:empty:not(.action), #grid_sa3:empty:not(.action) {
+	display: none;
+}
 
 #battle_header { grid-row: 1; grid-column: 1 / 4; }
 
@@ -160,7 +173,7 @@ body.Teutons #plan_actions .russian { display: none }
 .defender #grid_a1 { grid-row: 1; grid-column: 1; }
 .defender #grid_a2 { grid-row: 1; grid-column: 2; }
 .defender #grid_a3 { grid-row: 1; grid-column: 3; }
-.defender #grid_bm { grid-row: 2; grid-column: 2; }
+.defender #grid_ga { grid-row: 2; grid-column: 2; }
 .defender #grid_d1 { grid-row: 3; grid-column: 1; }
 .defender #grid_d2 { grid-row: 3; grid-column: 2; }
 .defender #grid_d3 { grid-row: 3; grid-column: 3; }
@@ -174,7 +187,7 @@ body.Teutons #plan_actions .russian { display: none }
 .attacker #grid_a1 { grid-row: 5; grid-column: 3; }
 .attacker #grid_a2 { grid-row: 5; grid-column: 2; }
 .attacker #grid_a3 { grid-row: 5; grid-column: 1; }
-.attacker #grid_bm { grid-row: 4; grid-column: 2; }
+.attacker #grid_ga { grid-row: 4; grid-column: 2; }
 .attacker #grid_d1 { grid-row: 3; grid-column: 3; }
 .attacker #grid_d2 { grid-row: 3; grid-column: 2; }
 .attacker #grid_d3 { grid-row: 3; grid-column: 1; }
@@ -185,109 +198,38 @@ body.Teutons #plan_actions .russian { display: none }
 .attacker #grid_sa2 { grid-row: 1; grid-column: 2; }
 .attacker #grid_sa3 { grid-row: 1; grid-column: 1; }
 
-/* BATTLE MAT WITH LORD CYLINDERS */
-
-#battle_mat {
-	position: relative;
-	width: 372px;
-	height: 372px;
-	background-size: 360px 360px;
-	background-position: center;
-	background-repeat: no-repeat;
-	background-color: #d1c07e;
-	border-radius: 12px;
-	border-width: 2px;
-	border-style: solid;
-}
-
-.defender #battle_mat { background-image: url(mats.1x/mat_battle_defender-fs8.png); }
-.attacker #battle_mat { background-image: url(mats.1x/mat_battle_attacker-fs8.png); }
-@media (min-resolution: 97dpi) {
-.defender #battle_mat { background-image: url(mats.2x/mat_battle_defender-fs8.png); }
-.attacker #battle_mat { background-image: url(mats.2x/mat_battle_attacker-fs8.png); }
-}
-
-#mat_pursuit { position: absolute; }
-.defender #mat_pursuit { top: 150px; left: 139px; }
-.attacker #mat_pursuit { top: 175px; left: 139px; }
-
-.defender #mat_pursuit.rotate, .attacker #mat_pursuit:not(.rotate)
+.defender #pursuit.rotate,
+.attacker #pursuit:not(.rotate)
 {
 	transform: rotate(180deg);
 	border-color: #a68c61 #e7cb9e #e7cb9e #a68c61;
 	box-shadow: 0 0 0 1px #4e370a, -1px -2px 4px #0008;
 }
 
-.defender #mat_garrison { top: 172px; left: 8px; }
-.defender #mat_attacker_reserves { top: 4px; left: 8px; }
-.defender #mat_defender_reserves { bottom: 4px; left: 8px; }
-.defender #mat_a1	{ top: 96px; left: 32px; }
-.defender #mat_a2	{ top: 96px; left: 162px; }
-.defender #mat_a3	{ top: 96px; right: 32px; }
-.defender #mat_d1	{ top: 220px; left: 32px; }
-.defender #mat_d2	{ top: 220px; left: 162px; }
-.defender #mat_d3	{ top: 220px; right: 32px; }
-.defender #mat_rd1	{ bottom: 60px; left: 4px; }
-.defender #mat_rd2	{ bottom: 60px; right: 200px; }
-.defender #mat_rd3	{ bottom: 60px; right: 4px; }
-.defender #mat_sa1		{ bottom: 48px; left: 64px; }
-.defender #mat_sa2		{ bottom: 48px; left: 200px; }
-.defender #mat_sa3		{ bottom: 48px; right: 64px; }
+#garrison {
+	background-color: #d1c07e;
+	border-color: #f2e19d #b1a05f #b1a05f #f2e19d;
+	box-shadow: 0 0 0 1px #584800, 1px 2px 4px #0008;
+	border-radius: 12px;
+	border-width: 2px;
+	border-style: solid;
+}
 
-.attacker #mat_garrison { bottom: 172px; left: 8px; }
-.attacker #mat_attacker_reserves { bottom: 4px; left: 8px; }
-.attacker #mat_defender_reserves { top: 4px; left: 8px; }
-.attacker #mat_a1	{ bottom: 96px; right: 32px; }
-.attacker #mat_a2	{ bottom: 96px; left: 162px; }
-.attacker #mat_a3	{ bottom: 96px; left: 32px; }
-.attacker #mat_d1	{ bottom: 220px; right: 32px; }
-.attacker #mat_d2	{ bottom: 220px; left: 162px; }
-.attacker #mat_d3	{ bottom: 220px; left: 32px; }
-.attacker #mat_rd1	{ top: 60px; right: 4px; }
-.attacker #mat_rd2	{ top: 60px; left: 200px; }
-.attacker #mat_rd3	{ top: 60px; left: 4px; }
-.attacker #mat_sa1		{ top: 48px; right: 64px; }
-.attacker #mat_sa2		{ top: 48px; right: 200px; }
-.attacker #mat_sa3		{ top: 48px; left: 64px; }
-
-/*
-.defender #mat_attacker_reserves { justify-content: end; }
-.defender #mat_defender_reserves { justify-content: start; }
-.attacker #mat_attacker_reserves { justify-content: start; }
-.attacker #mat_defender_reserves { justify-content: end; }
-*/
-
-#battle_mat .mat_array {
-	position: absolute;
+#garrison {
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: center;
 	align-items: center;
-}
-
-#battle_mat .mat_array {
-	width: 48px;
-	height: 48px;
-}
-
-#battle_mat .mat_array.reserves {
-	width: 356px;
-	height: 48px;
-	gap: 8px;
-}
-
-#battle_mat .mat_array.garrison {
-	width: 356px;
+	width: 376px;
 	height: 48px;
 	gap: 2px;
 }
 
-#battle_mat .mat_array.action {
-	border-radius: 50%;
-	box-shadow: 0 0 0 3px white;
+#garrison:empty {
+	display: none
 }
 
-#battle_mat .cylinder, #battle_mat .unit {
+#garrison .unit {
 	position: static
 }
 
@@ -1338,25 +1280,9 @@ body.shift .mustered_vassals {
 <div id="battle_panel" class="panel hide">
 <div id="battle_header" class="panel_header">Battle</div>
 <div id="battle_grid">
-	<div class="grid_array" id="grid_bm">
-		<div id="battle_mat">
-			<div id="mat_pursuit" class="marker rectangle pursuit russian hide"></div>
-			<div id="mat_attacker_reserves" class="mat_array reserves"></div>
-			<div id="mat_garrison" class="mat_array garrison"></div>
-			<div id="mat_defender_reserves" class="mat_array reserves"></div>
-			<div id="mat_a1" class="mat_array"></div>
-			<div id="mat_a2" class="mat_array"></div>
-			<div id="mat_a3" class="mat_array"></div>
-			<div id="mat_d1" class="mat_array"></div>
-			<div id="mat_d2" class="mat_array"></div>
-			<div id="mat_d3" class="mat_array"></div>
-			<div id="mat_rd1" class="mat_array"></div>
-			<div id="mat_rd2" class="mat_array"></div>
-			<div id="mat_rd3" class="mat_array"></div>
-			<div id="mat_sa1" class="mat_array"></div>
-			<div id="mat_sa2" class="mat_array"></div>
-			<div id="mat_sa3" class="mat_array"></div>
-		</div>
+	<div class="grid_array" id="grid_ga">
+		<div id="pursuit" class="marker rectangle pursuit russian hide"></div>
+		<div id="garrison"></div>
 	</div>
 	<div class="grid_array att" id="grid_a1"></div>
 	<div class="grid_array att" id="grid_a2"></div>

@@ -520,27 +520,10 @@ const ui = {
 	court2_header: document.getElementById("court2_header"),
 	court1: document.getElementById("court1"),
 	court2: document.getElementById("court2"),
-	battle_attacker_reserves: document.getElementById("mat_attacker_reserves"),
-	battle_defender_reserves: document.getElementById("mat_defender_reserves"),
-	garrison: document.getElementById("mat_garrison"),
+	garrison: document.getElementById("garrison"),
 	battle_panel: document.getElementById("battle_panel"),
 	battle_header: document.getElementById("battle_header"),
-	pursuit: document.getElementById("mat_pursuit"),
-	battle_mat: document.getElementById("battle_mat"),
-	battle_mat_array: [
-		document.getElementById("mat_a1"),
-		document.getElementById("mat_a2"),
-		document.getElementById("mat_a3"),
-		document.getElementById("mat_d1"),
-		document.getElementById("mat_d2"),
-		document.getElementById("mat_d3"),
-		document.getElementById("mat_sa1"),
-		document.getElementById("mat_sa2"),
-		document.getElementById("mat_sa3"),
-		document.getElementById("mat_rd1"),
-		document.getElementById("mat_rd2"),
-		document.getElementById("mat_rd3"),
-	],
+	pursuit: document.getElementById("pursuit"),
 	battle_grid: document.getElementById("battle_grid"),
 	battle_grid_array: [
 		document.getElementById("grid_a1"),
@@ -1398,25 +1381,12 @@ function update_battle() {
 		ui.pursuit.className = "hide"
 	}
 
-	ui.battle_attacker_reserves.replaceChildren()
-	ui.battle_defender_reserves.replaceChildren()
-	for (let lord of view.battle.reserves) {
-		if (is_attacking_lord(lord))
-			ui.battle_attacker_reserves.appendChild(ui.battle_cylinder[lord])
-		else
-			ui.battle_defender_reserves.appendChild(ui.battle_cylinder[lord])
-	}
-
 	for (let i = 0; i < array.length; ++i) {
 		let lord = array[i]
-		ui.battle_mat_array[i].replaceChildren()
-		if (lord >= 0)
-			ui.battle_mat_array[i].appendChild(ui.battle_cylinder[lord])
-		ui.battle_mat_array[i].classList.toggle("action", is_battle_array_action(i))
-
 		ui.battle_grid_array[i].replaceChildren()
 		if (lord >= 0)
 			ui.battle_grid_array[i].appendChild(ui.lord_mat[lord])
+		ui.battle_grid_array[i].classList.toggle("action", is_battle_array_action(i))
 	}
 
 	for (let lord = 0; lord < 12; ++lord) {
@@ -1890,8 +1860,8 @@ function build_map() {
 	build_plan()
 
 	for (let i = 0; i < 12; ++i) {
-		ui.battle_mat_array[i].my_id = i
-		ui.battle_mat_array[i].addEventListener("mousedown", on_click_array)
+		ui.battle_grid_array[i].my_id = i
+		ui.battle_grid_array[i].addEventListener("mousedown", on_click_array)
 	}
 
 	for (let c = 0; c < 21; ++c)
