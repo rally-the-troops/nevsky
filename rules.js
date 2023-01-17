@@ -8204,6 +8204,9 @@ function goto_sack() {
 
 	log(`Sacked %${here}.`)
 
+	if (has_friendly_castle(here))
+		flip_castle(here)
+
 	remove_all_siege_markers(game.battle.where)
 	add_conquered_marker(game.battle.where)
 	remove_walls(game.battle.where)
