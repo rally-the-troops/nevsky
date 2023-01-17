@@ -1572,6 +1572,7 @@ function on_update() {
 	action_button("remove", "Remove")
 	action_button("surrender", "Surrender")
 	action_button("siegeworks", "Siegeworks")
+	action_button("boats_x2", "Boats x2")
 
 	// Use all commands
 	action_button("use_legate", "Legate")

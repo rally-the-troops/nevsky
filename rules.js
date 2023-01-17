@@ -1,7 +1,6 @@
 "use strict"
 
 // TODO: Bridge - kn, sgt, 1x lh, maa, militia, serf, lh, ah
-// TODO: Lodya capability during supply!
 // TODO: 2nd edition supply rule - no reuse of transports
 
 // TODO: s/RD/RG/ (rearguard)
@@ -717,14 +716,10 @@ function count_lord_boats(lord) {
 	let boats = get_lord_assets(lord, BOAT)
 
 	if (lord_has_capability(lord, AOW_RUSSIAN_LODYA)) {
-		// TODO: one option or the other (only matters for supply)
-		let ships = get_lord_assets(lord, SHIP)
-		if (ships > 2)
-			ships = 2
-		if (boats * 2 > boats + ships)
-			boats = boats * 2
+		if (game.flags.lodya === 0)
+			boats *= 2
 		else
-			boats = boats + ships
+			boats += game.flags.lodya
 	}
 
 	return boats
@@ -747,11 +742,7 @@ function count_lord_ships(lord) {
 	}
 
 	if (lord_has_capability(lord, AOW_RUSSIAN_LODYA)) {
-		// TODO: one option or the other (only matters for supply)
-		let boats = get_lord_assets(lord, BOAT)
-		if (boats > 2)
-			boats = 2
-		ships += boats
+		ships -= game.flags.lodya
 	}
 
 	return ships
@@ -1622,6 +1613,7 @@ exports.setup = function (seed, scenario, options) {
 			first_march: 0,
 			teutonic_raiders: 0,
 			famine: 0,
+			lodya: 0,
 		},
 
 		command: NOBODY,
@@ -2513,7 +2505,7 @@ function goto_russian_event_osilian_revolt() {
 states.osilian_revolt = {
 	prompt() {
 		view.prompt = "Osilian Revolt: On Calendar, shift Service of Andreas or Heinrich 2 boxes left."
-		// Note: Service only!
+		// NOTE: Service only!
 		if (is_lord_on_map(LORD_ANDREAS) && game.who !== LORD_ANDREAS)
 			gen_action_service(LORD_ANDREAS)
 		if (is_lord_on_map(LORD_HEINRICH) && game.who !== LORD_HEINRICH)
@@ -4266,7 +4258,6 @@ function goto_actions() {
 	}
 
 	resume_actions()
-	update_supply()
 }
 
 function resume_actions() {
@@ -4519,7 +4510,11 @@ states.march_way = {
 
 function march_with_group_1() {
 	let way = game.march.approach
-	let transport = count_group_transport(data.ways[way].type)
+	let type = data.ways[way].type
+
+	init_lodya_march(type)
+
+	let transport = count_group_transport(type)
 	let prov = count_group_assets(PROV)
 	let loot = count_group_assets(LOOT)
 
@@ -4637,7 +4632,6 @@ function march_with_group_3() {
 		game.march = 0
 		spend_all_actions()
 		resume_actions()
-		update_supply()
 		return
 	}
 
@@ -4655,7 +4649,6 @@ function march_with_group_3() {
 	game.march = 0
 
 	resume_actions()
-	update_supply()
 }
 
 // === ACTION: MARCH - AVOID BATTLE ===
@@ -5214,16 +5207,128 @@ function goto_sally() {
 	start_sally()
 }
 
+// === CAPABILITY: LODYA ===
+
+// NOTE: Lodya = 0 is boats as 2x boats
+// NOTE: Lodya > 0 is ships as boats
+// NOTE: Lodya < 0 is boats as ships
+
+function find_lodya_lord_in_shared() {
+	let here = get_lord_locale(game.command)
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (get_lord_locale(lord) === here)
+			if (lord_has_capability(lord, AOW_RUSSIAN_LODYA))
+				return lord
+	return NOBODY
+}
+
+function find_lodya_lord_in_group() {
+	for (let lord of game.group)
+		if (lord_has_capability(lord, AOW_RUSSIAN_LODYA))
+			return lord
+	return NOBODY
+}
+
+function init_lodya_sail() {
+	let lord = find_lodya_lord_in_group()
+	if (lord !== NOBODY) {
+		game.flags.lodya = -Math.min(2, get_lord_assets(lord, BOAT))
+		if (game.flags.lodya < 0)
+			log_lodya()
+	} else {
+		game.flags.lodya = 0
+	}
+}
+
+function init_lodya_march(type) {
+	game.flags.lodya = 0
+	if (!is_winter() && type === "waterway") {
+		let lord = find_lodya_lord_in_group()
+		if (lord !== NOBODY) {
+			let ships = Math.min(2, get_lord_assets(lord, SHIP))
+			let boats = get_lord_assets(lord, BOAT)
+			if (boats > ships)
+				game.flags.lodya = 0 // 2x boats
+			else
+				game.flags.lodya = ships
+			log_lodya()
+		}
+	}
+}
+
+function init_lodya_supply() {
+	game.flags.lodya = 0
+	if (!is_winter()) {
+		let lord = find_lodya_lord_in_shared()
+		if (lord !== NOBODY) {
+			// No choice if enough ships and 2x boats >= boats + extra ships
+			let ships = get_lord_assets(lord, SHIP)
+			let boats = get_lord_assets(lord, BOAT)
+			if (ships < 2 || boats < ships - 2)
+				return true
+			log("Lodya: Boats as 2 Boats each.")
+		}
+	}
+	return false
+}
+
+states.supply_lodya = {
+	prompt() {
+		view.prompt = "Lodya: Boats as 2 Boats each, or Ships or Boats as the other: "
+		let lord = find_lodya_lord_in_shared()
+		let boats = get_lord_assets(lord, BOAT) + game.flags.lodya
+		let ships = get_lord_assets(lord, SHIP) - game.flags.lodya
+		view.prompt += ` ${boats} Boats,`
+		view.prompt += ` ${ships} Ships.`
+		view.actions.done = 1
+		if (game.flags.lodya === 0) {
+			view.actions.boats_x2 = 1
+			if (get_lord_assets(lord, SHIP) > 0)
+				view.actions.take_boat = 1
+			if (get_lord_assets(lord, BOAT) > 0)
+				view.actions.take_ship = (ships < 2) ? 1 : 0
+			view.actions.done = 0
+		}
+		if (ships < 2 && game.flags.lodya === -1 && get_lord_assets(lord, BOAT) >= 2) {
+			view.actions.take_boat = 0
+			view.actions.take_ship = (ships < 2) ? 1 : 0
+		}
+		if (game.flags.lodya === 1 && get_lord_assets(lord, SHIP) >= 2) {
+			view.actions.take_boat = 1
+			view.actions.take_ship = 0
+		}
+	},
+	take_boat() {
+		push_undo()
+		game.flags.lodya ++
+	},
+	take_ship() {
+		push_undo()
+		game.flags.lodya --
+	},
+	boats_x2: end_supply_lodya,
+	done: end_supply_lodya,
+}
+
+function end_supply_lodya() {
+	push_undo()
+	log_lodya()
+	init_supply()
+	game.state = "supply_source"
+}
+
+function log_lodya() {
+	if (game.flags.lodya === 0)
+		log("Lodya: Boats as 2 Boats each.")
+	else if (game.flags.lodya < 0)
+		log(`Lodya: ${-game.flags.lodya} Boats as Ships.`)
+	else
+		log(`Lodya: ${game.flags.lodya} Ships as Boats.`)
+}
+
 // === ACTION: SUPPLY ===
 
-function update_supply() {
-	// TODO: Lodya - select boat OR ship (we count both here...)
-
-	if (game.actions < 1) {
-		game.supply = 0
-		return
-	}
-
+function init_supply() {
 	let season = current_season()
 	let here = get_lord_locale(game.command)
 	let boats = 0
@@ -5424,7 +5529,7 @@ function filter_usable_supply_seaports(reachable, ships) {
 function can_action_supply() {
 	if (game.actions < 1)
 		return false
-	return can_supply()
+	return true // TODO - Lodya & pre-search?
 }
 
 function can_supply() {
@@ -5437,7 +5542,12 @@ function can_supply() {
 
 function goto_supply() {
 	push_undo()
-	game.state = "supply_source"
+	if (init_lodya_supply()) {
+		game.state = "supply_lodya"
+	} else {
+		init_supply()
+		game.state = "supply_source"
+	}
 }
 
 states.supply_source = {
@@ -5494,7 +5604,6 @@ function end_supply() {
 	game.supply = 0
 	spend_action(1)
 	resume_actions()
-	update_supply()
 }
 
 // === ACTION: FORAGE ===
@@ -5749,6 +5858,7 @@ function can_action_sail() {
 
 function goto_sail() {
 	push_undo()
+	init_lodya_sail()
 	game.state = "sail"
 }
 
@@ -5819,7 +5929,6 @@ states.sail = {
 
 		spend_all_actions()
 		resume_actions()
-		update_supply()
 	},
 }
 
