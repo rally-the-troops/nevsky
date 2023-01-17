@@ -1161,6 +1161,10 @@ function update_veche() {
 	ui.veche.replaceChildren()
 
 	let n = view.pieces.veche_coin
+	while (n >= 4) {
+		add_asset(ui.veche, COIN, 4, VECHE)
+		n -= 4
+	}
 	while (n >= 3) {
 		add_asset(ui.veche, COIN, 3, VECHE)
 		n -= 3
