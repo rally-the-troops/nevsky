@@ -343,6 +343,10 @@ body.shift .capabilities {
 	z-index: 200;
 }
 
+body.shift #capabilities1, body.shift #capabilities2 {
+	z-index: 200;
+}
+
 .mat .forces, .mat .routed, .mat .assets, #veche {
 	position: absolute;
 	display: flex;
@@ -354,6 +358,10 @@ body.shift .capabilities {
 	gap: 4px 6px;
 	z-index: 5;
 	//background-color: #f004;
+}
+
+#veche {
+	gap: 4px;
 }
 
 .mat > .background > div {
@@ -446,9 +454,9 @@ body.shift .mustered_vassals {
 .mat.russian.vladislav .background { background-image:url(mats.2x/mat_russian_vladislav-fs8.png) }
 }
 
-.conquered + .conquered { margin-left: -44px; margin-bottom: 13px; }
-.conquered + .conquered + .conquered { margin-bottom: 26px; }
-.conquered + .conquered + .conquered + .conquered { margin-bottom: 39px; }
+.locale_markers > .conquered + .conquered { margin-left: -44px; margin-bottom: 13px; }
+.locale_markers > .conquered + .conquered + .conquered { margin-bottom: 26px; }
+.locale_markers > .conquered + .conquered + .conquered + .conquered { margin-bottom: 39px; }
 
 .siege + .siege { margin-left: -44px; margin-bottom: 13px; }
 .siege + .siege + .siege { margin-bottom: 26px; }
@@ -459,23 +467,10 @@ body.shift .mustered_vassals {
 .tuck_under_map {
 	margin: 0 auto 36px auto;
 	width: 1275px;
-	min-height: 132px;
+	min-height: 260px;
+	margin-top: -130px;
 	display: grid;
 	grid-template-columns: auto auto;
-}
-
-.tuck_under_map .card {
-	height: 132px;
-	background-position: 0 100%;
-	border-top-left-radius: 0;
-	border-top-right-radius: 0;
-	z-index: 1;
-}
-
-.tuck_under_map .card:hover {
-	height: 253px;
-	margin-bottom: -132px;
-	z-index: 2;
 }
 
 #capabilities1, #capabilities2 {
@@ -792,8 +787,6 @@ body.shift .mustered_vassals {
 	align-items: center;
 	gap: 4px;
 }
-
-#veche { position: absolute; }
 
 .veche_label {
 	pointer-events: none;
