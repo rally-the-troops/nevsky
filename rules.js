@@ -1211,6 +1211,18 @@ function conquer_trade_route(loc) {
 	}
 }
 
+function conquer_stronghold(loc) {
+	if (has_castle_marker(loc))
+		flip_castle(loc)
+
+	remove_all_siege_markers(loc)
+
+	if (is_enemy_territory(loc))
+		add_conquered_marker(loc)
+	else
+		remove_conquered_marker(loc)
+}
+
 function count_castles() {
 	return game.pieces.castles1.length + game.pieces.castles2.length
 }
@@ -2744,8 +2756,7 @@ states.vodian_treachery = {
 	},
 	locale(loc) {
 		log(`Conquered %${loc}.`)
-		remove_all_siege_markers(loc)
-		add_conquered_marker(loc)
+		conquer_stronghold(loc)
 		end_held_event()
 	},
 }
@@ -5109,15 +5120,7 @@ function goto_surrender() {
 function surrender_stronghold(here) {
 	log(`%${here} surrendered.`)
 
-	remove_all_siege_markers(here)
-
-	if (has_conquered_marker(here))
-		remove_conquered_marker(here)
-	else
-		add_conquered_marker(here)
-
-	if (has_enemy_castle(here))
-		flip_castle(here)
+	conquer_stronghold(here)
 
 	if (here === LOC_NOVGOROD) {
 		if (game.pieces.veche_coin > 0) {
@@ -8180,7 +8183,6 @@ function end_battle() {
 
 	game.battle.array = 0
 
-	set_active_loser()
 	if (game.battle.storm) {
 		if (game.battle.attacker !== game.battle.loser)
 			goto_sack()
@@ -8202,16 +8204,12 @@ function award_spoils(n) {
 function goto_sack() {
 	let here = game.battle.where
 
+	set_active_victor()
+
 	log(`Sacked %${here}.`)
 
-	if (has_friendly_castle(here))
-		flip_castle(here)
+	conquer_stronghold(game.battle.where)
 
-	remove_all_siege_markers(game.battle.where)
-	if (is_friendly_territory(game.battle.where))
-		add_conquered_marker(game.battle.where)
-	else
-		remove_conquered_marker(game.battle.where)
 	remove_walls(game.battle.where)
 
 	if (here === LOC_NOVGOROD) {
@@ -8231,6 +8229,7 @@ function goto_sack() {
 	else if (is_castle(here))
 		award_spoils(1)
 
+	set_active_loser()
 	resume_sack()
 }
 
@@ -8286,6 +8285,7 @@ function withdrawal_capacity_needed(here) {
 }
 
 function goto_battle_withdraw() {
+	set_active_loser()
 	game.spoils = 0
 	let here = game.battle.where
 	let wn = withdrawal_capacity_needed(here)
