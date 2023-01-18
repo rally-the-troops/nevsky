@@ -8936,9 +8936,9 @@ states.battle_service = {
 	prompt() {
 		view.prompt = "Battle: Roll to shift service of each retreated lord."
 		for (let lord of game.battle.retreated)
-			gen_action_service(lord)
+			gen_action_service_bad(lord)
 	},
-	service(lord) {
+	service_bad(lord) {
 		let die = roll_die()
 		log(`L${lord} rolled ${die}.`)
 		if (die <= 2)
@@ -9091,7 +9091,7 @@ states.feed = {
 			view.prompt = "You must shift the Service of any unfed lords."
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 				if (is_lord_unfed(lord)) {
-					gen_action_service(lord)
+					gen_action_service_bad(lord)
 					done = false
 				}
 			}
@@ -9120,7 +9120,7 @@ states.feed = {
 		game.who = lord
 		game.state = "feed_lord_shared"
 	},
-	service(lord) {
+	service_bad(lord) {
 		push_undo()
 		log(`Unfed L${lord}.`)
 		add_lord_service(lord, -1)
@@ -9356,14 +9356,14 @@ states.disband = {
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 			if (is_lord_on_map(lord) && get_lord_service(lord) <= current_turn()) {
 				gen_action_lord(lord)
-				gen_action_service(lord)
+				gen_action_service_bad(lord)
 				done = false
 			}
 		}
 		if (done)
 			view.actions.end_disband = 1
 	},
-	service(lord) {
+	service_bad(lord) {
 		this.lord(lord)
 	},
 	lord(lord) {
@@ -10033,6 +10033,10 @@ function gen_action_array(pos) {
 
 function gen_action_service(service) {
 	gen_action("service", service)
+}
+
+function gen_action_service_bad(service) {
+	gen_action("service_bad", service)
 }
 
 function gen_action_vassal(vassal) {

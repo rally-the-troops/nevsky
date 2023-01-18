@@ -269,6 +269,10 @@ function is_service_action(lord) {
 	return !!(view.actions && view.actions.service && set_has(view.actions.service, lord))
 }
 
+function is_service_bad_action(lord) {
+	return !!(view.actions && view.actions.service_bad && set_has(view.actions.service_bad, lord))
+}
+
 function is_vassal_action(vassal) {
 	return !!(view.actions && view.actions.vassal && set_has(view.actions.vassal, vassal))
 }
@@ -696,6 +700,7 @@ function on_click_lord_service_marker(evt) {
 	if (evt.button === 0) {
 		let id = evt.target.my_id
 		send_action('service', id)
+		send_action('service_bad', id)
 	}
 }
 
@@ -1134,7 +1139,8 @@ function update_lord(ix) {
 	ui.lord_cylinder[ix].classList.toggle("moved", is_lord_moved(ix))
 	ui.lord_buttons[ix].classList.toggle("action", is_lord_action(ix))
 	ui.lord_cylinder[ix].classList.toggle("action", is_lord_action(ix))
-	ui.lord_service[ix].classList.toggle("action", is_service_action(ix))
+	ui.lord_service[ix].classList.toggle("action", is_service_action(ix) || is_service_bad_action(ix))
+	ui.lord_service[ix].classList.toggle("bad", is_service_bad_action(ix))
 
 	if (ix === LORD_HERMANN)
 		ui.lord_cylinder[ix].classList.toggle("marshal", !is_lord_on_map(LORD_ANDREAS))
