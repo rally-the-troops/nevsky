@@ -9212,9 +9212,12 @@ function resume_pay() {
 
 states.pay = {
 	prompt() {
-		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-			if (is_lord_on_map(lord) && can_pay_lord(lord))
+		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+			if (is_lord_on_map(lord) && can_pay_lord(lord)) {
 				prompt_select_lord(lord)
+				prompt_select_service(lord)
+			}
+		}
 
 		prompt_held_event()
 
@@ -9248,6 +9251,7 @@ states.pay = {
 		view.actions.end_pay = 1
 	},
 	lord: action_select_lord,
+	service: action_select_lord,
 	loot(lord) {
 		push_undo_without_who()
 		if (game.who === lord)
@@ -9983,9 +9987,13 @@ function prompt_select_lord_on_calendar(lord) {
 }
 
 function prompt_select_lord(lord) {
-	if (lord !== game.who) {
+	if (lord !== game.who)
 		gen_action_lord(lord)
-	}
+}
+
+function prompt_select_service(lord) {
+	if (lord !== game.who)
+		gen_action_service(lord)
 }
 
 function action_select_lord(lord) {
