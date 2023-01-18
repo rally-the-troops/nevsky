@@ -1231,9 +1231,10 @@ function update_locale(loc) {
 
 	ui.locale[loc].classList.toggle("action", is_locale_action(loc) || is_laden_march_action(loc))
 	ui.locale[loc].classList.toggle("laden", is_laden_march_action(loc))
+	ui.locale[loc].classList.toggle("supply_path", !!(view.supply && view.supply[0] === loc))
+	ui.locale[loc].classList.toggle("supply_source", !!(view.supply && view.supply[1] === loc))
 	if (ui.locale_name[loc]) {
 		ui.locale_name[loc].classList.toggle("action", is_locale_action(loc) || is_laden_march_action(loc))
-		ui.locale_name[loc].classList.toggle("laden", is_laden_march_action(loc))
 	}
 
 	ui.locale_markers[loc].replaceChildren()

@@ -5,6 +5,7 @@
 const fs = require('fs')
 
 function cmpnum(a,b) { return a - b }
+function cmpnum2(a,b) { return a[0] - b[0] }
 
 // :r !python3 genboxes.py
 const boxes = {
@@ -307,24 +308,33 @@ locales.forEach(loc => {
 	loc.adjacent = []
 	loc.adjacent_by_trackway = []
 	loc.adjacent_by_waterway = []
+	loc.trackways = []
+	loc.waterways = []
 	for (let data of loc.ways) {
 		let to = data[0]
 		for (let i = 1; i < data.length; ++i) {
 			let way = data[i]
-			console.log("WAY", loc.name, to, way)
 			if (!loc.adjacent.includes(to))
 				loc.adjacent.push(to)
-			if (ways[way].type === "trackway")
-				if (!loc.adjacent_by_trackway.includes(to))
+			if (ways[way].type === "trackway") {
+				if (!loc.adjacent_by_trackway.includes(to)) {
 					loc.adjacent_by_trackway.push(to)
-			if (ways[way].type === "waterway")
-				if (!loc.adjacent_by_waterway.includes(to))
+					loc.trackways.push([to,way])
+				}
+			}
+			if (ways[way].type === "waterway") {
+				if (!loc.adjacent_by_waterway.includes(to)) {
 					loc.adjacent_by_waterway.push(to)
+					loc.waterways.push([to,way])
+				}
+			}
 		}
 	}
 	loc.adjacent.sort(cmpnum)
 	loc.adjacent_by_trackway.sort(cmpnum)
 	loc.adjacent_by_waterway.sort(cmpnum)
+	loc.trackways.sort(cmpnum2)
+	loc.trackways.sort(cmpnum2)
 })
 
 function seats(list) {

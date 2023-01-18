@@ -7,13 +7,10 @@
 // FIXME: lift_sieges / besieged needs checking! (automatic after disband_lord, manual after move/sail, extra careful manual after battle)
 // FIXME: remove_legate_if_endangered needs checking! (automatic after disband_lord, manual after move/sail, manual after battle)
 
-// GUI: Remove battle mat.
-// GUI: tucked map capabilities pop up on shift key
+// GUI: siegeworks markers for walls and siegeworks (colored by side)
 // GUI: show moved/fought markers on mats during Feed phase
 // GUI: show sally/relief sally as unbesieged on map
-// GUI: show siegeworks + walls on battle mat for protection indication
 // GUI: show feed x2 on lord mats with > 6 units
-// GUI: battle event on lord mat (at top) - in client for Bridge and Field Organs
 
 // WONTFIX: choose crossbow/normal hit application order
 
@@ -25,6 +22,8 @@
 // drop game.who from push_state
 
 const data = require("./data.js")
+
+const AUTOWALK = true
 
 const BOTH = "Both"
 const TEUTONS = "Teutons"
@@ -2839,6 +2838,7 @@ function end_heinrich_sees_the_curia() {
 	if (game.state === "actions" && game.command === LORD_HEINRICH) {
 		spend_all_actions()
 		resume_actions()
+		update_supply_possible()
 	}
 
 	// No more muster of Heinrich
@@ -4259,6 +4259,7 @@ function goto_actions() {
 	}
 
 	resume_actions()
+	update_supply_possible()
 }
 
 function resume_actions() {
@@ -4633,6 +4634,7 @@ function march_with_group_3() {
 		game.march = 0
 		spend_all_actions()
 		resume_actions()
+		update_supply_possible()
 		return
 	}
 
@@ -4650,6 +4652,7 @@ function march_with_group_3() {
 	game.march = 0
 
 	resume_actions()
+	update_supply_possible()
 }
 
 // === ACTION: MARCH - AVOID BATTLE ===
@@ -5182,6 +5185,7 @@ function end_siege() {
 
 	spend_all_actions()
 	resume_actions()
+	update_supply_possible()
 }
 
 // === ACTION: STORM ===
@@ -5262,14 +5266,34 @@ function init_lodya_supply() {
 	if (!is_winter()) {
 		let lord = find_lodya_lord_in_shared()
 		if (lord !== NOBODY) {
-			// No choice if enough ships and 2x boats >= boats + extra ships
-			let ships = get_lord_assets(lord, SHIP)
 			let boats = get_lord_assets(lord, BOAT)
-			if (ships < 2 || boats < ships - 2)
-				return true
-			log("Lodya: Boats as 2 Boats each.")
+			let ships = get_lord_assets(lord, SHIP)
+
+			// Automatic choice if Novgorod is unavailable for seaport supply.
+			if (is_supply_forbidden(LOC_NOVGOROD)) {
+				if (boats < ships) {
+					game.flags.lodya = -ships
+					log_lodya()
+					return false
+				} else {
+					game.flags.lodya = 0
+					log_lodya()
+					return false
+				}
+			}
+
+			// Automatic choice if enough ships and 2x boats >= boats + extra ships.
+			if (ships >= 2 && boats >= ships - 2) {
+				game.flags.lodya = 0
+				log_lodya()
+				return false
+			}
+
+			// Manual choice.
+			return true
 		}
 	}
+	// No choice.
 	return false
 }
 
@@ -5315,6 +5339,7 @@ function end_supply_lodya() {
 	push_undo()
 	log_lodya()
 	init_supply()
+	resume_supply()
 	game.state = "supply_source"
 }
 
@@ -5327,7 +5352,37 @@ function log_lodya() {
 		log(`Lodya: ${game.flags.lodya} Ships as Boats.`)
 }
 
-// === ACTION: SUPPLY ===
+// === ACTION: SUPPLY (SEARCHING) ===
+
+let _supply_stat = 0
+let _supply_stop = new Array(last_locale+1)
+let _supply_reached = new Array(last_locale+1)
+
+let _supply_seen = new Array(last_locale+1).fill(0)
+let _supply_cost = new Array(last_locale+1)
+let _supply_boats = new Array(last_locale+1)
+let _supply_carts = new Array(last_locale+1)
+
+function is_supply_forbidden(here) {
+	if (has_unbesieged_enemy_lord(here))
+		return true
+	if (is_unbesieged_enemy_stronghold(here))
+		return true
+	if (is_friendly_territory(here) && has_conquered_marker(here))
+		if (!has_siege_marker(here))
+			return true
+	return false
+}
+
+function init_supply_forbidden() {
+	_supply_stat = 0
+	for (let here = 0; here <= last_locale; ++here) {
+		if (is_supply_forbidden(here))
+			_supply_stop[here] = 1
+		else
+			_supply_stop[here] = 0
+	}
+}
 
 function init_supply() {
 	let season = current_season()
@@ -5336,7 +5391,7 @@ function init_supply() {
 	let carts = 0
 	let sleds = 0
 	let ships = 0
-	let seats = 2
+	let available = 2
 
 	if (season === SUMMER) {
 		carts = get_shared_assets(here, CART)
@@ -5353,84 +5408,184 @@ function init_supply() {
 		ships = 2
 
 	if (is_famine_in_play())
-		seats = game.flags.famine ? 0 : 1
+		available = game.flags.famine ? 0 : 1
 
-	let sources = list_supply_sources(ships)
-	let reachable = filter_reachable_supply_sources(sources, boats, carts, sleds)
-	let supply_seats = filter_usable_supply_seats(reachable)
-	let supply_seaports = filter_usable_supply_seaports(reachable, ships)
+	let seats = []
+	if (available > 0) {
+		for_each_seat(game.command, seat => {
+			if (!is_supply_forbidden(seat))
+				seats.push(seat)
+		}, true)
+		available = Math.min(seats.length, available)
+	}
 
-	game.supply = { supply_seats, supply_seaports, seats, boats, carts, sleds, ships }
-}
-
-function list_supply_sources(ships) {
-	let sources = []
-
-	for_each_seat(game.command, seat => { set_add(sources, seat) }, false)
-
+	let seaports = []
 	if (ships > 0) {
 		if (game.active === TEUTONS)
 			for (let port of data.seaports)
-				set_add(sources, port)
+				if (!is_supply_forbidden(port))
+					seaports.push(port)
 		if (game.active === RUSSIANS)
-			set_add(sources, LOC_NOVGOROD)
+			if (!is_supply_forbidden(LOC_NOVGOROD))
+				seaports.push(LOC_NOVGOROD)
 	}
+	if (seaports.length === 0)
+		ships = 0
 
-	return sources
+	game.supply = { seats, seaports, available, boats, carts, sleds, ships }
 }
 
-let _supply_stat = 0
-let _supply_stop = new Array(last_locale+1)
-let _supply_reached = new Array(last_locale+1)
+function search_supply_winter(start, sleds, exit) {
+	if (_supply_stop[start])
+		return 0
+	_supply_reached[start] = 1
+	_supply_cost[start] = 0
+	if (exit && set_has(exit, start))
+		return 1
+	if (sleds === 0)
+		return 0
+	let queue = [ start ]
+	while (queue.length > 0) {
+		let item = queue.shift()
+		let here = item & 63
+		let used = item >> 6
+		if (used + 1 <= sleds) {
+			for (let next of data.locales[here].adjacent) {
+				if (!_supply_reached[next] && !_supply_stop[next]) {
+					if (exit && set_has(exit, next))
+						return 1
+					_supply_reached[next] = 1
+					_supply_cost[next] = used + 1
+					if (used + 1 < sleds)
+						queue.push(next | ((used + 1) << 6))
+				}
+			}
+		}
+		_supply_stat++
+	}
+	return 0
+}
 
-let _supply_seen = new Array(last_locale+1)
-let _supply_boats = new Array(last_locale+1)
-let _supply_carts = new Array(last_locale+1)
+function search_supply_rasputitsa(start, boats, exit) {
+	if (_supply_stop[start])
+		return 0
+	_supply_reached[start] = 1
+	_supply_cost[start] = 0
+	if (exit && set_has(exit, start))
+		return 1
+	if (boats === 0)
+		return 0
+	let queue = [ start ]
+	while (queue.length > 0) {
+		let item = queue.shift()
+		let here = item & 63
+		let used = item >> 6
+		if (used + 1 <= boats) {
+			for (let next of data.locales[here].adjacent_by_waterway) {
+				if (!_supply_reached[next] && !_supply_stop[next]) {
+					if (exit && set_has(exit, next))
+						return 1
+					_supply_reached[next] = 1
+					_supply_cost[next] = used + 1
+					if (used + 1 < boats)
+						queue.push(next | ((used + 1) << 6))
+				}
+			}
+		}
+		_supply_stat++
+	}
+	return 0
+}
 
-function filter_reachable_supply_sources(sources, boats, carts, sleds) {
+function search_supply_summer(here, boats, carts, exit) {
+	_supply_stat++
+
+	// Been here before with same or more transports remaining
+	if (_supply_boats[here] >= boats && _supply_carts[here] >= carts)
+		return 0
+
+	// First time here with this many transports remaining
+	if (_supply_boats[here] <= boats && _supply_carts[here] <= carts) {
+		_supply_boats[here] = boats
+		_supply_carts[here] = carts
+	}
+
+	_supply_reached[here] = 1
+	if (exit && set_has(exit, here))
+		return 1
+
+	_supply_seen[here] = 1
+
+	if (boats > 0) {
+		for (let next of data.locales[here].adjacent_by_waterway) {
+			if (!_supply_seen[next] && !_supply_stop[next]) {
+				if (search_supply_summer(next, boats-1, carts, exit)) {
+					_supply_seen[here] = 0
+					return 1
+				}
+			}
+		}
+	}
+
+	if (carts > 0) {
+		for (let next of data.locales[here].adjacent_by_trackway) {
+			if (!_supply_seen[next] && !_supply_stop[next]) {
+				if (search_supply_summer(next, boats, carts-1, exit)) {
+					_supply_seen[here] = 0
+					return 1
+				}
+			}
+		}
+	}
+
+	_supply_seen[here] = 0
+	return 0
+}
+
+function init_summer_path() {
+	init_supply_forbidden()
+
+	// First pass to create best-cost-so-far for each combo of boats to carts
+	let gate = {
+		boats: new Array(game.supply.boats+1).fill(0),
+		carts: new Array(game.supply.carts+1).fill(0),
+	}
 	_supply_stat = 0
-	_supply_stop.fill(0)
-	_supply_reached.fill(0)
+	_supply_boats.fill(-1)
+	_supply_carts.fill(-1)
+	search_summer_path_pass1(game.supply.here, game.supply.end, game.supply.boats, game.supply.carts, gate)
+	console.log("SUMMER GATE", _supply_stat, JSON.stringify(gate))
 
-	for (let here = 0; here <= last_locale; ++here) {
-		if (has_unbesieged_enemy_lord(here))
-			_supply_stop[here] = 1
-		else if (is_unbesieged_enemy_stronghold(here))
-			_supply_stop[here] = 1
-		else if (is_friendly_territory(here) && has_conquered_marker(here))
-			if (!has_siege_marker(here))
-				_supply_stop[here] = 1
-	}
+	// Second pass which lists acceptable paths
+	_supply_stat = 0
+	_supply_boats.fill(-1)
+	_supply_carts.fill(-1)
+	game.supply.path = []
+	search_summer_path_pass2([], game.supply.here, game.supply.end, game.supply.boats, game.supply.carts, gate)
+	console.log("SUMMER PATH", _supply_stat, JSON.stringify(game.supply.path).length)
 
-	// NOTE: Impossible situation
-	if (_supply_stop[get_lord_locale(game.command)])
-		return []
-
-	switch (current_season()) {
-		case SUMMER:
-			_supply_seen.fill(0)
-			_supply_boats.fill(-1)
-			_supply_carts.fill(-1)
-			search_supply_reachable_summer(get_lord_locale(game.command), boats, carts)
-			break
-		case EARLY_WINTER:
-		case LATE_WINTER:
-			search_supply_reachable_winter(get_lord_locale(game.command), sleds)
-			break
-		case RASPUTITSA:
-			search_supply_reachable_rasputitsa(get_lord_locale(game.command), boats)
-			break
-	}
-
-	let result = []
-	for (let here of sources)
-		if (_supply_reached[here])
-			set_add(result, here)
-	console.log("SUPPLY SEARCH", _supply_stat, sources, result, _supply_reached.join(""))
-	return result
+	// Auto-pick path if only one choice.
+	if (AUTOWALK && game.supply.path.length === 2)
+		walk_supply_path_way(game.supply.path[0] >> 8, game.supply.path[0] & 255)
 }
 
-function search_supply_reachable_summer(here, boats, carts) {
+function search_summer_path_pass1(here, end, boats, carts, gate) {
+	_supply_stat++
+
+	if (here === end) {
+		for (let c = 0; c <= carts; ++c)
+			if (boats > gate.boats[c])
+				gate.boats[c] = boats
+		for (let b = 0; b <= boats; ++b)
+			if (carts > gate.carts[b])
+				gate.carts[b] = carts
+		return
+	}
+
+	// Worse than the best path found
+	if (boats < gate.boats[carts] || carts < gate.carts[boats])
+		return
+
 	// Been here before with same or more transports remaining
 	if (_supply_boats[here] >= boats && _supply_carts[here] >= carts)
 		return
@@ -5441,102 +5596,171 @@ function search_supply_reachable_summer(here, boats, carts) {
 		_supply_carts[here] = carts
 	}
 
-	_supply_reached[here] = 1
-
-	_supply_stat++
 	_supply_seen[here] = 1
+
 	if (boats > 0)
 		for (let next of data.locales[here].adjacent_by_waterway)
-			if (!_supply_seen[next] && !_supply_stop[next])
-				search_supply_reachable_summer(next, boats - 1, carts)
+			if (!_supply_stop[next] && !_supply_seen[next])
+				search_summer_path_pass1(next, end, boats-1, carts, gate)
+
 	if (carts > 0)
 		for (let next of data.locales[here].adjacent_by_trackway)
-			if (!_supply_seen[next] && !_supply_stop[next])
-				search_supply_reachable_summer(next, boats, carts - 1)
+			if (!_supply_stop[next] && !_supply_seen[next])
+				search_summer_path_pass1(next, end, boats, carts-1, gate)
+
 	_supply_seen[here] = 0
 }
 
-function search_supply_reachable_winter(start, sleds) {
-	_supply_reached[start] = 1
-	if (0 < sleds) {
-		let queue = [ start ]
-		while (queue.length > 0) {
-			let item = queue.shift()
-			let here = item & 63
-			let used = item >> 6
-			for (let next of data.locales[here].adjacent) {
-				if (!_supply_reached[next] && !_supply_stop[next]) {
-					_supply_reached[next] = 1
-					if (used + 1 < sleds)
-						queue.push(next | ((used + 1) << 6))
-				}
+function search_summer_path_pass2(path, here, end, boats, carts, gate) {
+	_supply_stat++
+
+	// Worse than the best path found
+	if (boats < gate.boats[carts] || carts < gate.carts[boats])
+		return
+
+	if (here === end) {
+		console.log("  path", path.map(wl=>data.locales[wl>>8].name).join(","), boats, carts)
+		let out1 = game.supply.path
+		for (let i = 0; i < path.length; ++i) {
+			let wayloc = path[i]
+			let out2 = map_get(out1, wayloc, null)
+			if (out2 === null) {
+				if (i < path.length - 1)
+					map_set(out1, wayloc, out2 = [])
+				else
+					map_set(out1, wayloc, 0)
+			}
+			out1 = out2
+		}
+		return
+	}
+
+	// Been here before with same or more transports remaining
+	if (_supply_boats[here] >= boats && _supply_carts[here] >= carts)
+		return
+
+	// First time here with this many transports remaining
+	if (_supply_boats[here] <= boats && _supply_carts[here] <= carts) {
+		_supply_boats[here] = boats
+		_supply_carts[here] = carts
+	}
+
+	_supply_seen[here] = 1
+
+	if (boats > 0) {
+		for (let [next, way] of data.locales[here].waterways) {
+			if (!_supply_stop[next] && !_supply_seen[next]) {
+				path.push((next << 8) | way)
+				search_summer_path_pass2(path, next, end, boats-1, carts, gate)
+				path.pop()
 			}
 		}
 	}
-}
 
-function search_supply_reachable_rasputitsa(start, boats) {
-	_supply_reached[start] = 1
-	if (0 < boats) {
-		let queue = [ start ]
-		while (queue.length > 0) {
-			let item = queue.shift()
-			let here = item & 63
-			let used = item >> 6
-			for (let next of data.locales[here].adjacent_by_waterway) {
-				if (!_supply_reached[next] && !_supply_stop[next]) {
-					_supply_reached[next] = 1
-					if (used + 1 < boats)
-						queue.push(next | ((used + 1) << 6))
-				}
+	if (carts > 0) {
+		for (let [next, way] of data.locales[here].trackways) {
+			if (!_supply_stop[next] && !_supply_seen[next]) {
+				path.push((next << 8) | way)
+				search_summer_path_pass2(path, next, end, boats, carts-1, gate)
+				path.pop()
 			}
 		}
 	}
+
+	_supply_seen[here] = 0
 }
 
-function filter_usable_supply_seats(reachable) {
+// === ACTION: SUPPLY ===
+
+function update_supply_possible() {
+	if (game.actions < 1) {
+		game.supply = 0
+		return
+	}
+
+	let lord = find_lodya_lord_in_shared()
+	if (lord !== NOBODY) {
+		if (!is_winter()) {
+			if (!is_supply_forbidden(LOC_NOVGOROD)) {
+				if (get_lord_assets(lord, BOAT) >= 2 && update_supply_possible_lodya(-2))
+					return
+				if (get_lord_assets(lord, BOAT) >= 1 && update_supply_possible_lodya(-1))
+					return
+			}
+			if (get_lord_assets(lord, SHIP) >= 2 && update_supply_possible_lodya(2))
+				return
+			if (get_lord_assets(lord, SHIP) >= 1 && update_supply_possible_lodya(1))
+				return
+		}
+		update_supply_possible_lodya(0)
+	} else {
+		update_supply_possible_pass()
+		console.log("POSSIBLE SEARCH", _supply_stat, game.supply)
+	}
+}
+
+function update_supply_possible_lodya(x) {
+	game.flags.lodya = x
+	update_supply_possible_pass()
+	console.log("LODYA POSSIBLE SEARCH", _supply_stat, x, game.supply)
+	return game.supply
+}
+
+function update_supply_possible_pass() {
+	init_supply()
+	init_supply_forbidden()
+	_supply_reached.fill(0)
 	let sources = []
-	for_each_seat(
-		game.command,
-		(seat) => {
-			if (set_has(reachable, seat))
-				sources.push(seat)
-		},
-		true
-	)
-	return sources
+	for (let loc of game.supply.seats)
+		set_add(sources, loc)
+	for (let loc of game.supply.seaports)
+		set_add(sources, loc)
+	switch (current_season()) {
+		case SUMMER:
+			_supply_boats.fill(-1)
+			_supply_carts.fill(-1)
+			game.supply = search_supply_summer(get_lord_locale(game.command), game.supply.boats, game.supply.carts, sources)
+			break
+		case EARLY_WINTER:
+		case LATE_WINTER:
+			game.supply = search_supply_winter(get_lord_locale(game.command), game.supply.sleds, sources)
+			break
+		case RASPUTITSA:
+			game.supply = search_supply_rasputitsa(get_lord_locale(game.command), game.supply.boats, sources)
+			break
+	}
 }
 
-function filter_usable_supply_seaports(reachable, ships) {
-	if (ships > 0) {
-		let sources = []
-		if (game.active === TEUTONS) {
-			for (let port of data.seaports) {
-				if (set_has(reachable, port)) {
-					set_add(sources, port)
-				}
-			}
-		}
-		if (game.active === RUSSIANS) {
-			if (set_has(reachable, LOC_NOVGOROD)) {
-				set_add(sources, LOC_NOVGOROD)
-			}
-		}
-		return sources
+function search_supply_cost() {
+	init_supply_forbidden()
+	_supply_reached.fill(0)
+	switch (current_season()) {
+		case SUMMER:
+			_supply_boats.fill(-1)
+			_supply_carts.fill(-1)
+			search_supply_summer(get_lord_locale(game.command), game.supply.boats, game.supply.carts, null)
+			break
+		case EARLY_WINTER:
+		case LATE_WINTER:
+			search_supply_winter(get_lord_locale(game.command), game.supply.sleds, null)
+			break
+		case RASPUTITSA:
+			search_supply_rasputitsa(get_lord_locale(game.command), game.supply.boats, null)
+			break
 	}
-	return null
+	console.log("SUPPLY COST", _supply_stat)
 }
 
 function can_action_supply() {
 	if (game.actions < 1)
 		return false
-	return true // TODO - Lodya & pre-search?
+	return !!game.supply
 }
 
 function can_supply() {
-	if (game.supply.seats > 0 && game.supply.supply_seats.length > 0)
+	if (game.supply.available > 0 && game.supply.seats.length > 0)
 		return true
-	if (game.supply.ships > 0 && game.supply.supply_seaports.length > 0)
+	if (game.supply.ships > 0 && game.supply.seaports.length > 0)
 		return true
 	return false
 }
@@ -5547,8 +5771,25 @@ function goto_supply() {
 		game.state = "supply_lodya"
 	} else {
 		init_supply()
+		resume_supply()
 		game.state = "supply_source"
 	}
+}
+
+function resume_supply() {
+	if (game.supply.available + game.supply.ships === 0) {
+		game.supply.seats = []
+		game.supply.seaports = []
+	} else {
+		search_supply_cost()
+		game.supply.seats = game.supply.seats.filter(loc => _supply_reached[loc])
+		game.supply.seaports = game.supply.seaports.filter(loc => _supply_reached[loc])
+	}
+
+	if (can_supply())
+		game.state = "supply_source"
+	else
+		end_supply()
 }
 
 states.supply_source = {
@@ -5569,25 +5810,23 @@ states.supply_source = {
 		if (game.supply.ships > 0)
 			view.prompt += ` ${game.supply.ships} ship`
 
-		if (game.supply.seats > 0)
-			for (let source of game.supply.supply_seats)
+		if (game.supply.available > 0)
+			for (let source of game.supply.seats)
 				gen_action_locale(source)
 		if (game.supply.ships > 0)
-			for (let source of game.supply.supply_seaports)
+			for (let source of game.supply.seaports)
 				gen_action_locale(source)
 		view.actions.end_supply = 1
 	},
 	locale(source) {
-		// TODO: 2nd ed - no reusing of transports!
-
-		if (game.supply.supply_seats.includes(source)) {
+		if (game.supply.seats.includes(source)) {
 			log(`Supplied from seat at %${source}.`)
 			if (is_famine_in_play()) {
 				log("Famine.")
 				game.flags.famine = 1
 			}
-			array_remove_item(game.supply.supply_seats, source)
-			game.supply.seats--
+			game.supply.available--
+			array_remove_item(game.supply.seats, source)
 		} else {
 			log(`Supplied from seaport at %${source}.`)
 			game.supply.ships--
@@ -5595,16 +5834,119 @@ states.supply_source = {
 
 		add_lord_assets(game.command, PROV, 1)
 
-		if (!can_supply())
-			end_supply()
+		spend_supply_transport(source)
 	},
 	end_supply: end_supply,
 }
 
 function end_supply() {
-	game.supply = 0
 	spend_action(1)
 	resume_actions()
+	game.supply = 1 // supply is possible!
+}
+
+function spend_supply_transport(source) {
+	if (source === get_lord_locale(game.command)) {
+		resume_supply()
+		return
+	}
+
+	switch (current_season()) {
+		case SUMMER:
+			game.supply.here = get_lord_locale(game.command)
+			game.supply.end = source
+			game.state = "supply_path"
+			init_summer_path()
+			break
+		case EARLY_WINTER:
+		case LATE_WINTER:
+			search_supply_cost()
+			game.supply.sleds -= _supply_cost[source]
+			resume_supply()
+			break
+		case RASPUTITSA:
+			search_supply_cost()
+			game.supply.boats -= _supply_cost[source]
+			resume_supply()
+			break
+	}
+}
+
+states.supply_path = {
+	prompt() {
+		view.prompt = "Supply: Trace path to supply source."
+		view.supply = [ game.supply.here, game.supply.end ]
+		if (game.supply.boats > 0)
+			view.prompt += ` ${game.supply.boats} boat`
+		if (game.supply.carts > 0)
+			view.prompt += ` ${game.supply.carts} cart`
+		for (let i = 0; i < game.supply.path.length; i += 2) {
+			let wayloc = game.supply.path[i]
+			gen_action_locale(wayloc >> 8)
+		}
+	},
+	locale(next) {
+		let useloc = -1
+		let useway = -1
+		let twoway = false
+		for (let i = 0; i < game.supply.path.length; i += 2) {
+			let wayloc = game.supply.path[i]
+			let way = wayloc & 255
+			let loc = wayloc >> 8
+			if (loc === next) {
+				if (useloc < 0) {
+					useloc = loc
+					useway = way
+				} else {
+					twoway = true
+				}
+			}
+		}
+		if (twoway) {
+			game.state = "supply_path_way"
+			game.supply.next = next
+		} else {
+			walk_supply_path_way(next, useway)
+		}
+	},
+}
+
+function walk_supply_path_way(next, way) {
+	let type = data.ways[way].type
+	if (type === "waterway")
+		game.supply.boats--
+	else
+		game.supply.carts--
+	game.supply.here = next
+	game.supply.path = map_get(game.supply.path, (next << 8) | way)
+	if (game.supply.path === 0)
+		resume_supply()
+	else
+		// Auto-pick path if only one choice.
+		if (AUTOWALK && game.supply.path.length === 2)
+			walk_supply_path_way(game.supply.path[0] >> 8, game.supply.path[0] & 255)
+}
+
+states.supply_path_way = {
+	prompt() {
+		view.prompt = "Supply: Trace path to supply source."
+		view.supply = [ game.supply.here, game.supply.end ]
+		if (game.supply.boats > 0)
+			view.prompt += ` ${game.supply.boats} boat`
+		if (game.supply.carts > 0)
+			view.prompt += ` ${game.supply.carts} cart`
+		for (let i = 0; i < game.supply.path.length; i += 2) {
+			let wayloc = game.supply.path[i]
+			let way = wayloc & 255
+			let loc = wayloc >> 8
+			if (loc === game.supply.next)
+				gen_action_way(way)
+		}
+	},
+	way(way) {
+		game.state = "supply_path"
+		walk_supply_path_way(game.supply.next, way)
+	},
 }
 
 // === ACTION: FORAGE ===
@@ -5930,6 +6272,7 @@ states.sail = {
 
 		spend_all_actions()
 		resume_actions()
+		update_supply_possible()
 	},
 }
 
@@ -6423,7 +6766,6 @@ states.array_attacker = {
 				gen_action_array(A3)
 		}
 	},
-	array: action_array_place,
 	array: action_array_place,
 	lord: action_select_lord,
 	end_array: end_array_attacker,
@@ -7481,10 +7823,6 @@ for each battle step:
 
 */
 
-function format_group(g) {
-	return g.map(p=>lord_name[game.battle.array[p]]).join(", ")
-}
-
 function format_strike_step() {
 	// TODO: format strike group and target groups too?
 	if (game.battle.storm)
@@ -7494,7 +7832,6 @@ function format_strike_step() {
 
 function format_hits() {
 	if (game.battle.xhits > 0 && game.battle.hits > 0) {
-		return `${game.battle.xhits} crossbow hits and ${game.battle.hits} hits`
 		if (game.battle.xhits > 1 && game.battle.hits > 1)
 			return `${game.battle.xhits} crossbow hits and ${game.battle.hits} hits`
 		else if (game.battle.xhits > 1)
