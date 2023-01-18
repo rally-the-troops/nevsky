@@ -531,9 +531,15 @@ function get_lord_calendar(lord) {
 		return get_lord_service(lord)
 }
 
+function set_lord_cylinder_on_calendar(lord, turn) {
+	if (turn < 0) turn = 0
+	if (turn > 17) turn = 17
+	set_lord_locale(lord, CALENDAR + turn)
+}
+
 function set_lord_calendar(lord, turn) {
 	if (is_lord_on_calendar(lord))
-		set_lord_locale(lord, CALENDAR + turn)
+		set_lord_cylinder_on_calendar(lord, turn)
 	else
 		set_lord_service(lord, turn)
 }
@@ -1441,10 +1447,6 @@ function locale_distance_by_waterway(from, to) {
 
 // === SETUP ===
 
-function setup_lord_on_calendar(lord, turn) {
-	set_lord_locale(lord, CALENDAR + turn)
-}
-
 function muster_lord_forces(lord) {
 	let info = data.lords[lord]
 	set_lord_forces(lord, KNIGHTS, info.forces.knights | 0)
@@ -1683,8 +1685,8 @@ function setup_pleskau() {
 	muster_lord(LORD_GAVRILO, LOC_PSKOV, 4)
 	muster_lord(LORD_VLADISLAV, LOC_NEVA, 3)
 
-	setup_lord_on_calendar(LORD_RUDOLF, 1)
-	setup_lord_on_calendar(LORD_DOMASH, 1)
+	set_lord_cylinder_on_calendar(LORD_RUDOLF, 1)
+	set_lord_cylinder_on_calendar(LORD_DOMASH, 1)
 }
 
 function setup_watland_1st_ed() {
@@ -1703,13 +1705,13 @@ function setup_watland_1st_ed() {
 	muster_lord(LORD_YAROSLAV, LOC_PSKOV, 5)
 	muster_lord(LORD_DOMASH, LOC_NOVGOROD, 7)
 
-	setup_lord_on_calendar(LORD_HEINRICH, 4)
-	setup_lord_on_calendar(LORD_RUDOLF, 4)
-	setup_lord_on_calendar(LORD_VLADISLAV, 4)
-	setup_lord_on_calendar(LORD_KARELIANS, 4)
-	setup_lord_on_calendar(LORD_ANDREY, 5)
-	setup_lord_on_calendar(LORD_ALEKSANDR, 7)
-	setup_lord_on_calendar(LORD_HERMANN, 8)
+	set_lord_cylinder_on_calendar(LORD_HEINRICH, 4)
+	set_lord_cylinder_on_calendar(LORD_RUDOLF, 4)
+	set_lord_cylinder_on_calendar(LORD_VLADISLAV, 4)
+	set_lord_cylinder_on_calendar(LORD_KARELIANS, 4)
+	set_lord_cylinder_on_calendar(LORD_ANDREY, 5)
+	set_lord_cylinder_on_calendar(LORD_ALEKSANDR, 7)
+	set_lord_cylinder_on_calendar(LORD_HERMANN, 8)
 }
 
 function setup_watland_2nd_ed() {
@@ -1728,13 +1730,13 @@ function setup_watland_2nd_ed() {
 	muster_lord(LORD_DOMASH, LOC_NOVGOROD, 7)
 	muster_lord(LORD_VLADISLAV, LOC_LADOGA, 6)
 
-	setup_lord_on_calendar(LORD_RUDOLF, 4)
-	setup_lord_on_calendar(LORD_KARELIANS, 4)
-	setup_lord_on_calendar(LORD_YAROSLAV, 5)
-	setup_lord_on_calendar(LORD_ANDREY, 5)
-	setup_lord_on_calendar(LORD_HEINRICH, 7)
-	setup_lord_on_calendar(LORD_ALEKSANDR, 7)
-	setup_lord_on_calendar(LORD_HERMANN, 8)
+	set_lord_cylinder_on_calendar(LORD_RUDOLF, 4)
+	set_lord_cylinder_on_calendar(LORD_KARELIANS, 4)
+	set_lord_cylinder_on_calendar(LORD_YAROSLAV, 5)
+	set_lord_cylinder_on_calendar(LORD_ANDREY, 5)
+	set_lord_cylinder_on_calendar(LORD_HEINRICH, 7)
+	set_lord_cylinder_on_calendar(LORD_ALEKSANDR, 7)
+	set_lord_cylinder_on_calendar(LORD_HERMANN, 8)
 }
 
 function setup_peipus() {
@@ -1760,11 +1762,11 @@ function setup_peipus() {
 	muster_lord(LORD_DOMASH, LOC_NOVGOROD, 16)
 	muster_lord(LORD_KARELIANS, LOC_NOVGOROD, 14)
 
-	setup_lord_on_calendar(LORD_HEINRICH, 13)
-	setup_lord_on_calendar(LORD_KNUD_ABEL, 13)
-	setup_lord_on_calendar(LORD_RUDOLF, 13)
-	setup_lord_on_calendar(LORD_GAVRILO, 13)
-	setup_lord_on_calendar(LORD_VLADISLAV, 15)
+	set_lord_cylinder_on_calendar(LORD_HEINRICH, 13)
+	set_lord_cylinder_on_calendar(LORD_KNUD_ABEL, 13)
+	set_lord_cylinder_on_calendar(LORD_RUDOLF, 13)
+	set_lord_cylinder_on_calendar(LORD_GAVRILO, 13)
+	set_lord_cylinder_on_calendar(LORD_VLADISLAV, 15)
 }
 
 function setup_return_of_the_prince() {
@@ -1788,16 +1790,16 @@ function setup_return_of_the_prince() {
 	muster_lord(LORD_ANDREAS, LOC_KOPORYE, 12)
 	muster_lord(LORD_ALEKSANDR, LOC_NOVGOROD, 14)
 
-	setup_lord_on_calendar(LORD_HERMANN, 9)
-	setup_lord_on_calendar(LORD_RUDOLF, 9)
-	setup_lord_on_calendar(LORD_YAROSLAV, 9)
-	setup_lord_on_calendar(LORD_ANDREY, 9)
-	setup_lord_on_calendar(LORD_KARELIANS, 9)
-	setup_lord_on_calendar(LORD_GAVRILO, 9)
-	setup_lord_on_calendar(LORD_VLADISLAV, 10)
-	setup_lord_on_calendar(LORD_HEINRICH, 11)
-	setup_lord_on_calendar(LORD_KNUD_ABEL, 11)
-	setup_lord_on_calendar(LORD_DOMASH, 11)
+	set_lord_cylinder_on_calendar(LORD_HERMANN, 9)
+	set_lord_cylinder_on_calendar(LORD_RUDOLF, 9)
+	set_lord_cylinder_on_calendar(LORD_YAROSLAV, 9)
+	set_lord_cylinder_on_calendar(LORD_ANDREY, 9)
+	set_lord_cylinder_on_calendar(LORD_KARELIANS, 9)
+	set_lord_cylinder_on_calendar(LORD_GAVRILO, 9)
+	set_lord_cylinder_on_calendar(LORD_VLADISLAV, 10)
+	set_lord_cylinder_on_calendar(LORD_HEINRICH, 11)
+	set_lord_cylinder_on_calendar(LORD_KNUD_ABEL, 11)
+	set_lord_cylinder_on_calendar(LORD_DOMASH, 11)
 }
 
 function setup_return_of_the_prince_nicolle() {
@@ -1820,13 +1822,13 @@ function setup_return_of_the_prince_nicolle() {
 	muster_lord(LORD_ALEKSANDR, LOC_NOVGOROD, 14)
 	muster_lord(LORD_GAVRILO, LOC_PSKOV, 12)
 
-	setup_lord_on_calendar(LORD_RUDOLF, 9)
-	setup_lord_on_calendar(LORD_YAROSLAV, 9)
-	setup_lord_on_calendar(LORD_ANDREY, 9)
-	setup_lord_on_calendar(LORD_KARELIANS, 9)
-	setup_lord_on_calendar(LORD_VLADISLAV, 10)
-	setup_lord_on_calendar(LORD_HEINRICH, 11)
-	setup_lord_on_calendar(LORD_DOMASH, 11)
+	set_lord_cylinder_on_calendar(LORD_RUDOLF, 9)
+	set_lord_cylinder_on_calendar(LORD_YAROSLAV, 9)
+	set_lord_cylinder_on_calendar(LORD_ANDREY, 9)
+	set_lord_cylinder_on_calendar(LORD_KARELIANS, 9)
+	set_lord_cylinder_on_calendar(LORD_VLADISLAV, 10)
+	set_lord_cylinder_on_calendar(LORD_HEINRICH, 11)
+	set_lord_cylinder_on_calendar(LORD_DOMASH, 11)
 }
 
 function setup_crusade_on_novgorod() {
@@ -1841,13 +1843,13 @@ function setup_crusade_on_novgorod() {
 	muster_lord(LORD_GAVRILO, LOC_PSKOV, 4)
 	muster_lord(LORD_VLADISLAV, LOC_NEVA, 3)
 
-	setup_lord_on_calendar(LORD_ANDREAS, 3)
-	setup_lord_on_calendar(LORD_HEINRICH, 1)
-	setup_lord_on_calendar(LORD_RUDOLF, 1)
-	setup_lord_on_calendar(LORD_DOMASH, 1)
-	setup_lord_on_calendar(LORD_KARELIANS, 3)
-	setup_lord_on_calendar(LORD_ALEKSANDR, 5)
-	setup_lord_on_calendar(LORD_ANDREY, 5)
+	set_lord_cylinder_on_calendar(LORD_ANDREAS, 3)
+	set_lord_cylinder_on_calendar(LORD_HEINRICH, 1)
+	set_lord_cylinder_on_calendar(LORD_RUDOLF, 1)
+	set_lord_cylinder_on_calendar(LORD_DOMASH, 1)
+	set_lord_cylinder_on_calendar(LORD_KARELIANS, 3)
+	set_lord_cylinder_on_calendar(LORD_ALEKSANDR, 5)
+	set_lord_cylinder_on_calendar(LORD_ANDREY, 5)
 }
 
 function setup_pleskau_quickstart() {

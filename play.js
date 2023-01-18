@@ -1124,7 +1124,9 @@ function update_lord(ix) {
 		ui.lord_service[ix].classList.remove("hide")
 		update_lord_mat(ix)
 	} else {
-		calendar_layout_cylinder[locale - 100].push(ui.lord_cylinder[ix])
+		let t = locale - 100
+		if (t > 17) t = 17
+		calendar_layout_cylinder[t].push(ui.lord_cylinder[ix])
 		ui.lord_cylinder[ix].classList.remove("hide")
 		ui.lord_service[ix].classList.add("hide")
 	}
