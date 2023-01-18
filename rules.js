@@ -9176,6 +9176,8 @@ function end_feed() {
 // === LEVY & CAMPAIGN: PAY ===
 
 function can_pay_lord(lord) {
+	if (get_lord_service(lord) > 16)
+		return false
 	if (game.active === RUSSIANS) {
 		if (game.pieces.veche_coin > 0 && is_lord_unbesieged(lord))
 			return true
