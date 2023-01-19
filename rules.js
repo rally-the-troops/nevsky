@@ -1,7 +1,6 @@
 "use strict"
 
 // TODO: Bridge - kn, sgt, 1x lh, maa, militia, serf, lh, ah
-// TODO: 2nd edition supply rule - no reuse of transports
 
 // TODO: s/RD/RG/ (rearguard)
 

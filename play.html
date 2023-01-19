@@ -206,23 +206,19 @@ body.Teutons #plan_actions .russian { display: none }
 }
 
 #garrison {
-	background-color: #d1c07e;
-	border-color: #f2e19d #b1a05f #b1a05f #f2e19d;
-	box-shadow: 0 0 0 1px #584800, 1px 2px 4px #0008;
-	border-radius: 12px;
-	border-width: 2px;
-	border-style: solid;
-}
-
-#garrison {
+	background-repeat: no-repeat;
+	background-position: center;
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: center;
 	align-items: center;
 	width: 376px;
-	height: 48px;
+	height: 80px;
 	gap: 2px;
 }
+
+.attacker #garrison { background-image: url(images/garrison_attacker.svg); }
+.defender #garrison { background-image: url(images/garrison_defender.svg); }
 
 #garrison:empty {
 	display: none
