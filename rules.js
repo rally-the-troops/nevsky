@@ -2,6 +2,9 @@
 
 // TODO: Bridge - kn, sgt, 1x lh, maa, militia, serf, lh, ah
 
+// TODO: feed x2 marker
+// TODO: end marker
+
 // FIXME: lift_sieges / besieged needs checking! (automatic after disband_lord, manual after move/sail, extra careful manual after battle)
 // FIXME: remove_legate_if_endangered needs checking! (automatic after disband_lord, manual after move/sail, manual after battle)
 
@@ -10481,6 +10484,7 @@ exports.view = function (state, current) {
 		log: game.log,
 
 		turn: game.turn,
+		end: scenario_last_turn[game.scenario],
 		events: game.events,
 		capabilities: game.capabilities,
 		pieces: game.pieces,

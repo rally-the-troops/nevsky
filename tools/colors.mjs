@@ -42,11 +42,11 @@ const data = [
 [".marker.walls", "e3dedc"],
 [".marker.russian.number", "c6992f"],
 [".marker.teutonic.number", "a02532"],
+[".marker.moved_fought", "0072bc"],
 
 /*
 [".unit", "ffd768"],
 [".marker.supply_source", "e6dcb9"],
-[".marker.moved_fought", "0072bc"],
 [".marker.pleskau_black", "324b5b"],
 [".marker.pleskau_white", "e3dedc"],
 */

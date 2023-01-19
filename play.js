@@ -229,8 +229,24 @@ function is_russian_lord(lord) {
 	return lord >= first_p2_lord && lord <= last_p2_lord
 }
 
-function is_lord_moved(lord) {
-	return pack2_get(view.pieces.moved, lord) > 0
+function get_lord_moved(lord) {
+	return pack2_get(view.pieces.moved, lord)
+}
+
+function get_lord_forces(lord, n) {
+	return pack4_get(view.pieces.forces[lord], n)
+}
+
+function count_lord_all_forces(lord) {
+	return (
+		get_lord_forces(lord, KNIGHTS) +
+		get_lord_forces(lord, SERGEANTS) +
+		get_lord_forces(lord, LIGHT_HORSE) +
+		get_lord_forces(lord, ASIATIC_HORSE) +
+		get_lord_forces(lord, MEN_AT_ARMS) +
+		get_lord_forces(lord, MILITIA) +
+		get_lord_forces(lord, SERFS)
+	)
 }
 
 function is_veche_action() {
@@ -299,6 +315,10 @@ function is_legate_action() {
 
 function is_legate_selected() {
 	return player === "Teutons" && !!view.pieces.legate_selected
+}
+
+function is_levy_phase() {
+	return (view.turn & 1) === 0
 }
 
 const force_type_count = 7
@@ -456,22 +476,22 @@ const original_boxes = {
 	"way wirz": [1295,4526,175,350],
 	"way peipus-east": [2232,4197,220,480],
 	"way peipus-north": [2053,3830,361,228],
-	"calendar summer box1": [40,168,590,916],
-	"calendar summer box2": [650,168,590,916],
-	"calendar winter box3": [1313,168,590,916],
-	"calendar winter box4": [1922,168,590,916],
-	"calendar winter box5": [2587,168,590,916],
-	"calendar winter box6": [3196,168,590,916],
-	"calendar rasputitsa box7": [3860,168,590,916],
-	"calendar rasputitsa box8": [4470,168,590,916],
-	"calendar summer box9": [40,1120,590,916],
-	"calendar summer box10": [650,1120,590,916],
-	"calendar winter box11": [1313,1120,590,916],
-	"calendar winter box12": [1922,1120,590,916],
-	"calendar winter box13": [2587,1120,590,916],
-	"calendar winter box14": [3196,1120,590,916],
-	"calendar rasputitsa box15": [3860,1120,590,916],
-	"calendar rasputitsa box16": [4470,1120,590,916],
+	"calendar summer box1": [40,168,598,924],
+	"calendar summer box2": [650,168,598,924],
+	"calendar winter box3": [1313,168,598,924],
+	"calendar winter box4": [1922,168,598,924],
+	"calendar winter box5": [2587,168,598,924],
+	"calendar winter box6": [3196,168,598,924],
+	"calendar rasputitsa box7": [3860,168,598,924],
+	"calendar rasputitsa box8": [4470,168,598,924],
+	"calendar summer box9": [40,1120,598,924],
+	"calendar summer box10": [650,1120,598,924],
+	"calendar winter box11": [1313,1120,598,924],
+	"calendar winter box12": [1922,1120,598,924],
+	"calendar winter box13": [2587,1120,598,924],
+	"calendar winter box14": [3196,1120,598,924],
+	"calendar rasputitsa box15": [3860,1120,598,924],
+	"calendar rasputitsa box16": [4470,1120,598,924],
 	"calendar box0": [6,62,1265,89],
 	"calendar box17": [3827,2056,1265,86],
 }
@@ -518,6 +538,9 @@ const ui = {
 	mustered_vassals: [],
 	lord_capabilities: [],
 	lord_events: [],
+	lord_moved1: [],
+	lord_moved2: [],
+	lord_feed_x2: [],
 	cards: [],
 	boxes: {},
 	ways: [],
@@ -544,6 +567,7 @@ const ui = {
 	capabilities2: document.getElementById("capabilities2"),
 	command: document.getElementById("command"),
 	turn: document.getElementById("turn"),
+	end: document.getElementById("end"),
 	vp1: document.getElementById("vp1"),
 	vp2: document.getElementById("vp2"),
 	court1_header: document.getElementById("court1_header"),
@@ -1085,6 +1109,9 @@ function update_lord_mat(ix) {
 	update_vassals(ui.ready_vassals[ix], ui.mustered_vassals[ix], ix)
 	update_forces(ui.forces[ix], view.pieces.forces[ix], ix, false)
 	update_forces(ui.routed[ix], view.pieces.routed[ix], ix, true)
+	ui.lord_moved1[ix].classList.toggle("hide", is_levy_phase() || get_lord_moved(ix) < 1)
+	ui.lord_moved2[ix].classList.toggle("hide", is_levy_phase() || get_lord_moved(ix) < 2)
+	ui.lord_feed_x2[ix].classList.toggle("hide", count_lord_all_forces(ix) <= 6)
 }
 
 function is_lord_command(ix) {
@@ -1136,7 +1163,6 @@ function update_lord(ix) {
 		ui.lord_service[ix].classList.add("hide")
 	}
 	ui.lord_cylinder[ix].classList.toggle("besieged", is_lord_besieged(ix))
-	ui.lord_cylinder[ix].classList.toggle("moved", is_lord_moved(ix))
 	ui.lord_buttons[ix].classList.toggle("action", is_lord_action(ix))
 	ui.lord_cylinder[ix].classList.toggle("action", is_lord_action(ix))
 	ui.lord_service[ix].classList.toggle("action", is_service_action(ix) || is_service_bad_action(ix))
@@ -1155,7 +1181,6 @@ function update_lord(ix) {
 	ui.lord_mat[ix].classList.toggle("command", is_lord_command(ix))
 
 	ui.lord_mat[ix].classList.toggle("besieged", is_lord_besieged(ix))
-	ui.lord_mat[ix].classList.toggle("moved", is_lord_moved(ix))
 }
 
 function update_legate() {
@@ -1569,8 +1594,11 @@ function on_update() {
 
 	update_court()
 
-	for (let i = 0; i <= 17; ++i)
+	for (let i = 0; i <= 17; ++i) {
 		ui.calendar[i].classList.toggle("action", is_calendar_action(i))
+		if (i >= 1 && i <= 16)
+			ui.calendar[i].classList.toggle("end", i > view.end)
+	}
 
 	// Misc
 	action_button("lordship", "Lordship")
@@ -1671,6 +1699,9 @@ function build_lord_mat(lord, ix, side, name) {
 	ui.lord_buttons[ix] = build_div(bg, "shield", ix, on_click_cylinder)
 	ui.lord_capabilities[ix] = build_div(mat, "capabilities")
 	ui.lord_events[ix] = build_div(mat, "events")
+	ui.lord_moved1[ix] = build_div(mat, "marker square moved_fought one hide")
+	ui.lord_moved2[ix] = build_div(mat, "marker square moved_fought two hide")
+	ui.lord_feed_x2[ix] = build_div(mat, "marker small feed_x2")
 	ui.lord_mat[ix] = mat
 }
 

@@ -299,6 +299,15 @@ body.Teutons #plan_actions .russian { display: none }
 	display: none;
 }
 
+.mat .moved_fought, .mat .feed_x2 {
+	position: absolute;
+	z-index: 5;
+}
+
+.mat .feed_x2 { left: 8px; top: 178px; }
+.mat .moved_fought.one { right: 72px; top: 12px; }
+.mat .moved_fought.two { right: 66px; top: 6px; }
+
 body.shift .capabilities,
 body.shift .events,
 body.shift #capabilities1,
@@ -542,7 +551,8 @@ body.shift .mustered_vassals {
 .marker.castle.russian { background-image: url(images/marker_castle_russian.png) }
 .marker.castle.teutonic { background-image: url(images/marker_castle_teutonic.png) }
 .marker.walls { background-image: url(images/marker_walls.a.png) }
-.marker.sea_trade_blocked { background-image: url(images/marker_sea_trade_blocked.a.png) }
+.marker.moved_fought { background-image: url(images/marker_moved_fought.png) }
+.marker.feed_x2 { background-image: url(images/almoravid_marker_feed_x2.png) }
 
 .marker.number.teutonic.n1 { background-image: url(images/marker_1_teutonic.png) }
 .marker.number.teutonic.n2 { background-image: url(images/marker_2_teutonic.png) }
@@ -574,15 +584,11 @@ body.shift .mustered_vassals {
 }
 
 .unit.knights, .unit.sergeants, .unit.light_horse, .unit.asiatic_horse {
-	width: 24px;
-	height: 28px;
 	width: 30px;
 	height: 35px;
 }
 
 .unit.men_at_arms, .unit.militia, .unit.serfs {
-	width: 34px;
-	height: 28px;
 	width: 43px;
 	height: 35px;
 }
@@ -669,15 +675,16 @@ body.shift .mustered_vassals {
 	position: absolute;
 }
 
-.box.calendar {
-}
-
 .box.victory {
 	border-radius: 50%;
 }
 
 .box.turn {
 	border-radius: 50%;
+}
+
+.box.calendar.end {
+	background-color: #8884;
 }
 
 .box.calendar.action {
@@ -1036,6 +1043,8 @@ body.shift .mustered_vassals {
 .marker.walls { background-color: #e3dedc; border-color: #fffefc #c3bebc #c3bebc #fffefc; box-shadow: 0 0 0 1px #686362, 1px 2px 4px #0008; }
 .marker.russian.number { background-color: #c6992f; border-color: #e7b954 #a67a00 #a67a00 #e7b954; box-shadow: 0 0 0 1px #4d2400, 1px 2px 4px #0008; }
 .marker.teutonic.number { background-color: #a02532; border-color: #c2474e #7e0017 #7e0017 #c2474e; box-shadow: 0 0 0 1px #1a0000, 1px 2px 4px #0008; }
+.marker.moved_fought { background-color: #0072bc; border-color: #3491dd #00549c #00549c #3491dd; box-shadow: 0 0 0 1px #00003f, 1px 2px 4px #0008; }
+.marker.feed_x2 { background-color: #0072bc; border-color: #3491dd #00549c #00549c #3491dd; box-shadow: 0 0 0 1px #00003f, 1px 2px 4px #0008; }
 
 /* CARD IMAGES */
 
@@ -1238,6 +1247,8 @@ body.shift .mustered_vassals {
 	<div id="turn" class="hide marker circle turn levy t1"></div>
 	<div id="vp2" class="hide marker circle victory russian v0 stack"></div>
 	<div id="vp1" class="hide marker circle victory teutonic v0 stack"></div>
+	<div id="elr2" class="marker circle enemy_lords_removed russian v9"></div>
+	<div id="elr1" class="marker circle enemy_lords_removed teutonic v10"></div>
 	<div id="legate" class="hide"></div>
 	<div id="smerdi" class="box"></div>
 	<div id="castle11" class="hide marker rectangle castle teutonic"/></div>
