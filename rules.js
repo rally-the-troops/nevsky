@@ -2,8 +2,6 @@
 
 // TODO: Bridge - kn, sgt, 1x lh, maa, militia, serf, lh, ah
 
-// TODO: s/RD/RG/ (rearguard)
-
 // FIXME: lift_sieges / besieged needs checking! (automatic after disband_lord, manual after move/sail, extra careful manual after battle)
 // FIXME: remove_legate_if_endangered needs checking! (automatic after disband_lord, manual after move/sail, manual after battle)
 
@@ -105,15 +103,15 @@ const D3 = 5
 const SA1 = 6 // relief sally: attackers
 const SA2 = 7
 const SA3 = 8
-const RD1 = 9 // relief sally: reserve defenders
-const RD2 = 10
-const RD3 = 11
+const RG1 = 9 // relief sally: rearguard
+const RG2 = 10
+const RG3 = 11
 
 const ARRAY_FLANKS = [
 	[ A2, A3 ], [ A1, A3 ], [ A1, A2 ],
 	[ D2, D3 ], [ D1, D3 ], [ D1, D2 ],
 	[ SA2, SA3 ], [ SA1, SA3 ], [ SA1, SA2 ],
-	[ RD2, RD3 ], [ RD1, RD3 ], [ RD1, RD2 ],
+	[ RG2, RG3 ], [ RG1, RG3 ], [ RG1, RG2 ],
 ]
 
 function find_card(name) {
@@ -6618,7 +6616,7 @@ states.relief_sally = {
 // 2) Attacker positions front A.
 // 3) Defender positions front D.
 // 4) Attacker positions SA.
-// 5) Defender positions reaguard RD.
+// 5) Defender positions reaguard RG.
 
 function has_friendly_reserves() {
 	for (let lord of game.battle.reserves)
@@ -6830,7 +6828,7 @@ states.array_rearguard = {
 		view.prompt = "Battle Array: Position your rearguard lords."
 		let array = game.battle.array
 		let done = true
-		if (array[RD1] === NOBODY || array[RD2] === NOBODY || array[RD3] === NOBODY) {
+		if (array[RG1] === NOBODY || array[RG2] === NOBODY || array[RG3] === NOBODY) {
 			for (let lord of game.battle.reserves) {
 				if (lord !== game.who && is_friendly_lord(lord)) {
 					gen_action_lord(lord)
@@ -6841,7 +6839,7 @@ states.array_rearguard = {
 		if (done && game.who === NOBODY)
 			view.actions.end_array = 1
 		if (game.who !== NOBODY)
-			prompt_array_place_opposed(RD1, RD2, RD3, SA1, SA3)
+			prompt_array_place_opposed(RG1, RG2, RG3, SA1, SA3)
 	},
 	array: action_array_place,
 	lord: action_select_lord,
@@ -7095,8 +7093,8 @@ states.bridge = {
 		if (is_attacker()) {
 			if (array[D2] !== NOBODY)
 				gen_action_lord(array[D2])
-			if (array[RD2] !== NOBODY)
-				gen_action_lord(array[RD2])
+			if (array[RG2] !== NOBODY)
+				gen_action_lord(array[RG2])
 		} else {
 			// Cannot play on Relief Sallying lord
 			if (array[A2] !== NOBODY)
@@ -7207,25 +7205,25 @@ function slide_array(from, to) {
 function goto_reposition_battle() {
 	let array = game.battle.array
 
-	// If all SA routed, send RD to reserve (end relief sally)
+	// If all SA routed, send RG to reserve (end relief sally)
 	if (array[SA1] === NOBODY && array[SA2] === NOBODY && array[SA3] === NOBODY) {
-		if (array[RD1] !== NOBODY || array[RD2] !== NOBODY || array[RD3] !== NOBODY) {
+		if (array[RG1] !== NOBODY || array[RG2] !== NOBODY || array[RG3] !== NOBODY) {
 			log("Sallying routed.")
 			log("Rearguard to reserve.")
-			send_to_reserve(RD1)
-			send_to_reserve(RD2)
-			send_to_reserve(RD3)
+			send_to_reserve(RG1)
+			send_to_reserve(RG2)
+			send_to_reserve(RG3)
 		}
 	}
 
-	// If all D routed, advance RD to front
+	// If all D routed, advance RG to front
 	if (array[D1] === NOBODY && array[D2] === NOBODY && array[D3] === NOBODY) {
 		log("Defenders routed.")
-		if (array[RD1] !== NOBODY || array[RD2] !== NOBODY || array[RD3] !== NOBODY) {
+		if (array[RG1] !== NOBODY || array[RG2] !== NOBODY || array[RG3] !== NOBODY) {
 			log("Rearguard to front.")
-			slide_array(RD1, D1)
-			slide_array(RD2, D2)
-			slide_array(RD3, D3)
+			slide_array(RG1, D1)
+			slide_array(RG2, D2)
+			slide_array(RG3, D3)
 		}
 	}
 
@@ -7244,7 +7242,7 @@ function goto_reposition_battle() {
 			slide_array(SA3, A3)
 
 			// then D back to reserve
-			if (array[RD1] !== NOBODY || array[RD2] !== NOBODY || array[RD3] !== NOBODY) {
+			if (array[RG1] !== NOBODY || array[RG2] !== NOBODY || array[RG3] !== NOBODY) {
 				log("Rearguard to front.")
 
 				if (array[D1] !== NOBODY || array[D2] !== NOBODY || array[D3] !== NOBODY) {
@@ -7254,10 +7252,10 @@ function goto_reposition_battle() {
 					send_to_reserve(D3)
 				}
 
-				// then RD to D
-				slide_array(RD1, D1)
-				slide_array(RD2, D2)
-				slide_array(RD3, D3)
+				// then RG to D
+				slide_array(RG1, D1)
+				slide_array(RG2, D2)
+				slide_array(RG3, D3)
 			}
 
 			// and during the advance D may come back out from reserve
@@ -7310,7 +7308,7 @@ function can_reposition_advance() {
 			if (array[D1] === NOBODY || array[D2] === NOBODY || array[D3] === NOBODY)
 				return true
 			if (array[SA1] !== NOBODY || array[SA2] !== NOBODY || array[SA2] !== NOBODY)
-				if (array[RD1] === NOBODY || array[RD2] === NOBODY || array[RD3] === NOBODY)
+				if (array[RG1] === NOBODY || array[RG2] === NOBODY || array[RG3] === NOBODY)
 					return true
 		}
 	}
@@ -7336,9 +7334,9 @@ states.reposition_advance = {
 				if (array[D2] === NOBODY) gen_action_array(D2)
 				if (array[D3] === NOBODY) gen_action_array(D3)
 				if (array[SA1] !== NOBODY || array[SA2] !== NOBODY || array[SA2] !== NOBODY) {
-					if (array[RD1] === NOBODY) gen_action_array(RD1)
-					if (array[RD2] === NOBODY) gen_action_array(RD2)
-					if (array[RD3] === NOBODY) gen_action_array(RD3)
+					if (array[RG1] === NOBODY) gen_action_array(RG1)
+					if (array[RG2] === NOBODY) gen_action_array(RG2)
+					if (array[RG3] === NOBODY) gen_action_array(RG3)
 				}
 			}
 		}
@@ -7364,7 +7362,7 @@ function can_reposition_center() {
 	} else {
 		if (array[D2] === NOBODY && (array[D1] !== NOBODY || array[D3] !== NOBODY))
 			return true
-		if (array[RD2] === NOBODY && (array[RD1] !== NOBODY || array[RD3] !== NOBODY))
+		if (array[RG2] === NOBODY && (array[RG1] !== NOBODY || array[RG3] !== NOBODY))
 			return true
 	}
 	return false
@@ -7389,9 +7387,9 @@ states.reposition_center = {
 				if (array[D1] !== NOBODY) gen_action_lord(game.battle.array[D1])
 				if (array[D3] !== NOBODY) gen_action_lord(game.battle.array[D3])
 			}
-			if (array[RD2] === NOBODY) {
-				if (array[RD1] !== NOBODY) gen_action_lord(game.battle.array[RD1])
-				if (array[RD3] !== NOBODY) gen_action_lord(game.battle.array[RD3])
+			if (array[RG2] === NOBODY) {
+				if (array[RG1] !== NOBODY) gen_action_lord(game.battle.array[RG1])
+				if (array[RG3] !== NOBODY) gen_action_lord(game.battle.array[RG3])
 			}
 		}
 
@@ -7400,7 +7398,7 @@ states.reposition_center = {
 			if (from === A1 || from === A3) gen_action_array(A2)
 			if (from === D1 || from === D3) gen_action_array(D2)
 			if (from === SA1 || from === SA3) gen_action_array(SA2)
-			if (from === RD1 || from === RD3) gen_action_array(RD2)
+			if (from === RG1 || from === RG3) gen_action_array(RG2)
 		}
 	},
 	lord(lord) {
@@ -7483,7 +7481,7 @@ function get_battle_array(pos) {
 		if (pos === A1 || pos === A3 || pos === SA1 || pos === SA3)
 			return NOBODY
 	if (game.battle.ambush & 2)
-		if (pos === D1 || pos === D3 || pos === RD1 || pos === RD3)
+		if (pos === D1 || pos === D3 || pos === RG1 || pos === RG3)
 			return NOBODY
 	return game.battle.array[pos]
 }
@@ -7496,7 +7494,7 @@ function empty(pos) {
 	return get_battle_array(pos) === NOBODY
 }
 
-const battle_defending_positions = [ D1, D2, D3, RD1, RD2, RD3 ]
+const battle_defending_positions = [ D1, D2, D3, RG1, RG2, RG3 ]
 const battle_attacking_positions = [ A1, A2, A3, SA1, SA2, SA3 ]
 
 const battle_steps = [
@@ -7692,12 +7690,12 @@ function find_strike_target(S) {
 	case D1: return find_closest_target(A1, A2, A3)
 	case D2: return find_closest_target_center(A2)
 	case D3: return find_closest_target(A3, A2, A1)
-	case SA1: return find_closest_target(RD1, RD2, RD3)
-	case SA2: return find_closest_target_center(RD2)
-	case SA3: return find_closest_target(RD3, RD2, RD1)
-	case RD1: return find_closest_target(SA1, SA2, SA3)
-	case RD2: return find_closest_target_center(SA2)
-	case RD3: return find_closest_target(SA3, SA2, SA1)
+	case SA1: return find_closest_target(RG1, RG2, RG3)
+	case SA2: return find_closest_target_center(RG2)
+	case SA3: return find_closest_target(RG3, RG2, RG1)
+	case RG1: return find_closest_target(SA1, SA2, SA3)
+	case RG2: return find_closest_target_center(SA2)
+	case RG3: return find_closest_target(SA3, SA2, SA1)
 	}
 }
 
@@ -7709,8 +7707,8 @@ function has_strike_target(S) {
 	if (S === D1 || S === D2 || S === D3)
 		return filled(A1) || filled(A2) || filled(A3)
 	if (S === SA1 || S === SA2 || S === SA3)
-		return filled(RD1) || filled(RD2) || filled(RD3) || (!game.battle.rearguard && (filled(D1) || filled(D2) || filled(D3)))
-	if (S === RD1 || S === RD2 || S === RD3)
+		return filled(RG1) || filled(RG2) || filled(RG3) || (!game.battle.rearguard && (filled(D1) || filled(D2) || filled(D3)))
+	if (S === RG1 || S === RG2 || S === RG3)
 		return filled(SA1) || filled(SA2) || filled(SA3)
 }
 
@@ -7766,9 +7764,9 @@ function flanks_position(S, T) {
 	if (S === D1 || S === D2 || S === D3)
 		return flanks_position_row(S, T, D1, D2, D3, A1, A2, A3)
 	if (S === SA1 || S === SA2 || S === SA3)
-		return flanks_position_row(S, T, SA1, SA2, SA3, RD1, RD2, RD3)
-	if (S === RD1 || S === RD2 || S === RD3)
-		return flanks_position_row(S, T, RD1, RD2, RD3, SA1, SA2, SA3)
+		return flanks_position_row(S, T, SA1, SA2, SA3, RG1, RG2, RG3)
+	if (S === RG1 || S === RG2 || S === RG3)
+		return flanks_position_row(S, T, RG1, RG2, RG3, SA1, SA2, SA3)
 }
 
 function flanks_all_positions(S, TT) {
@@ -7855,7 +7853,7 @@ function format_hits() {
 
 function goto_first_strike() {
 	game.battle.step = 0
-	if (filled(RD1) || filled(RD2) || filled(RD3))
+	if (filled(RG1) || filled(RG2) || filled(RG3))
 		game.battle.rearguard = 1
 	else
 		game.battle.rearguard = 0
@@ -7945,20 +7943,20 @@ function goto_strike() {
 	if (did_concede())
 		log("Pursuit halved hits.")
 
-	// Strike left or right or reserve defender
+	// Strike left or right or defender
 	if (is_attacker_step())
 		game.battle.fc = strike_left_or_right(has_strike, A2, D1, D2, D3)
 	else
 		game.battle.fc = strike_left_or_right(has_strike, D2, A1, A2, A3)
 
-	if (is_sa_without_rd()) {
-		// NOTE: striking reserve defenders is handled in strike_group and assign_hits
-		game.battle.rc = RD2
+	if (is_sa_without_rg()) {
+		// NOTE: striking rearguard is handled in strike_group and assign_hits
+		game.battle.rc = RG2
 	} else {
 		if (is_attacker_step())
-			game.battle.rc = strike_left_or_right(has_strike, SA2, RD1, RD2, RD3)
+			game.battle.rc = strike_left_or_right(has_strike, SA2, RG1, RG2, RG3)
 		else
-			game.battle.rc = strike_left_or_right(has_strike, RD2, SA1, SA2, SA3)
+			game.battle.rc = strike_left_or_right(has_strike, RG2, SA1, SA2, SA3)
 	}
 
 	if (game.battle.storm) {
@@ -7992,7 +7990,7 @@ function prompt_target_2(S1, T1, T3) {
 	gen_action_lord(game.battle.array[T3])
 }
 
-function is_sa_without_rd() {
+function is_sa_without_rg() {
 	return !game.battle.rearguard && (filled(SA1) || filled(SA2) || filled(SA3))
 }
 
@@ -8004,7 +8002,7 @@ function prompt_left_right() {
 		else
 			prompt_target_2(D2, A1, A3)
 	} else {
-		if (is_sa_without_rd()) {
+		if (is_sa_without_rg()) {
 			view.prompt = `${format_strike_step()}: Strike which defender?`
 			view.group = []
 			if (filled(SA1)) view.group.push(SA1)
@@ -8016,9 +8014,9 @@ function prompt_left_right() {
 		} else {
 			view.prompt = `${format_strike_step()}: Strike left or right?`
 			if (is_attacker_step())
-				prompt_target_2(SA2, RD1, RD3)
+				prompt_target_2(SA2, RG1, RG3)
 			else
-				prompt_target_2(RD2, SA1, SA3)
+				prompt_target_2(RG2, SA1, SA3)
 		}
 	}
 }
@@ -8058,7 +8056,7 @@ states.strike_group = {
 	},
 	lord(lord) {
 		let pos = get_lord_array_position(lord)
-		if ((pos === SA1 || pos === SA2 || pos === SA3) && is_sa_without_rd()) {
+		if ((pos === SA1 || pos === SA2 || pos === SA3) && is_sa_without_rg()) {
 			game.battle.strikers = [ SA1, SA2, SA3 ]
 			game.battle.rc = strike_defender_row()
 		} else {
@@ -8284,7 +8282,7 @@ function goto_assign_hits() {
 	} else {
 		if (game.battle.fc < 0 && set_has(game.battle.strikers, D2))
 			return goto_assign_left_right()
-		if (game.battle.rc < 0 && set_has(game.battle.strikers, RD2))
+		if (game.battle.rc < 0 && set_has(game.battle.strikers, RG2))
 			return goto_assign_left_right()
 	}
 
@@ -8310,8 +8308,8 @@ function end_assign_hits() {
 function for_each_target(fn) {
 	let start = game.battle.strikers[0]
 
-	// SA without RD striking D, target is always flanked
-	if ((start === SA1 || start === SA2 || start === SA3) && is_sa_without_rd()) {
+	// SA without RG striking D, target is always flanked
+	if ((start === SA1 || start === SA2 || start === SA3) && is_sa_without_rg()) {
 		fn(game.battle.array[game.battle.rc])
 		return
 	}
@@ -8325,8 +8323,8 @@ function for_each_target(fn) {
 		if (flanks_position(striker, target))
 			return
 
-	// SA without RD flank all D (target must take all hits)
-	if ((target === D1 || target === D2 || target === D3) && is_sa_without_rd())
+	// SA without RG flank all D (target must take all hits)
+	if ((target === D1 || target === D2 || target === D3) && is_sa_without_rg())
 		return
 
 	// If other lord flanks all strikers, he may take hits instead
@@ -8334,8 +8332,8 @@ function for_each_target(fn) {
 		if (filled(flanker) && flanks_all_positions(flanker, game.battle.strikers))
 			fn(game.battle.array[flanker])
 
-	// SA without RD flank all D (and can thus take hits from A)
-	if ((target === A1 || target === A2 || target === A3) && is_sa_without_rd()) {
+	// SA without RG flank all D (and can thus take hits from A)
+	if ((target === A1 || target === A2 || target === A3) && is_sa_without_rg()) {
 		if (filled(SA1)) fn(game.battle.array[SA1])
 		if (filled(SA2)) fn(game.battle.array[SA2])
 		if (filled(SA3)) fn(game.battle.array[SA3])
@@ -8465,23 +8463,24 @@ function rout_lord(lord) {
 	// Remove from battle array
 	game.battle.array[pos] = NOBODY
 
-	// Strike left or right or reserve defender
+	// Strike left or right or defender
+
 	if (pos >= A1 && pos <= A3) {
 		game.battle.fc = strike_left_or_right(is_striking, D2, A1, A2, A3)
 	}
 
 	else if (pos >= D1 && pos <= D3) {
 		game.battle.fc = strike_left_or_right(is_striking, A2, D1, D2, D3)
-		if (is_sa_without_rd())
+		if (is_sa_without_rg())
 			game.battle.rc = strike_defender_row()
 	}
 
 	else if (pos >= SA1 && pos <= SA3) {
-		game.battle.rc = strike_left_or_right(is_striking, RD2, SA1, SA2, SA3)
+		game.battle.rc = strike_left_or_right(is_striking, RG2, SA1, SA2, SA3)
 	}
 
-	else if (pos >= RD1 && pos <= RD3) {
-		game.battle.rc = strike_left_or_right(is_striking, SA2, RD1, RD2, RD3)
+	else if (pos >= RG1 && pos <= RG3) {
+		game.battle.rc = strike_left_or_right(is_striking, SA2, RG1, RG2, RG3)
 	}
 }
 
