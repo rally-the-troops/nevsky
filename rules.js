@@ -9958,9 +9958,9 @@ function goto_game_end() {
 		let vp1 = count_vp1()
 		let vp2 = count_vp2()
 		if (vp1 > vp2)
-			goto_game_over(P1, `${P1} won with ${vp1} VP.`)
+			goto_game_over(P1, `${P1} won with ${vp1/2} VP.`)
 		else if (vp2 > vp1)
-			goto_game_over(P2, `${P2} won with ${vp2} VP.`)
+			goto_game_over(P2, `${P2} won with ${vp2/2} VP.`)
 		else
 			goto_game_over("Draw", "The game ended in a draw.")
 	} else {
