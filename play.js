@@ -851,6 +851,18 @@ function on_click_locale_tip(loc) {
 	ui.locale[loc].scrollIntoView({ block:"center", inline:"center", behavior:"smooth" })
 }
 
+function on_focus_way_tip(way) {
+	ui.ways[way].classList.add("tip")
+}
+
+function on_blur_way_tip(way) {
+	ui.ways[way].classList.remove("tip")
+}
+
+function on_click_way(way) {
+	ui.ways[way].scrollIntoView({ block:"center", inline:"center", behavior:"smooth" })
+}
+
 function on_focus_lord_tip(lord) {
 }
 
@@ -871,6 +883,12 @@ function sub_lord_name(match, p1) {
 	let x = p1 | 0
 	let n = data.lords[x].name
 	return `<span class="lord_tip" onmouseenter="on_focus_lord_tip(${x})" onmouseleave="on_blur_lord_tip(${x})" onclick="on_click_lord_tip(${x})">${n}</span>`
+}
+
+function sub_way_name(match, p1) {
+	let x = p1 | 0
+	let n = data.ways[x].name
+	return `<span class="way_tip" onmouseenter="on_focus_way_tip(${x})" onmouseleave="on_blur_way_tip(${x})" onclick="on_click_way_tip(${x})">${n}</span>`
 }
 
 function on_log(text) {
@@ -894,6 +912,7 @@ function on_log(text) {
 	text = text.replace(/E(\d+)/g, sub_card_event)
 	text = text.replace(/L(\d+)/g, sub_lord_name)
 	text = text.replace(/%(\d+)/g, sub_locale_name)
+	text = text.replace(/W(\d+)/g, sub_way_name)
 
 	if (text.match(/^\.h1/)) {
 		text = text.substring(4)

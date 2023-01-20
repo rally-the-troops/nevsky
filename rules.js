@@ -1,7 +1,5 @@
 "use strict"
 
-// TODO: Bridge - kn, sgt, 1x lh, maa, militia, serf, lh, ah
-
 // FIXME: lift_sieges / besieged needs checking! (automatic after disband_lord, manual after move/sail, extra careful manual after battle)
 // FIXME: remove_legate_if_endangered needs checking! (automatic after disband_lord, manual after move/sail, manual after battle)
 
@@ -4602,7 +4600,7 @@ function march_with_group_2() {
 		spend_march_action(1)
 
 	if (data.ways[way].name)
-		log(`Marched via ${data.ways[way].name} to %${to}.`)
+		log(`Marched via W${way} to %${to}.`)
 	else
 		log(`Marched to %${to}.`)
 
@@ -4860,7 +4858,7 @@ function avoid_battle_2() {
 	let way = game.march.avoid_way
 
 	if (data.ways[way].name)
-		log(`Avoided Battle via ${data.ways[way].name} to %${to}.`)
+		log(`Avoided Battle via W${way} to %${to}.`)
 	else
 		log(`Avoided Battle to %${to}.`)
 
@@ -9103,7 +9101,7 @@ function retreat_2() {
 	let way = game.battle.retreat_way
 
 	if (data.ways[way].name)
-		log(`Retreated via ${data.ways[way].name} to %${to}.`)
+		log(`Retreated via W${way} to %${to}.`)
 	else
 		log(`Retreated to %${to}.`)
 
