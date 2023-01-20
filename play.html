@@ -136,14 +136,19 @@ body.Teutons #plan_actions .russian { display: none }
 }
 
 #battle_grid #grid_ga {
-	width: 376px;
-	height: 60px;
-	display: flex;
-	justify-content: center;
-	align-items: center;
+	height: auto;
+	min-height: 80px;
 }
 
-#grid_rd1:empty:not(.action), #grid_rd2:empty:not(.action), #grid_rd3:empty:not(.action),
+#battle_grid #grid_sw {
+	height: auto;
+}
+
+#battle_grid #grid_sw:empty {
+	display: none;
+}
+
+#grid_rg1:empty:not(.action), #grid_rg2:empty:not(.action), #grid_rg3:empty:not(.action),
 #grid_sa1:empty:not(.action), #grid_sa2:empty:not(.action), #grid_sa3:empty:not(.action) {
 	display: none;
 }
@@ -157,7 +162,11 @@ body.Teutons #plan_actions .russian { display: none }
 .defender .att .asset,
 .attacker .def .asset,
 .defender .att .service_marker,
-.attacker .def .service_marker
+.attacker .def .service_marker,
+.defender .att .moved_fought,
+.attacker .def .moved_fought,
+.defender .att .feed_x2,
+.attacker .def .feed_x2
 {
 	transform: rotate(180deg)
 }
@@ -176,23 +185,25 @@ body.Teutons #plan_actions .russian { display: none }
 .defender #grid_d1 { grid-row: 3; grid-column: 1; }
 .defender #grid_d2 { grid-row: 3; grid-column: 2; }
 .defender #grid_d3 { grid-row: 3; grid-column: 3; }
-.defender #grid_rd1 { grid-row: 4; grid-column: 1; }
-.defender #grid_rd2 { grid-row: 4; grid-column: 2; }
-.defender #grid_rd3 { grid-row: 4; grid-column: 3; }
-.defender #grid_sa1 { grid-row: 5; grid-column: 1; }
-.defender #grid_sa2 { grid-row: 5; grid-column: 2; }
-.defender #grid_sa3 { grid-row: 5; grid-column: 3; }
+.defender #grid_rg1 { grid-row: 4; grid-column: 1; }
+.defender #grid_rg2 { grid-row: 4; grid-column: 2; }
+.defender #grid_rg3 { grid-row: 4; grid-column: 3; }
+.defender #grid_sw { grid-row: 5; grid-column: 2; }
+.defender #grid_sa1 { grid-row: 6; grid-column: 1; }
+.defender #grid_sa2 { grid-row: 6; grid-column: 2; }
+.defender #grid_sa3 { grid-row: 6; grid-column: 3; }
 
-.attacker #grid_a1 { grid-row: 5; grid-column: 3; }
-.attacker #grid_a2 { grid-row: 5; grid-column: 2; }
-.attacker #grid_a3 { grid-row: 5; grid-column: 1; }
-.attacker #grid_ga { grid-row: 4; grid-column: 2; }
-.attacker #grid_d1 { grid-row: 3; grid-column: 3; }
-.attacker #grid_d2 { grid-row: 3; grid-column: 2; }
-.attacker #grid_d3 { grid-row: 3; grid-column: 1; }
-.attacker #grid_rd1 { grid-row: 2; grid-column: 3; }
-.attacker #grid_rd2 { grid-row: 2; grid-column: 2; }
-.attacker #grid_rd3 { grid-row: 2; grid-column: 1; }
+.attacker #grid_a1 { grid-row: 6; grid-column: 3; }
+.attacker #grid_a2 { grid-row: 6; grid-column: 2; }
+.attacker #grid_a3 { grid-row: 6; grid-column: 1; }
+.attacker #grid_ga { grid-row: 5; grid-column: 2; }
+.attacker #grid_d1 { grid-row: 4; grid-column: 3; }
+.attacker #grid_d2 { grid-row: 4; grid-column: 2; }
+.attacker #grid_d3 { grid-row: 4; grid-column: 1; }
+.attacker #grid_rg1 { grid-row: 3; grid-column: 3; }
+.attacker #grid_rg2 { grid-row: 3; grid-column: 2; }
+.attacker #grid_rg3 { grid-row: 3; grid-column: 1; }
+.attacker #grid_sw { grid-row: 2; grid-column: 2; }
 .attacker #grid_sa1 { grid-row: 1; grid-column: 3; }
 .attacker #grid_sa2 { grid-row: 1; grid-column: 2; }
 .attacker #grid_sa3 { grid-row: 1; grid-column: 1; }
@@ -203,6 +214,17 @@ body.Teutons #plan_actions .russian { display: none }
 	transform: rotate(180deg);
 	border-color: #a68c61 #e7cb9e #e7cb9e #a68c61;
 	box-shadow: 0 0 0 1px #4e370a, -1px -2px 4px #0008;
+}
+
+#pursuit {
+	margin: 0 auto;
+}
+
+.siegeworks {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 4px;
 }
 
 #garrison {
@@ -217,12 +239,10 @@ body.Teutons #plan_actions .russian { display: none }
 	gap: 2px;
 }
 
+#garrison.hide { display: none }
+
 .attacker #garrison { background-image: url(images/garrison_attacker.svg); }
 .defender #garrison { background-image: url(images/garrison_defender.svg); }
-
-#garrison:empty {
-	display: none
-}
 
 #garrison .unit {
 	position: static
@@ -426,9 +446,9 @@ body.shift .mustered_vassals {
 .locale_markers > .conquered + .conquered + .conquered { margin-bottom: 26px; }
 .locale_markers > .conquered + .conquered + .conquered + .conquered { margin-bottom: 39px; }
 
-.siege + .siege { margin-left: -44px; margin-bottom: 13px; }
-.siege + .siege + .siege { margin-bottom: 26px; }
-.siege + .siege + .siege + .siege { margin-bottom: 39px; }
+.locale_markers .siege + .siege { margin-left: -44px; margin-bottom: 13px; }
+.locale_markers .siege + .siege + .siege { margin-bottom: 26px; }
+.locale_markers .siege + .siege + .siege + .siege { margin-bottom: 39px; }
 
 /* TUCKED CARDS */
 
@@ -1293,7 +1313,9 @@ body.shift .mustered_vassals {
 <div id="battle_grid">
 	<div class="grid_array" id="grid_ga">
 		<div id="pursuit" class="marker rectangle pursuit russian hide"></div>
+		<div id="battle_walls1" class="siegeworks"></div>
 		<div id="garrison"></div>
+		<div id="battle_walls2" class="siegeworks"></div>
 	</div>
 	<div class="grid_array att" id="grid_a1"></div>
 	<div class="grid_array att" id="grid_a2"></div>
@@ -1301,9 +1323,10 @@ body.shift .mustered_vassals {
 	<div class="grid_array def" id="grid_d1"></div>
 	<div class="grid_array def" id="grid_d2"></div>
 	<div class="grid_array def" id="grid_d3"></div>
-	<div class="grid_array att" id="grid_rd1"></div>
-	<div class="grid_array att" id="grid_rd2"></div>
-	<div class="grid_array att" id="grid_rd3"></div>
+	<div class="grid_array att" id="grid_rg1"></div>
+	<div class="grid_array att" id="grid_rg2"></div>
+	<div class="grid_array att" id="grid_rg3"></div>
+	<div class="grid_array siegeworks" id="grid_sw"></div>
 	<div class="grid_array def" id="grid_sa1"></div>
 	<div class="grid_array def" id="grid_sa2"></div>
 	<div class="grid_array def" id="grid_sa3"></div>

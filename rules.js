@@ -2,18 +2,8 @@
 
 // TODO: Bridge - kn, sgt, 1x lh, maa, militia, serf, lh, ah
 
-// PLESKAU: Enemy Lords Removed marker and VP
-
-// TODO: feed x2 marker
-// TODO: end marker
-
 // FIXME: lift_sieges / besieged needs checking! (automatic after disband_lord, manual after move/sail, extra careful manual after battle)
 // FIXME: remove_legate_if_endangered needs checking! (automatic after disband_lord, manual after move/sail, manual after battle)
-
-// GUI: siegeworks markers for walls and siegeworks (colored by side)
-// GUI: show moved/fought markers on mats during Feed phase
-// GUI: show sally/relief sally as unbesieged on map
-// GUI: show feed x2 on lord mats with > 6 units
 
 // WONTFIX: choose crossbow/normal hit application order
 

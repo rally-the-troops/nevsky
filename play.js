@@ -32,10 +32,15 @@ function find_card(name) {
 const R1 = find_card("R1")
 const T4 = find_card("T4")
 const T10 = find_card("T10")
+const T14 = find_card("T14")
 
 const EVENT_RUSSIAN_BRIDGE = R1
 const EVENT_TEUTONIC_BRIDGE = T4
 const EVENT_TEUTONIC_FIELD_ORGAN = T10
+
+const AOW_TEUTONIC_TREBUCHETS = T14
+
+const RG2 = 10
 
 const MAP_DPI = 75
 
@@ -575,6 +580,9 @@ const ui = {
 	court1: document.getElementById("court1"),
 	court2: document.getElementById("court2"),
 	garrison: document.getElementById("garrison"),
+	battle_walls1: document.getElementById("battle_walls1"),
+	battle_walls2: document.getElementById("battle_walls2"),
+	battle_siegeworks: document.getElementById("grid_sw"),
 	battle_panel: document.getElementById("battle_panel"),
 	battle_header: document.getElementById("battle_header"),
 	pursuit: document.getElementById("pursuit"),
@@ -589,9 +597,9 @@ const ui = {
 		document.getElementById("grid_sa1"),
 		document.getElementById("grid_sa2"),
 		document.getElementById("grid_sa3"),
-		document.getElementById("grid_rd1"),
-		document.getElementById("grid_rd2"),
-		document.getElementById("grid_rd3"),
+		document.getElementById("grid_rg1"),
+		document.getElementById("grid_rg2"),
+		document.getElementById("grid_rg3"),
 	],
 	castles: [
 		document.getElementById("castle11"),
@@ -1433,6 +1441,70 @@ function update_cards() {
 	}
 }
 
+function has_castle_marker(loc) {
+	return (
+		set_has(view.pieces.castles1, loc) ||
+		set_has(view.pieces.castles2, loc)
+	)
+}
+
+function is_castle(loc) {
+	return data.locales[loc].type === "castle" || has_castle_marker(loc)
+}
+
+function is_bishopric(loc) {
+	return data.locales[loc].type === "bishopric"
+}
+
+function has_walls(loc) {
+	return set_has(view.pieces.walls, loc)
+}
+
+function lord_has_unrouted_units(lord) {
+	return view.pieces.forces[lord] !== 0
+}
+
+function get_lord_capability(lord, n) {
+	return view.pieces.capabilities[(lord << 1) + n]
+}
+
+function lord_has_capability_card(lord, c) {
+	let name = data.cards[c].capability
+	let c1 = get_lord_capability(lord, 0)
+	if (c1 >= 0 && data.cards[c1].capability === name)
+		return true
+	let c2 = get_lord_capability(lord, 1)
+	if (c2 >= 0 && data.cards[c2].capability === name)
+		return true
+	return false
+}
+
+function lord_has_capability(lord, card_or_list) {
+	if (Array.isArray(card_or_list)) {
+		for (let card of card_or_list)
+			if (lord_has_capability_card(lord, card))
+				return true
+		return false
+	}
+	return lord_has_capability_card(lord, card_or_list)
+}
+
+function attacker_has_trebuchets() {
+	if (view.battle.attacker === "Teutons") {
+		for (let lord = first_p1_lord; lord <= last_p1_lord; ++lord) {
+			if (get_lord_locale(lord) === view.battle.where && lord_has_unrouted_units(lord)) {
+				if (lord_has_capability(lord, AOW_TEUTONIC_TREBUCHETS))
+					return true
+			}
+		}
+	}
+	return false
+}
+
+function count_siege_markers(loc) {
+	return map_get(view.pieces.sieges, loc, 0)
+}
+
 function update_battle() {
 	let array = view.battle.array
 
@@ -1464,6 +1536,8 @@ function update_battle() {
 		ui.battle_cylinder[lord].classList.toggle("selected", is_lord_selected(lord))
 	}
 
+	ui.garrison.classList.toggle("hide", !view.battle.storm)
+
 	ui.garrison.replaceChildren()
 	if (view.battle.garrison) {
 		for (let i = 0; i < view.battle.garrison.knights; ++i)
@@ -1471,6 +1545,73 @@ function update_battle() {
 		for (let i = 0; i < view.battle.garrison.men_at_arms; ++i)
 			add_force(ui.garrison, MEN_AT_ARMS, -1, 0)
 	}
+
+	let here = view.battle.where
+
+	let def_prot = 0
+	let def_walls = 0
+	let att_prot = 0
+	let sally_prot = 0
+
+	if (view.battle.storm) {
+		if (is_bishopric(here) || is_castle(here))
+			def_prot = 4
+		else
+			def_prot = 3
+		if (attacker_has_trebuchets())
+			def_prot--
+		if (has_walls(here))
+			def_walls++
+		att_prot = count_siege_markers(view.battle.where)
+	}
+
+	if (view.battle.sally)
+		def_prot = count_siege_markers(view.battle.where)
+	if (view.battle.array[RG2] >= 0)
+		sally_prot = count_siege_markers(view.battle.where)
+
+	let att_ui, def_ui
+
+	if (view.battle.attacker === "Teutons") {
+		if (player === "Russians") {
+			att_ui = ui.battle_walls1
+			def_ui = ui.battle_walls2
+		} else {
+			att_ui = ui.battle_walls2
+			def_ui = ui.battle_walls1
+		}
+	} else {
+		if (player === "Russians") {
+			att_ui = ui.battle_walls2
+			def_ui = ui.battle_walls1
+		} else {
+			att_ui = ui.battle_walls1
+			def_ui = ui.battle_walls2
+		}
+	}
+
+	def_ui.replaceChildren()
+	for (let i = 0; i < def_prot; ++i)
+		if (view.battle.attacker === "Teutons")
+			def_ui.appendChild(get_cached_element("marker square russian siege"))
+		else
+			def_ui.appendChild(get_cached_element("marker square teutonic siege"))
+	for (let i = 0; i < def_walls; ++i)
+		def_ui.appendChild(get_cached_element("marker square walls"))
+
+	ui.battle_siegeworks.replaceChildren()
+	for (let i = 0; i < sally_prot; ++i)
+		if (view.battle.attacker === "Teutons")
+			ui.battle_siegeworks.appendChild(get_cached_element("marker square russian siege"))
+		else
+			ui.battle_siegeworks.appendChild(get_cached_element("marker square teutonic siege"))
+
+	att_ui.replaceChildren()
+	for (let i = 0; i < att_prot; ++i)
+		if (view.battle.attacker === "Teutons")
+			att_ui.appendChild(get_cached_element("marker square teutonic siege"))
+		else
+			att_ui.appendChild(get_cached_element("marker square russian siege"))
 }
 
 function is_lord_in_grid(lord) {
