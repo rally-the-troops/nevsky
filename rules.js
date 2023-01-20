@@ -1506,8 +1506,6 @@ function disband_vassal(vassal) {
 	let info = data.vassals[vassal]
 	let lord = data.vassals[vassal].lord
 
-	logi(`Disbanded ${info.name}.`)
-
 	add_lord_forces(lord, KNIGHTS, -(info.forces.knights | 0))
 	add_lord_forces(lord, SERGEANTS, -(info.forces.sergeants | 0))
 	add_lord_forces(lord, LIGHT_HORSE, -(info.forces.light_horse | 0))
@@ -1939,7 +1937,6 @@ states.setup_lords = {
 	},
 	lord(lord) {
 		push_undo()
-		log(`L${lord} at %${get_lord_locale(lord)}`)
 
 		// FIXME: clean up these transitions
 		push_state("muster_lord_transport")
@@ -2090,7 +2087,6 @@ states.death_of_the_pope = {
 		gen_action_card(AOW_TEUTONIC_WILLIAM_OF_MODENA)
 	},
 	card(card) {
-		logi(`Discarded C${card}.`)
 		discard_global_capability(AOW_TEUTONIC_WILLIAM_OF_MODENA)
 		end_immediate_event()
 	},
@@ -2119,6 +2115,7 @@ function action_torzhok(lord, asset) {
 
 states.torzhok = {
 	prompt() {
+		// TODO: need to reveal Domash if hidden!
 		if (game.count > 0) {
 			if (game.count === 3)
 				view.prompt = "Torzhok: Remove up to 3 Assets from Domash or up to 3 Coin from Veche."
@@ -2301,6 +2298,7 @@ states.pope_gregory = {
 	},
 	lord: action_select_lord,
 	calendar(turn) {
+		log(`Shifted L${game.who} to ${turn}.`)
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
 		end_immediate_event()
@@ -2408,6 +2406,7 @@ states.grand_prince = {
 	lord: action_select_lord,
 	service: action_select_lord,
 	calendar(turn) {
+		log(`Shifted L${game.who} to ${turn}.`)
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
 		end_immediate_event()
@@ -2433,6 +2432,7 @@ states.khan_baty = {
 	lord: action_select_lord,
 	service: action_select_lord,
 	calendar(turn) {
+		log(`Shifted L${game.who} to ${turn}.`)
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
 		end_immediate_event()
@@ -2465,6 +2465,7 @@ states.swedish_crusade = {
 	service: action_select_lord,
 	calendar(turn) {
 		game.count ^= (1 << game.who)
+		log(`Shifted L${game.who} to ${turn}.`)
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
 		if (game.count === 0)
@@ -2489,6 +2490,7 @@ states.valdemar = {
 	lord: action_select_lord,
 	service: action_select_lord,
 	calendar(turn) {
+		log(`Shifted L${game.who} to ${turn}.`)
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
 		end_immediate_event()
@@ -2519,6 +2521,7 @@ states.osilian_revolt = {
 	service: action_select_lord,
 	calendar(turn) {
 		set_active_enemy()
+		log(`Shifted L${game.who} to ${turn}.`)
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
 		end_immediate_event()
@@ -2542,6 +2545,7 @@ states.batu_khan = {
 	lord: action_select_lord,
 	service: action_select_lord,
 	calendar(turn) {
+		log(`Shifted L${game.who} to ${turn}.`)
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
 		end_immediate_event()
@@ -2567,6 +2571,7 @@ states.russian_dietrich_von_gruningen = {
 	lord: action_select_lord,
 	service: action_select_lord,
 	calendar(turn) {
+		log(`Shifted L${game.who} to ${turn}.`)
 		set_lord_calendar(game.who, turn)
 		game.who = NOBODY
 		end_immediate_event()
@@ -2828,7 +2833,6 @@ states.heinrich_sees_the_curia_2 = {
 }
 
 function take_asset(type) {
-	log(`L${game.who} took ${ASSET_TYPE_NAME[type]}.`)
 	add_lord_assets(game.who, type, 1)
 	if (--game.count === 0)
 		resume_heinrich_sees_the_curia()
@@ -2935,6 +2939,7 @@ function prompt_shift_cylinder(list, boxes) {
 }
 
 function action_shift_cylinder_calendar(turn) {
+	log(`Shifted L${game.who} to ${turn}.`)
 	set_lord_calendar(game.who, turn)
 	game.who = NOBODY
 	end_held_event()
@@ -3059,31 +3064,30 @@ function draw_two_cards() {
 
 function discard_card_capability(c) {
 	if (is_no_event_card(c) && should_remove_no_event_card()) {
-		logi(`C${c} - removed`)
+		log(`${game.active} removed C${c}.`)
 		if (game.active === P1)
 			game.no1--
 		else
 			game.no2--
 	} else {
-		logi(`C${c} - discarded`)
+		log(`${game.active} discarded C${c}.`)
 	}
 }
 
 function discard_card_event(c) {
 	if (is_no_event_card(c) && should_remove_no_event_card()) {
-		log(`Removed E${c}`)
+		log(`${game.active} removed E${c}.`)
 		if (game.active === P1)
 			game.no1--
 		else
 			game.no2--
 	} else {
-		log(`Discarded E${c}`)
+		log(`${game.active} discarded E${c}.`)
 	}
 }
 
 function goto_levy_arts_of_war_first() {
 	log_br()
-	log_h3(game.active)
 	game.state = "levy_arts_of_war_first"
 	game.what = draw_two_cards()
 }
@@ -3120,14 +3124,14 @@ states.levy_arts_of_war_first = {
 	lord(lord) {
 		push_undo()
 		let c = game.what.shift()
-		logi(`C${c} - L${lord}`)
+		log(`${game.active} deployed Capability.`)
 		add_lord_capability(lord, c)
 		resume_levy_arts_of_war_first()
 	},
 	deploy() {
 		push_undo()
 		let c = game.what.shift()
-		logi(`C${c}`)
+		log(`${game.active} deployed C${c}.`)
 		deploy_global_capability(c)
 		resume_levy_arts_of_war_first()
 	},
@@ -3154,7 +3158,6 @@ function end_levy_arts_of_war_first() {
 
 function goto_levy_arts_of_war() {
 	log_br()
-	log_h3(game.active)
 	game.what = draw_two_cards()
 	resume_levy_arts_of_war()
 }
@@ -3189,12 +3192,12 @@ states.levy_arts_of_war = {
 	},
 	play() {
 		let c = game.what.shift()
-		log(`Played E${c}`)
+		log(`${game.active} played E${c}.`)
 		goto_immediate_event(c)
 	},
 	hold() {
 		let c = game.what.shift()
-		log(`Held.`)
+		log(`${game.active} held Event.`)
 		if (game.active === P1)
 			set_add(game.hand1, c)
 		else
@@ -3258,7 +3261,7 @@ states.levy_muster = {
 	},
 	lord(lord) {
 		push_undo()
-		log_h3(`L${lord} at %${get_lord_locale(lord)}`)
+		log(`Mustered with L${lord}.`)
 		push_state("levy_muster_lord")
 		game.who = lord
 		game.count = data.lords[lord].lordship
@@ -3338,44 +3341,38 @@ states.levy_muster_lord = {
 		let die = roll_die()
 		let fealty = data.lords[other].fealty
 		if (die <= fealty) {
-			logi(`L${other} rolled ${die} <= ${fealty}`)
+			log(`L${other} rolled ${die} <= ${fealty}.`)
 			push_state("muster_lord_at_seat")
 			game.who = other
 		} else {
-			logi(`L${other} rolled ${die} > ${fealty}`)
-			logii(`failed`)
+			log(`L${other} rolled ${die} > ${fealty}.`)
 			resume_levy_muster_lord()
 		}
 	},
 
 	vassal(vassal) {
 		push_undo()
-		logi(vassal_name[vassal])
 		muster_vassal(game.who, vassal)
 		resume_levy_muster_lord()
 	},
 
 	take_ship() {
 		push_undo()
-		logi("Ship")
 		add_lord_assets(game.who, SHIP, 1)
 		resume_levy_muster_lord()
 	},
 	take_boat() {
 		push_undo()
-		logi("Boat")
 		add_lord_assets(game.who, BOAT, 1)
 		resume_levy_muster_lord()
 	},
 	take_cart() {
 		push_undo()
-		logi("Cart")
 		add_lord_assets(game.who, CART, 1)
 		resume_levy_muster_lord()
 	},
 	take_sled() {
 		push_undo()
-		logi("Sled")
 		add_lord_assets(game.who, SLED, 1)
 		resume_levy_muster_lord()
 	},
@@ -3401,7 +3398,8 @@ states.muster_lord_at_seat = {
 	},
 	locale(loc) {
 		push_undo()
-		logii(`at %${loc}`)
+
+		log(`Mustered L${game.who} at %${loc}.`)
 
 		// FIXME: clean up these transitions
 		set_lord_moved(game.who, 1)
@@ -3439,28 +3437,24 @@ states.muster_lord_transport = {
 	},
 	take_ship() {
 		push_undo()
-		logii("Ship")
 		add_lord_assets(game.who, SHIP, 1)
 		--game.count
 		resume_muster_lord_transport()
 	},
 	take_boat() {
 		push_undo()
-		logii("Boat")
 		add_lord_assets(game.who, BOAT, 1)
 		--game.count
 		resume_muster_lord_transport()
 	},
 	take_cart() {
 		push_undo()
-		logii("Cart")
 		add_lord_assets(game.who, CART, 1)
 		--game.count
 		resume_muster_lord_transport()
 	},
 	take_sled() {
 		push_undo()
-		logii("Sled")
 		add_lord_assets(game.who, SLED, 1)
 		--game.count
 		resume_muster_lord_transport()
@@ -3548,7 +3542,6 @@ states.muster_capability = {
 		}
 	},
 	card(c) {
-		logi(`Capability C${c}`)
 		if (data.cards[c].this_lord) {
 			if (can_add_lord_capability(game.who, c)) {
 				add_lord_capability(game.who, c)
@@ -3573,7 +3566,6 @@ states.muster_capability_discard = {
 	},
 	card(c) {
 		push_undo()
-		logi(`Discarded C${c}.`)
 		discard_lord_capability(game.who, c)
 		add_lord_capability(game.who, game.what)
 		game.what = NOTHING
@@ -3619,7 +3611,6 @@ function goto_teutonic_call_to_arms() {
 		else
 			game.state = "papal_legate_active"
 	} else {
-		log("Skipped.")
 		end_papal_legate()
 	}
 }
@@ -3693,8 +3684,7 @@ states.papal_legate_active = {
 		game.state = "papal_legate_done"
 
 		if (is_lord_ready(lord)) {
-			log(`Mustered L${lord}`)
-			logii(`at %${here}`)
+			log(`Mustered L${lord} at %${here}.`)
 
 			// FIXME: clean up these transitions
 			muster_lord(lord, here)
@@ -3710,7 +3700,7 @@ states.papal_legate_active = {
 		}
 
 		else {
-			log_h3(`L${lord} at %${get_lord_locale(lord)}`)
+			log(`Mustered with L${lord}.`)
 			push_state("levy_muster_lord")
 			game.who = lord
 			game.count = data.lords[lord].lordship
@@ -3812,6 +3802,7 @@ function goto_russian_call_to_arms() {
 function goto_black_sea_trade() {
 	if (has_global_capability(AOW_RUSSIAN_BLACK_SEA_TRADE)) {
 		if (!has_conquered_marker(LOC_NOVGOROD) && !has_conquered_marker(LOC_LOVAT)) {
+			log("Black Sea Trade.")
 			if (game.pieces.veche_coin < 8) {
 				game.state = "black_sea_trade"
 				return
@@ -3827,7 +3818,7 @@ states.black_sea_trade = {
 		view.actions.veche = 1
 	},
 	veche() {
-		log("Black Sea Trade added 1 coin to Veche.")
+		log("Added 1 Coin to Veche.")
 		game.pieces.veche_coin += 1
 		goto_baltic_sea_trade()
 	},
@@ -3836,12 +3827,20 @@ states.black_sea_trade = {
 function goto_baltic_sea_trade() {
 	if (!is_winter() && has_global_capability(AOW_RUSSIAN_BALTIC_SEA_TRADE)) {
 		if (!has_conquered_marker(LOC_NOVGOROD) && !has_conquered_marker(LOC_NEVA)) {
-			if (count_all_teutonic_ships() <= count_all_russian_ships()) {
+			let t = count_all_teutonic_ships()
+			let r = count_all_russian_ships()
+			log("Baltic Sea Trade:")
+			logi(`${t}x Teutonic Ships`)
+			logi(`${r}x Russian Ships`)
+			if (t <= r) {
 				if (game.pieces.veche_coin < 8) {
 					game.state = "baltic_sea_trade"
 					return
 				}
 			}
+		} else {
+			log("Baltic Sea Trade:")
+			logi("Novgorod and/or Neva Conquered.")
 		}
 	}
 	goto_novgorod_veche()
@@ -3854,10 +3853,10 @@ states.baltic_sea_trade = {
 	},
 	veche() {
 		if (game.pieces.veche_coin === 7) {
-			log("Baltic Sea Trade added 1 coin to Veche.")
+			log("Added 1 Coin to Veche.")
 			game.pieces.veche_coin += 1
 		} else {
-			log("Baltic Sea Trade added 2 coins to Veche.")
+			log("Added 2 Coin to Veche.")
 			game.pieces.veche_coin += 2
 		}
 		goto_novgorod_veche()
@@ -3897,31 +3896,32 @@ states.novgorod_veche = {
 		push_undo()
 		game.state = "novgorod_veche_done"
 
-		if (game.scenario === "Watland") {
-			log("Decline of Andrey: Added 2VP to Veche.")
-			add_veche_vp(2)
-		} else {
-			log("Added 1VP to Veche.")
-			add_veche_vp(1)
-		}
-
 		if (is_lord_ready(LORD_ALEKSANDR)) {
-			log(`Delayed L${LORD_ALEKSANDR}.`)
-			set_lord_calendar(LORD_ALEKSANDR, current_turn() + 1)
+			let turn = current_turn() + 1
+			log(`Delayed L${LORD_ALEKSANDR} to ${turn}.`)
+			set_lord_calendar(LORD_ALEKSANDR, turn)
 		}
 		if (is_lord_ready(LORD_ANDREY)) {
-			log(`Delayed L${LORD_ANDREY}.`)
-			set_lord_calendar(LORD_ANDREY, current_turn() + 1)
+			let turn = current_turn() + 1
+			log(`Delayed L${LORD_ANDREY} to ${turn}.`)
+			set_lord_calendar(LORD_ANDREY, turn)
+		}
+
+		if (game.scenario === "Watland") {
+			log("Added 2 VP to Veche.")
+			add_veche_vp(2)
+		} else {
+			log("Added 1 VP to Veche.")
+			add_veche_vp(1)
 		}
 	},
 	lord(lord) {
 		push_undo()
-		log("Removed 1VP from Veche.")
+		log("Removed 1 VP from Veche.")
 		add_veche_vp(-1)
 		game.state = "novgorod_veche_done"
 
 		if (is_lord_ready(lord)) {
-			log(`Mustered L${lord}`)
 			push_state("muster_lord_at_seat")
 			game.who = lord
 		}
@@ -3933,7 +3933,7 @@ states.novgorod_veche = {
 		}
 
 		else {
-			log_h3(`L${lord} at %${get_lord_locale(lord)}`)
+			log(`Mustered with L${lord}.`)
 			push_state("levy_muster_lord")
 			game.who = lord
 			game.count = data.lords[lord].lordship
@@ -4163,7 +4163,7 @@ function end_campaign_plan() {
 		for (let i = 0; i < game.pieces.lieutenants.length; i += 2) {
 			let upper = game.pieces.lieutenants[i]
 			let lower = game.pieces.lieutenants[i + 1]
-			log(`>L${upper} over L${lower}`)
+			logi(`L${upper} over L${lower}`)
 		}
 	}
 
@@ -4243,22 +4243,35 @@ function goto_actions() {
 		set_add(game.group, lower)
 
 	if (game.active === TEUTONS) {
-		if (has_global_capability(AOW_TEUTONIC_ORDENSBURGEN))
-			if (is_commandery(get_lord_locale(game.command)))
+		if (has_global_capability(AOW_TEUTONIC_ORDENSBURGEN)) {
+			if (is_commandery(get_lord_locale(game.command))) {
+				log("Ordensburgen.")
 				++game.actions
-		if (game.command === LORD_HEINRICH || game.command === LORD_KNUD_ABEL)
-			if (has_global_capability(AOW_TEUTONIC_TREATY_OF_STENSBY))
+			}
+		}
+		if (game.command === LORD_HEINRICH || game.command === LORD_KNUD_ABEL) {
+			if (has_global_capability(AOW_TEUTONIC_TREATY_OF_STENSBY)) {
+				log("Treaty of Stensby.")
 				++game.actions
+			}
+		}
 	}
 
 	if (game.active === RUSSIANS) {
-		if (has_global_capability(AOW_RUSSIAN_ARCHBISHOPRIC))
-			if (get_lord_locale(game.command) === LOC_NOVGOROD)
+		if (has_global_capability(AOW_RUSSIAN_ARCHBISHOPRIC)) {
+			if (get_lord_locale(game.command) === LOC_NOVGOROD) {
+				log("Archbishopric.")
 				++game.actions
-		if (this_lord_has_russian_druzhina())
+			}
+		}
+		if (this_lord_has_russian_druzhina()) {
+			log("Druzhina.")
 			++game.actions
-		if (this_lord_has_house_of_suzdal())
+		}
+		if (this_lord_has_house_of_suzdal()) {
+			log("House of Suzdal.")
 			++game.actions
+		}
 	}
 
 	resume_actions()
@@ -4386,7 +4399,7 @@ states.actions = {
 
 	use_legate() {
 		push_undo()
-		log(`Used Legate for +1 Command.`)
+		log(`Legate +1 Command.`)
 		game.pieces.legate = LEGATE_ARRIVED
 		game.pieces.legate_selected = 0
 		++game.actions
@@ -4600,7 +4613,7 @@ function march_with_group_2() {
 		spend_march_action(1)
 
 	if (data.ways[way].name)
-		log(`Marched via W${way} to %${to}.`)
+		log(`Marched to %${to} via W${way}.`)
 	else
 		log(`Marched to %${to}.`)
 
@@ -4679,13 +4692,11 @@ function stronghold_capacity(loc) {
 }
 
 function spoil_prov(lord) {
-	log("Discarded Provender.")
 	add_lord_assets(lord, PROV, -1)
 	add_spoils(PROV, 1)
 }
 
 function spoil_loot(lord) {
-	log("Discarded Loot.")
 	add_lord_assets(lord, LOOT, -1)
 	add_spoils(LOOT, 1)
 }
@@ -5132,7 +5143,7 @@ function surrender_stronghold(here) {
 
 	if (here === LOC_NOVGOROD) {
 		if (game.pieces.veche_coin > 0) {
-			log(`Removed ${game.pieces.veche_coin} coin from Veche.`)
+			log(`Removed ${game.pieces.veche_coin} Coin from Veche.`)
 			game.pieces.veche_coin = 0
 		}
 	}
@@ -5341,6 +5352,7 @@ states.supply_lodya = {
 function end_supply_lodya() {
 	push_undo()
 	log_lodya()
+	log(`Supplied from`)
 	init_supply()
 	resume_supply()
 	game.state = "supply_source"
@@ -5770,9 +5782,11 @@ function can_supply() {
 
 function goto_supply() {
 	push_undo()
+
 	if (init_lodya_supply()) {
 		game.state = "supply_lodya"
 	} else {
+		log(`Supplied from`)
 		init_supply()
 		resume_supply()
 		game.state = "supply_source"
@@ -5823,15 +5837,15 @@ states.supply_source = {
 	},
 	locale(source) {
 		if (game.supply.seats.includes(source)) {
-			log(`Supplied from seat at %${source}.`)
+			logi(`Seat at %${source}`)
 			if (is_famine_in_play()) {
-				log("Famine.")
+				logi("Famine!")
 				game.flags.famine = 1
 			}
 			game.supply.available--
 			array_remove_item(game.supply.seats, source)
 		} else {
-			log(`Supplied from seaport at %${source}.`)
+			logi(`Seaport at %${source}`)
 			game.supply.ships--
 		}
 
@@ -6087,7 +6101,10 @@ states.ravage = {
 }
 
 function ravage_location(here, there) {
-	log(`Ravaged at %${there}.`)
+	if (here !== there)
+		log(`Ravaged %${there} with Raiders.`)
+	else
+		log(`Ravaged %${there}.`)
 
 	add_ravaged_marker(there)
 	add_lord_assets(game.command, PROV, 1)
@@ -6142,8 +6159,7 @@ function goto_tax() {
 	resume_actions()
 
 	if (lord_has_capability(game.command, AOW_RUSSIAN_VELIKY_KNYAZ)) {
-		logi("Veliky Knyaz")
-		logii("Restored mustered forces.")
+		log("Veliky Knyaz.")
 		restore_mustered_forces(game.command)
 		push_state("veliky_knyaz")
 		game.who = game.command
@@ -6156,12 +6172,10 @@ states.veliky_knyaz = states.muster_lord_transport
 // === ACTION: SAIL ===
 
 function drop_prov(lord) {
-	log("Discarded Provender.")
 	add_lord_assets(lord, PROV, -1)
 }
 
 function drop_loot(lord) {
-	log("Discarded Loot.")
 	add_lord_assets(lord, LOOT, -1)
 }
 
@@ -6442,7 +6456,7 @@ function can_action_smerdi() {
 
 function goto_smerdi() {
 	push_undo()
-	log("Mustered Serfs.")
+	log("Smerdi.")
 	game.pieces.smerdi --
 	add_lord_forces(game.command, SERFS, 1)
 	spend_action(1)
@@ -7995,10 +8009,10 @@ function goto_strike() {
 	}
 
 	if (is_marsh_in_play())
-		log("Marsh")
+		log("Marsh.")
 
 	if (is_archery_step() && is_hill_in_play())
-		log("Hill")
+		log("Hill.")
 
 	// Generate hits
 	if (!game.battle.storm) {
@@ -8036,7 +8050,7 @@ function goto_strike() {
 	}
 
 	if (did_concede())
-		log("Pursuit halved hits.")
+		log("Pursuit.")
 
 	// Strike left or right or defender
 	if (is_attacker_step())
@@ -8062,7 +8076,7 @@ function goto_strike() {
 		goto_strike_total_hits()
 	} else {
 		if (has_no_strikers_and_strike_targets())
-			log("No targets.")
+			log("No hits or targets.")
 		resume_strike()
 	}
 }
@@ -8117,7 +8131,7 @@ function prompt_left_right() {
 }
 
 function action_left_right(lord) {
-	log(`Targeted L${lord}`)
+	log(`Targeted L${lord}.`)
 	let pos = get_lord_array_position(lord)
 	if (game.battle.fc < 0)
 		game.battle.fc = pos
@@ -8365,7 +8379,7 @@ function goto_assign_hits() {
 		return end_assign_hits()
 
 	if (has_no_strike_targets()) {
-		log("Lost " + format_hits())
+		log("Lost " + format_hits() + ".")
 		return end_assign_hits()
 	}
 
@@ -8551,7 +8565,7 @@ function is_striking(pos) {
 }
 
 function rout_lord(lord) {
-	log(`L${lord} routed!`)
+	log(`L${lord} routed.`)
 
 	let pos = get_lord_array_position(lord)
 
@@ -8729,10 +8743,10 @@ function end_battle() {
 	//	spoils
 
 	log_br()
-	log(`${game.battle.loser} lost battle.`)
+	log(`${game.battle.loser} lost.`)
 
 	if ((game.battle.sally || game.battle.relief) && game.battle.attacker === game.battle.loser) {
-		log("Raid removed siege markers.")
+		log("Raid removed Siege markers.")
 		remove_all_but_one_siege_markers(game.battle.where)
 	}
 
@@ -9441,6 +9455,8 @@ function can_use_hillforts() {
 }
 
 function goto_feed() {
+	log_br()
+
 	// Count how much food each lord needs
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 		if (get_lord_moved(lord)) {
@@ -9472,7 +9488,7 @@ states.hillforts = {
 	},
 	lord(lord) {
 		push_undo()
-		log(`Hillforts fed L${lord}.`)
+		log(`Hillforts.`)
 		feed_lord_skip(lord)
 		if (has_friendly_lord_who_must_feed())
 			game.state = "feed"
@@ -9535,13 +9551,11 @@ states.feed = {
 	},
 	prov(lord) {
 		push_undo()
-		log(`Fed L${lord}.`)
 		add_lord_assets(lord, PROV, -1)
 		feed_lord(lord)
 	},
 	loot(lord) {
 		push_undo()
-		log(`Fed L${lord} with Loot.`)
 		add_lord_assets(lord, LOOT, -1)
 		feed_lord(lord)
 	},
@@ -9552,7 +9566,6 @@ states.feed = {
 	},
 	service_bad(lord) {
 		push_undo()
-		log(`Unfed L${lord}.`)
 		add_lord_service(lord, -1)
 		set_lord_unfed(lord, 0)
 	},
@@ -9584,14 +9597,12 @@ states.feed_lord_shared = {
 	},
 	prov(lord) {
 		push_undo()
-		log(`Fed L${game.who} from L${lord}.`)
 		add_lord_assets(lord, PROV, -1)
 		feed_lord(game.who)
 		resume_feed_lord_shared()
 	},
 	loot(lord) {
 		push_undo()
-		log(`Fed L${game.who} with Loot from L${lord}.`)
 		add_lord_assets(lord, LOOT, -1)
 		feed_lord(game.who)
 		resume_feed_lord_shared()
@@ -9684,27 +9695,21 @@ states.pay = {
 	service: action_select_lord,
 	loot(lord) {
 		push_undo_without_who()
-		if (game.who === lord)
-			log(`Paid L${game.who} with Loot.`)
-		else
-			log(`Paid L${game.who} with Loot from L${lord}.`)
+		log(`Paid L${game.who}.`)
 		add_lord_assets(lord, LOOT, -1)
 		add_lord_service(game.who, 1)
 		resume_pay()
 	},
 	coin(lord) {
 		push_undo_without_who()
-		if (game.who === lord)
-			log(`Paid L${game.who} with Coin.`)
-		else
-			log(`Paid L${game.who} with Coin from L${lord}.`)
+		log(`Paid L${game.who}.`)
 		add_lord_assets(lord, COIN, -1)
 		add_lord_service(game.who, 1)
 		resume_pay()
 	},
 	veche_coin() {
 		push_undo_without_who()
-		log(`Paid L${game.who} with Coin from Veche.`)
+		log(`Paid L${game.who} from Veche.`)
 		game.pieces.veche_coin--
 		add_lord_service(game.who, 1)
 		resume_pay()
@@ -9874,7 +9879,7 @@ function goto_ransom(lord) {
 	push_state("ransom")
 	game.who = lord
 	game.count = data.lords[lord].service
-	log(`Ransomed L${lord}`)
+	log(`Ransomed L${lord}.`)
 }
 
 function end_ransom() {
@@ -9911,7 +9916,6 @@ states.ransom = {
 		}
 	},
 	lord(lord) {
-		logi(`Coin to L${lord}.`)
 		add_lord_assets(lord, COIN, game.count)
 		end_ransom()
 	},
@@ -9936,10 +9940,11 @@ function count_enemy_ravaged() {
 
 function goto_growth() {
 	game.count = count_enemy_ravaged() >> 1
+	log_br()
 	if (game.active === TEUTONS)
-		log_h3("Teutonic Growth")
+		log("Teutonic Growth")
 	else
-		log_h3("Russian Growth")
+		log("Russian Growth")
 	if (game.count === 0) {
 		logi("Nothing")
 		end_growth()
@@ -10013,7 +10018,6 @@ function goto_end_campaign() {
 	set_active(P1)
 
 	if (current_turn() === 8 || current_turn() === 16) {
-		log_h2("Growth")
 		goto_growth()
 	} else {
 		goto_game_end()
@@ -10066,16 +10070,8 @@ function goto_game_end() {
 function goto_plow_and_reap() {
 	let turn = current_turn()
 	if (turn === 2 || turn === 10 || turn === 6 || turn === 14) {
-		if (game.active === TEUTONS)
-			log_h2("Teutonic Plow, Reap, and Wastage")
-		else
-			log_h2("Russian Plow, Reap, and Wastage")
 		game.state = "plow_and_reap"
 	} else {
-		if (game.active === TEUTONS)
-			log_h2("Teutonic Wastage")
-		else
-			log_h2("Russian Wastage")
 		end_plow_and_reap()
 	}
 }
@@ -10190,7 +10186,6 @@ function prompt_wastage(lord) {
 
 function action_wastage(lord, type) {
 	push_undo()
-	log(`L${lord} discarded ${ASSET_TYPE_NAME[type]}.`)
 	set_lord_moved(lord, 0)
 	add_lord_assets(lord, type, -1)
 }
@@ -10221,7 +10216,6 @@ states.wastage = {
 	card(c) {
 		push_undo()
 		let lord = find_lord_capability(c)
-		log(`L${lord} wasted C${c}.`)
 		set_lord_moved(lord, 0)
 		discard_lord_capability(lord, c)
 	},
@@ -10294,7 +10288,6 @@ states.reset = {
 		} else {
 			let lord = find_lord_capability(c)
 			if (lord !== NOBODY) {
-				log(`L${lord} discarded C${c}.`)
 				discard_lord_capability(lord, c)
 			}
 		}
