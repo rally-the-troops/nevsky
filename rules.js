@@ -9723,8 +9723,10 @@ function end_ransom_disband() {
 function end_disband() {
 	clear_undo()
 
-	if (check_campaign_victory())
-		return
+	if (is_campaign_phase()) {
+		if (check_campaign_victory())
+			return
+	}
 
 	set_active_enemy()
 	if (is_campaign_phase()) {
