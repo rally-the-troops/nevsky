@@ -20,7 +20,7 @@ header.your_turn { background-color: orange; }
 #role_Teutons .role_name { background-color: #e1e6e8; }
 #role_Russians .role_name { background-color: #e1d6c1; }
 #turn_info { background-color: gainsboro; }
-.role_supply { float: right; }
+.role_held { float: right; }
 
 #log { background-color: whitesmoke; }
 #log .h1 { background-color: silver; font-weight: bold; padding-top:2px; padding-bottom:2px; text-align: center; }
@@ -1240,12 +1240,14 @@ body.shift .mustered_vassals {
 		<div class="role" id="role_Teutons">
 			<div class="role_name">
 				Teutons
+				<div class="role_held">0 Held</div>
 				<div class="role_user">-</div>
 			</div>
 		</div>
 		<div class="role" id="role_Russians">
 			<div class="role_name">
 				Russians
+				<div class="role_held">0 Held</div>
 				<div class="role_user">-</div>
 			</div>
 		</div>

@@ -567,6 +567,9 @@ const ui = {
 	hand_panel: document.getElementById("hand_panel"),
 	hand: document.getElementById("hand"),
 
+	held1: document.querySelector("#role_Teutons .role_held"),
+	held2: document.querySelector("#role_Russians .role_held"),
+
 	capabilities1: document.getElementById("capabilities1"),
 	capabilities2: document.getElementById("capabilities2"),
 	command: document.getElementById("command"),
@@ -1735,6 +1738,9 @@ function on_update() {
 		ui.elr2.classList = `marker circle enemy_lords_removed russian ${view.pieces.elr2}`
 	else
 		ui.elr2.classList = `marker circle enemy_lords_removed russian hide`
+
+	ui.held1.textContent = `${view.held1} Held`
+	ui.held2.textContent = `${view.held2} Held`
 
 	update_plan()
 	update_cards()

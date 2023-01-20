@@ -10579,6 +10579,9 @@ exports.view = function (state, current) {
 		pieces: game.pieces,
 		battle: game.battle,
 
+		held1: game.hand1.length,
+		held2: game.hand2.length,
+
 		command: game.command,
 		hand: null,
 		plan: null,
