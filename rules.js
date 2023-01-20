@@ -973,6 +973,14 @@ function is_russian_lord(lord) {
 	return lord >= first_p2_lord && lord <= last_p2_lord
 }
 
+function is_p1_lord(lord) {
+	return lord >= first_p1_lord && lord <= last_p1_lord
+}
+
+function is_p2_lord(lord) {
+	return lord >= first_p2_lord && lord <= last_p2_lord
+}
+
 function is_friendly_lord(lord) {
 	return lord >= first_friendly_lord && lord <= last_friendly_lord
 }
@@ -7103,8 +7111,11 @@ states.bridge = {
 	lord(lord) {
 		log(`Played E${game.what} on L${lord}.`)
 		if (!game.battle.bridge)
-			game.battle.bridge = []
-		set_add(game.battle.bridge, lord)
+			game.battle.bridge = { lord1: NOBODY, lord2: NOBODY, n1: 0, n2: 0 }
+		if (is_p1_lord(lord))
+			game.battle.bridge.lord1 = lord
+		else
+			game.battle.bridge.lord2 = lord
 		resume_battle_events()
 	},
 }
@@ -7547,29 +7558,105 @@ function count_melee_hits(lord) {
 	return count_horse_hits(lord) + count_foot_hits(lord)
 }
 
+function assemble_melee_forces(lord) {
+	let forces = {
+		knights: get_lord_forces(lord, KNIGHTS),
+		sergeants: get_lord_forces(lord, SERGEANTS),
+		light_horse: get_lord_forces(lord, LIGHT_HORSE),
+		men_at_arms: get_lord_forces(lord, MEN_AT_ARMS),
+		militia: get_lord_forces(lord, MILITIA),
+		serfs: get_lord_forces(lord, SERFS),
+	}
+
+	if (is_marsh_in_play()) {
+		forces.knights = 0
+		forces.sergeants = 0
+		forces.light_horse = 0
+	}
+
+	if (game.battle.bridge && (game.battle.bridge.lord1 === lord || game.battle.bridge.lord12 === lord)) {
+		let n = is_p1_lord(lord) ? game.battle.bridge.n1 : game.battle.bridge.n2
+
+		console.log("FORCES1", forces, n)
+
+		log(`Bridge L${lord}`)
+
+		if (is_horse_step()) {
+			// Pick at most 1 LH if there are any Foot (for +1/2 rounding benefit)
+			if (forces.men_at_arms + forces.militia + forces.serfs > 0 && forces.light_horse > 1)
+				forces.light_horse = 1
+
+			if (forces.knights >= n)
+				forces.knights = n
+			n -= forces.knights
+			if (forces.sergeants >= n)
+				forces.sergeants = n
+			n -= forces.sergeants
+			if (forces.light_horse >= n)
+				forces.light_horse = n
+			n -= forces.light_horse
+
+			if (forces.knights > 0) logi(`${forces.knights} Knights`)
+			if (forces.sergeants > 0) logi(`${forces.sergeants} Sergeants`)
+			if (forces.light_horse > 0) logi(`${forces.light_horse} Light Horse`)
+			if (forces.knights + forces.sergeants + forces.light_horse === 0) logi(`None`)
+		}
+
+		if (is_foot_step()) {
+			if (forces.men_at_arms >= n)
+				forces.men_at_arms = n
+			n -= forces.men_at_arms
+			if (forces.militia >= n)
+				forces.militia = n
+			n -= forces.militia
+			if (forces.serfs >= n)
+				forces.serfs = n
+			n -= forces.serfs
+
+			if (forces.men_at_arms > 0) logi(`${forces.men_at_arms} Men-at-Arms`)
+			if (forces.militia > 0) logi(`${forces.militia} Militia`)
+			if (forces.serfs > 0) logi(`${forces.serfs} Serfs`)
+			if (forces.men_at_arms + forces.militia + forces.serfs === 0) logi(`None`)
+		}
+
+		console.log("FORCES2", forces, n)
+
+		if (is_p1_lord(lord))
+			game.battle.bridge.n1 = n
+		else
+			game.battle.bridge.n2 = n
+	}
+
+	return forces
+}
+
 function count_horse_hits(lord) {
 	let hits = 0
 	if (!is_marsh_in_play()) {
+		let forces = assemble_melee_forces(lord)
+
+		if (game.battle.storm)
+			hits += forces.knights << 1
+		else
+			hits += forces.knights << 2
+		hits += forces.sergeants << 1
+		hits += forces.light_horse
+
 		if (game.battle.field_organ === lord && game.battle.round === 1) {
 			log(`Field Organ L${lord}.`)
-			hits += get_lord_forces(lord, KNIGHTS) << 1
-			hits += get_lord_forces(lord, SERGEANTS) << 1
+			hits += forces.knights << 1
+			hits += forces.sergeants << 1
 		}
-		if (game.battle.storm)
-			hits += get_lord_forces(lord, KNIGHTS) << 1
-		else
-			hits += get_lord_forces(lord, KNIGHTS) << 2
-		hits += get_lord_forces(lord, SERGEANTS) << 1
-		hits += get_lord_forces(lord, LIGHT_HORSE)
 	}
 	return hits
 }
 
 function count_foot_hits(lord) {
+	let forces = assemble_melee_forces(lord)
 	let hits = 0
-	hits += get_lord_forces(lord, MEN_AT_ARMS) << 1
-	hits += get_lord_forces(lord, MILITIA)
-	hits += get_lord_forces(lord, SERFS)
+	hits += forces.men_at_arms << 1
+	hits += forces.militia
+	hits += forces.serfs
 	return hits
 }
 
@@ -7643,6 +7730,14 @@ function is_archery_step() {
 
 function is_melee_step() {
 	return game.battle.step >= 2
+}
+
+function is_horse_step() {
+	return game.battle.step === 2 || game.battle.step === 3
+}
+
+function is_foot_step() {
+	return game.battle.step === 4 || game.battle.step === 5
 }
 
 function did_concede() {
@@ -7852,6 +7947,12 @@ function format_hits() {
 
 function goto_first_strike() {
 	game.battle.step = 0
+
+	if (game.battle.bridge) {
+		game.battle.bridge.n1 = game.battle.round
+		game.battle.bridge.n2 = game.battle.round
+	}
+
 	if (filled(RG1) || filled(RG2) || filled(RG3))
 		game.battle.rearguard = 1
 	else
@@ -7900,9 +8001,6 @@ function goto_strike() {
 
 	if (is_archery_step() && is_hill_in_play())
 		log("Hill")
-
-	if (is_melee_step() && game.battle.bridge)
-		log("TODO: Bridge")
 
 	// Generate hits
 	if (!game.battle.storm) {

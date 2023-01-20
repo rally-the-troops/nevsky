@@ -1432,12 +1432,10 @@ function update_cards() {
 		ui.lord_events[ix].replaceChildren()
 		if (view.battle && view.battle.field_organ === ix)
 			ui.lord_events[ix].appendChild(ui.cards[EVENT_TEUTONIC_FIELD_ORGAN])
-		if (view.battle && view.battle.bridge && set_has(view.battle.bridge, ix)) {
-			if (is_teutonic_lord(ix))
-				ui.lord_events[ix].appendChild(ui.cards[EVENT_RUSSIAN_BRIDGE])
-			else
-				ui.lord_events[ix].appendChild(ui.cards[EVENT_TEUTONIC_BRIDGE])
-		}
+		if (view.battle && view.battle.bridge && view.battle.bridge.lord1 === ix)
+			ui.lord_events[ix].appendChild(ui.cards[EVENT_RUSSIAN_BRIDGE])
+		if (view.battle && view.battle.bridge && view.battle.bridge.lord2 === ix)
+			ui.lord_events[ix].appendChild(ui.cards[EVENT_TEUTONIC_BRIDGE])
 	}
 }
 
