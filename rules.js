@@ -9916,15 +9916,12 @@ function goto_end_campaign() {
 
 	set_active(P1)
 
-	if (game.scenario === "Crusade on Novgorod") {
-		if (game.turn === 8 || game.turn === 16) {
-			log_h2("Growth")
-			goto_growth()
-			return
-		}
+	if (current_turn() === 8 || current_turn() === 16) {
+		log_h2("Growth")
+		goto_growth()
+	} else {
+		goto_game_end()
 	}
-
-	goto_game_end()
 }
 
 function count_vp1() {
