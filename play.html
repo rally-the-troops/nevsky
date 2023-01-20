@@ -542,6 +542,8 @@ body.shift .mustered_vassals {
 .marker.ravaged.russian { background-image: url(images/marker_ravaged_russian.png) }
 .marker.siege.teutonic { background-image: url(images/marker_siege_teutonic.png) }
 .marker.siege.russian { background-image: url(images/marker_siege_russian.png) }
+.marker.enemy_lords_removed.teutonic { background-image: url(images/marker_enemy_lords_removed_teutonic.png) }
+.marker.enemy_lords_removed.russian { background-image: url(images/marker_enemy_lords_removed_russian.png) }
 .marker.victory.teutonic { background-image: url(images/marker_victory_teutonic.png) }
 .marker.victory.russian { background-image: url(images/marker_victory_russian.png) }
 .marker.victory.half.teutonic { background-image: url(images/marker_victory_half_teutonic.png) }
@@ -806,7 +808,10 @@ body.shift .mustered_vassals {
 #vp2.stack.half ~ #vp1.stack:not(.half) { transform: translate(-12px,-30px); }
 #vp2.stack:not(.half) ~ #vp1.stack.half { transform: translate(12px,-30px); }
 
-.marker.victory, .marker.turn {
+.marker.russian.enemy_lords_removed { transform: translate(-12px,18px); }
+.marker.teutonic.enemy_lords_removed { transform: translate(12px,18px); }
+
+.marker.victory, .marker.turn, .marker.enemy_lords_removed {
 	position: absolute;
 }
 
@@ -933,6 +938,7 @@ body.shift .mustered_vassals {
 }
 
 .marker.russian,
+.marker.teutonic.enemy_lords_removed,
 .service_marker.russian.lord {
 	background-color: #fff;
 	border-color: #eee #ccc #ccc #eee;
@@ -1244,11 +1250,11 @@ body.shift .mustered_vassals {
 <div id="boxes"></div>
 
 <div id="pieces">
+	<div id="elr1" class="marker circle enemy_lords_removed teutonic hide"></div>
+	<div id="elr2" class="marker circle enemy_lords_removed russian hide"></div>
 	<div id="turn" class="hide marker circle turn levy t1"></div>
 	<div id="vp2" class="hide marker circle victory russian v0 stack"></div>
 	<div id="vp1" class="hide marker circle victory teutonic v0 stack"></div>
-	<div id="elr2" class="marker circle enemy_lords_removed russian v9"></div>
-	<div id="elr1" class="marker circle enemy_lords_removed teutonic v10"></div>
 	<div id="legate" class="hide"></div>
 	<div id="smerdi" class="box"></div>
 	<div id="castle11" class="hide marker rectangle castle teutonic"/></div>

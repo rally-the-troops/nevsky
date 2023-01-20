@@ -2,6 +2,8 @@
 
 // TODO: Bridge - kn, sgt, 1x lh, maa, militia, serf, lh, ah
 
+// PLESKAU: Enemy Lords Removed marker and VP
+
 // TODO: feed x2 marker
 // TODO: end marker
 
@@ -1671,6 +1673,10 @@ exports.setup = function (seed, scenario, options) {
 
 function setup_pleskau() {
 	game.turn = 1 << 1
+
+	// Count Enemy Lords Removed in this scenario
+	game.pieces.elr1 = 0
+	game.pieces.elr2 = 0
 
 	// Remove all No Event cards in this scenario
 	game.no1 = 0
@@ -9666,6 +9672,13 @@ function disband_lord(lord, permanently = false) {
 		set_lord_service(lord, NEVER)
 	}
 
+	if (game.scenario === "Pleskau" || game.scenario === "Pleskau (Quickstart)") {
+		if (is_russian_lord(lord))
+			game.pieces.elr1 ++
+		else
+			game.pieces.elr2 ++
+	}
+
 	remove_lieutenant(lord)
 
 	// Smerdi - serfs go back to card
@@ -9925,7 +9938,7 @@ function goto_end_campaign() {
 }
 
 function count_vp1() {
-	let vp = 0
+	let vp = game.pieces.elr1 << 1
 	vp += game.pieces.castles1.length << 1
 	for (let loc of game.pieces.conquered)
 		if (is_p2_locale(loc))
@@ -9937,7 +9950,7 @@ function count_vp1() {
 }
 
 function count_vp2() {
-	let vp = 0
+	let vp = game.pieces.elr2 << 1
 	vp += game.pieces.veche_vp << 1
 	vp += game.pieces.castles2.length << 1
 	for (let loc of game.pieces.conquered)

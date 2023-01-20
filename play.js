@@ -378,9 +378,8 @@ function is_p2_locale(loc) {
 }
 
 function count_vp1() {
-	let vp = 0
-	for (let loc of view.pieces.castles1)
-		vp += 2
+	let vp = view.pieces.elr1 << 1
+	vp += view.pieces.castles1.length << 1
 	for (let loc of view.pieces.conquered)
 		if (is_p2_locale(loc))
 			vp += data.locales[loc].vp << 1
@@ -391,9 +390,9 @@ function count_vp1() {
 }
 
 function count_vp2() {
-	let vp = view.pieces.veche_vp * 2
-	for (let loc of view.pieces.castles2)
-		vp += 2
+	let vp = view.pieces.elr2 << 1
+	vp += view.pieces.veche_vp << 1
+	vp += view.pieces.castles2.length << 1
 	for (let loc of view.pieces.conquered)
 		if (is_p1_locale(loc))
 			vp += data.locales[loc].vp << 1
@@ -567,7 +566,8 @@ const ui = {
 	capabilities2: document.getElementById("capabilities2"),
 	command: document.getElementById("command"),
 	turn: document.getElementById("turn"),
-	end: document.getElementById("end"),
+	elr1: document.getElementById("elr1"),
+	elr2: document.getElementById("elr2"),
 	vp1: document.getElementById("vp1"),
 	vp2: document.getElementById("vp2"),
 	court1_header: document.getElementById("court1_header"),
@@ -1568,6 +1568,15 @@ function on_update() {
 		else
 			ui.vp2.className = `marker circle victory russian v${vp2>>1}`
 	}
+
+	if (view.pieces.elr1)
+		ui.elr1.classList = `marker circle enemy_lords_removed teutonic ${view.pieces.elr1}`
+	else
+		ui.elr1.classList = `marker circle enemy_lords_removed teutonic hide`
+	if (view.pieces.elr2)
+		ui.elr2.classList = `marker circle enemy_lords_removed russian ${view.pieces.elr2}`
+	else
+		ui.elr2.classList = `marker circle enemy_lords_removed russian hide`
 
 	update_plan()
 	update_cards()
