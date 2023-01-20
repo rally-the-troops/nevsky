@@ -1965,7 +1965,7 @@ function is_event_in_play(c) {
 }
 
 function is_ravens_rock_in_play() {
-	if (game.battle.round <= 1) {
+	if (game.battle.round <= 1 && is_melee_step()) {
 		if (game.active === RUSSIANS)
 			return is_event_in_play(EVENT_RUSSIAN_RAVENS_ROCK)
 	}
