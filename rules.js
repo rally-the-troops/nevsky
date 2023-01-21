@@ -44,7 +44,6 @@ exports.roles = [ P1, P2 ]
 
 exports.scenarios = [
 	"Pleskau",
-	"Watland (1st ed)",
 	"Watland",
 	"Peipus",
 	"Return of the Prince",
@@ -56,7 +55,6 @@ exports.scenarios = [
 
 const scenario_last_turn = {
 	"Pleskau": 2,
-	"Watland (1st ed)": 8,
 	"Watland": 8,
 	"Peipus": 16,
 	"Return of the Prince": 16,
@@ -1644,11 +1642,8 @@ exports.setup = function (seed, scenario, options) {
 		case "Pleskau":
 			setup_pleskau()
 			break
-		case "Watland (1st ed)":
-			setup_watland_1st_ed()
-			break
 		case "Watland":
-			setup_watland_2nd_ed()
+			setup_watland()
 			break
 		case "Peipus":
 			setup_peipus()
@@ -1696,32 +1691,7 @@ function setup_pleskau() {
 	set_lord_cylinder_on_calendar(LORD_DOMASH, 1)
 }
 
-function setup_watland_1st_ed() {
-	game.turn = 4 << 1
-
-	game.pieces.veche_vp = 1
-	game.pieces.veche_coin = 1
-
-	set_add(game.pieces.conquered, LOC_IZBORSK)
-	set_add(game.pieces.conquered, LOC_PSKOV)
-	set_add(game.pieces.ravaged, LOC_PSKOV)
-	set_add(game.pieces.ravaged, LOC_DUBROVNO)
-
-	muster_lord(LORD_ANDREAS, LOC_FELLIN, 7)
-	muster_lord(LORD_KNUD_ABEL, LOC_WESENBERG, 6)
-	muster_lord(LORD_YAROSLAV, LOC_PSKOV, 5)
-	muster_lord(LORD_DOMASH, LOC_NOVGOROD, 7)
-
-	set_lord_cylinder_on_calendar(LORD_HEINRICH, 4)
-	set_lord_cylinder_on_calendar(LORD_RUDOLF, 4)
-	set_lord_cylinder_on_calendar(LORD_VLADISLAV, 4)
-	set_lord_cylinder_on_calendar(LORD_KARELIANS, 4)
-	set_lord_cylinder_on_calendar(LORD_ANDREY, 5)
-	set_lord_cylinder_on_calendar(LORD_ALEKSANDR, 7)
-	set_lord_cylinder_on_calendar(LORD_HERMANN, 8)
-}
-
-function setup_watland_2nd_ed() {
+function setup_watland() {
 	game.turn = 4 << 1
 
 	game.pieces.veche_vp = 1
@@ -4045,20 +4015,15 @@ states.novgorod_veche = {
 			log(`Declined L${LORD_ALEKSANDR} to ${turn}.`)
 			set_lord_calendar(LORD_ALEKSANDR, turn)
 		}
+
 		if (is_lord_ready(LORD_ANDREY)) {
 			let turn = current_turn() + 1
 			log(`Declined L${LORD_ANDREY} to ${turn}.`)
 			set_lord_calendar(LORD_ANDREY, turn)
 		}
 
-		if (game.scenario === "Watland") {
-			// Decline of Andrey
-			log("Added 2 VP to Veche.")
-			add_veche_vp(2)
-		} else {
-			log("Added 1 VP to Veche.")
-			add_veche_vp(1)
-		}
+		log("Added 1 VP to Veche.")
+		add_veche_vp(1)
 	},
 	lord(lord) {
 		push_undo()
@@ -10416,10 +10381,21 @@ function goto_game_end() {
 	if (current_turn() === scenario_last_turn[game.scenario]) {
 		let vp1 = count_vp1()
 		let vp2 = count_vp2()
+
+		if (game.scenario === "Watland") {
+			if (vp1 < 20)
+				goto_game_over(P1, `Russians won \u2014 Teutons had less than 10 VP.`)
+			else if (vp1 < vp2 * 2)
+				goto_game_over(P1, `Russians won \u2014 Teutons had less than double Russian VP.`)
+			else
+				goto_game_over(P2, `Teutons won with ${frac(vp1)} VP vs ${frac(vp2)} VP.`)
+			return
+		}
+
 		if (vp1 > vp2)
-			goto_game_over(P1, `${P1} won with ${frac(vp1)} VP.`)
+			goto_game_over(P1, `${P1} won with ${frac(vp1)} VP vs ${frac(vp2)} VP.`)
 		else if (vp2 > vp1)
-			goto_game_over(P2, `${P2} won with ${frac(vp2)} VP.`)
+			goto_game_over(P2, `${P2} won with ${frac(vp2)} VP vs ${frac(vp1)} VP.`)
 		else
 			goto_game_over("Draw", "The game ended in a draw.")
 	} else {
