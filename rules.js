@@ -6696,15 +6696,28 @@ function start_battle() {
 
 	log_h2(`Battle at %${here}`)
 
-	// TODO: array <= 3 attacking lords automatically
-
 	init_battle(here, 0, 0)
 
-	for (let lord = first_lord; lord <= last_lord; ++lord) {
+	// All attacking lords to reserve
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 		if (get_lord_locale(lord) === here && !is_lord_besieged(lord)) {
 			set_lord_moved(lord, 1)
 			if (lord !== game.command)
 				set_add(game.battle.reserves, lord)
+		}
+	}
+
+	// Array attacking lords if fewer than 3.
+	if (game.battle.reserves.length === 2)
+		game.battle.array[A3] = game.battle.reserves.pop()
+	if (game.battle.reserves.length === 1)
+		game.battle.array[A1] = game.battle.reserves.pop()
+
+	// All defending lords to reserve
+	for (let lord = first_enemy_lord; lord <= last_enemy_lord; ++lord) {
+		if (get_lord_locale(lord) === here && !is_lord_besieged(lord)) {
+			set_lord_moved(lord, 1)
+			set_add(game.battle.reserves, lord)
 		}
 	}
 
