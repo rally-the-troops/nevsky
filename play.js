@@ -1820,10 +1820,10 @@ function on_update() {
 	action_button("concede", "Concede")
 	action_button("battle", "Battle")
 
-	action_button("end_actions", "End Actions")
 	action_button("end_array", "End Array")
 	action_button("end_avoid_battle", "End Avoid Battle")
 	action_button("end_call_to_arms", "End Call to Arms")
+	action_button("end_command", "End Command")
 	action_button("end_disband", "End Disband")
 	action_button("end_discard", "End Discard")
 	action_button("end_feed", "End Feed")

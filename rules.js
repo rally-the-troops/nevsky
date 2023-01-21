@@ -2871,9 +2871,9 @@ function end_heinrich_sees_the_curia() {
 	end_held_event()
 
 	// No more actions if Heinrich is current command card
-	if (game.state === "actions" && game.command === LORD_HEINRICH) {
+	if (game.state === "command" && game.command === LORD_HEINRICH) {
 		spend_all_actions()
-		resume_actions()
+		resume_command()
 		update_supply_possible()
 	}
 
@@ -3324,13 +3324,14 @@ function resume_levy_muster_lord() {
 states.levy_muster_lord = {
 	inactive: "Levy",
 	prompt() {
-		view.prompt = `Levy: Muster with ${lord_name[game.who]}.`
+		if (game.count === 1)
+			view.prompt = `Levy: ${lord_name[game.who]} has ${game.count} action.`
+		else
+			view.prompt = `Levy: ${lord_name[game.who]} has ${game.count} actions.`
 
 		prompt_held_event_lordship()
 
 		if (game.count > 0) {
-			view.prompt += ` ${game.count} Lordship left.`
-
 			// Roll to muster Ready Lord at Seat
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 				if (lord === LORD_ALEKSANDR)
@@ -3368,8 +3369,6 @@ states.levy_muster_lord = {
 
 			// Add Capability
 			view.actions.capability = 1
-		} else {
-			view.prompt += " All done."
 		}
 
 		view.actions.done = 1
@@ -4125,6 +4124,7 @@ function plan_can_make_lieutenant(plan, upper, first, last) {
 }
 
 states.campaign_plan = {
+	inactive: "Plan",
 	prompt(current) {
 		let plan = current === P1 ? game.plan1 : game.plan2
 		let first = current === P1 ? first_p1_lord : first_p2_lord
@@ -4260,7 +4260,7 @@ function goto_command_activation() {
 		goto_command_activation()
 	} else {
 		log_h2(`L${game.command} at %${get_lord_locale(game.command)}`)
-		goto_actions()
+		goto_command()
 	}
 }
 
@@ -4288,7 +4288,7 @@ function is_first_march() {
 	return game.flags.first_march
 }
 
-function goto_actions() {
+function goto_command() {
 	game.actions = data.lords[game.command].command
 
 	game.flags.first_action = 1
@@ -4332,12 +4332,12 @@ function goto_actions() {
 		}
 	}
 
-	resume_actions()
+	resume_command()
 	update_supply_possible()
 }
 
-function resume_actions() {
-	game.state = "actions"
+function resume_command() {
+	game.state = "command"
 }
 
 function spend_action(cost) {
@@ -4357,7 +4357,7 @@ function spend_all_actions() {
 	game.actions = 0
 }
 
-function end_actions() {
+function end_command() {
 	log_br()
 
 	game.group = 0
@@ -4387,10 +4387,13 @@ function this_lord_has_house_of_suzdal() {
 	return false
 }
 
-states.actions = {
-	inactive: "Actions",
+states.command = {
+	inactive: "Command",
 	prompt() {
-		view.prompt = `${lord_name[game.command]} has ${game.actions} actions.`
+		if (game.actions === 1)
+			view.prompt = `Command: ${lord_name[game.command]} has ${game.actions} action.`
+		else
+			view.prompt = `Command: ${lord_name[game.command]} has ${game.actions} actions.`
 
 		view.group = game.group
 
@@ -4414,7 +4417,7 @@ states.actions = {
 		if (game.actions > 0)
 			view.actions.pass = 1
 		else
-			view.actions.end_actions = 1
+			view.actions.end_command = 1
 
 		if (is_lord_besieged(game.command)) {
 			if (can_action_sally())
@@ -4470,9 +4473,9 @@ states.actions = {
 		spend_all_actions()
 	},
 
-	end_actions() {
+	end_command() {
 		clear_undo()
-		end_actions()
+		end_command()
 	},
 
 	stonemasons: goto_stonemasons,
@@ -4712,7 +4715,7 @@ function march_with_group_3() {
 	if (here === NOWHERE) {
 		game.march = 0
 		spend_all_actions()
-		resume_actions()
+		resume_command()
 		update_supply_possible()
 		return
 	}
@@ -4730,7 +4733,7 @@ function march_with_group_3() {
 
 	game.march = 0
 
-	resume_actions()
+	resume_command()
 	update_supply_possible()
 }
 
@@ -5263,7 +5266,7 @@ function end_siege() {
 			set_lord_moved(lord, 1)
 
 	spend_all_actions()
-	resume_actions()
+	resume_command()
 	update_supply_possible()
 }
 
@@ -5933,7 +5936,7 @@ states.supply_source = {
 
 function end_supply() {
 	spend_action(1)
-	resume_actions()
+	resume_command()
 	game.supply = 1 // supply is possible!
 }
 
@@ -6068,7 +6071,7 @@ function goto_forage() {
 	log(`Foraged at %${here}`)
 	add_lord_assets(game.command, PROV, 1)
 	spend_action(1)
-	resume_actions()
+	resume_command()
 }
 
 // === ACTION: RAVAGE ===
@@ -6204,7 +6207,7 @@ function ravage_location(here, there) {
 		spend_action(2)
 	else
 		spend_action(1)
-	resume_actions()
+	resume_command()
 }
 
 // === ACTION: TAX ===
@@ -6238,7 +6241,7 @@ function goto_tax() {
 	add_lord_assets(game.command, COIN, 1)
 
 	spend_all_actions()
-	resume_actions()
+	resume_command()
 
 	if (lord_has_capability(game.command, AOW_RUSSIAN_VELIKY_KNYAZ)) {
 		logcap(AOW_RUSSIAN_VELIKY_KNYAZ)
@@ -6371,7 +6374,7 @@ states.sail = {
 			conquer_trade_route(to)
 
 		spend_all_actions()
-		resume_actions()
+		resume_command()
 		update_supply_possible()
 	},
 }
@@ -6434,7 +6437,7 @@ function end_stonemasons() {
 	add_friendly_castle(here)
 	remove_walls(here)
 	spend_all_actions()
-	resume_actions()
+	resume_command()
 }
 
 // === ACTION: STONE KREMLIN (CAPABILITY) ===
@@ -6524,7 +6527,7 @@ function end_stone_kremlin() {
 	log(`Built Walls at %${here}.`)
 	add_walls(here)
 	spend_all_actions()
-	resume_actions()
+	resume_command()
 }
 
 // === ACTION: SMERDI (CAPABILITY) ===
@@ -6545,7 +6548,7 @@ function goto_smerdi() {
 	game.pieces.smerdi --
 	add_lord_forces(game.command, SERFS, 1)
 	spend_action(1)
-	resume_actions()
+	resume_command()
 }
 
 // === BATTLE ===
@@ -9643,11 +9646,11 @@ function goto_battle_aftermath() {
 		march_with_group_3()
 	} else if (game.battle.storm) {
 		game.battle = 0
-		resume_actions()
+		resume_command()
 	} else {
 		remove_legate_if_endangered(game.battle.where)
 		game.battle = 0
-		resume_actions()
+		resume_command()
 	}
 }
 
