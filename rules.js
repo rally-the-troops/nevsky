@@ -7969,6 +7969,7 @@ function goto_first_strike() {
 		game.battle.rearguard = 1
 	else
 		game.battle.rearguard = 0
+
 	goto_strike()
 }
 
@@ -8089,8 +8090,7 @@ function resume_strike() {
 	else if (game.battle.fc < 0 || game.battle.rc < 0)
 		game.state = "strike_left_right"
 	else
-		// TODO: auto-strike if only one group?
-		game.state = "strike_group"
+		goto_strike_group()
 }
 
 function prompt_target_2(S1, T1, T3) {
@@ -8156,6 +8156,41 @@ states.assign_left_right = {
 	},
 }
 
+function goto_strike_group() {
+	game.state = "strike_group"
+
+	// Auto-strike if only one group
+	let first_striker = -1
+	let first_target = -1
+	let target
+	for (let pos of current_strike_positions()) {
+		if (has_strike(pos)) {
+			if ((pos === SA1 || pos === SA2 || pos === SA3) && is_sa_without_rg())
+				target = 100 // just a unique target id
+			else
+				target = find_strike_target(pos)
+			if (first_target < 0) {
+				first_striker = pos
+				first_target = target
+			} else if (first_target !== target) {
+				return // more than one target!
+			}
+		}
+	}
+
+	select_strike_group(first_striker)
+}
+
+function select_strike_group(pos) {
+	if ((pos === SA1 || pos === SA2 || pos === SA3) && is_sa_without_rg()) {
+		game.battle.strikers = [ SA1, SA2, SA3 ]
+		game.battle.rc = strike_defender_row()
+	} else {
+		game.battle.strikers = create_strike_group(pos)
+	}
+	goto_strike_total_hits()
+}
+
 states.strike_group = {
 	prompt() {
 		view.prompt = `${format_strike_step()}: Strike with a Lord.`
@@ -8164,14 +8199,7 @@ states.strike_group = {
 				gen_action_lord(game.battle.array[pos])
 	},
 	lord(lord) {
-		let pos = get_lord_array_position(lord)
-		if ((pos === SA1 || pos === SA2 || pos === SA3) && is_sa_without_rg()) {
-			game.battle.strikers = [ SA1, SA2, SA3 ]
-			game.battle.rc = strike_defender_row()
-		} else {
-			game.battle.strikers = create_strike_group(pos)
-		}
-		goto_strike_total_hits()
+		select_strike_group(get_lord_array_position(lord))
 	},
 }
 
