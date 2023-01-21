@@ -3070,12 +3070,11 @@ function discard_global_capability(c) {
 	}
 
 	if (c === AOW_TEUTONIC_CRUSADE) {
-		// TODO: make disband vassals manual state?
-		for (let v of data.summer_crusaders) {
-			if (is_vassal_mustered(v))
-				disband_vassal(v)
-			game.pieces.vassals[v] = VASSAL_UNAVAILABLE
-		}
+		for (let v of data.summer_crusaders)
+			if (is_vassal_ready(v))
+				game.pieces.vassals[v] = VASSAL_UNAVAILABLE
+		if (has_summer_crusaders())
+			push_state("disband_summer_crusaders")
 	}
 
 	if (c === AOW_RUSSIAN_SMERDI) {
@@ -3083,13 +3082,100 @@ function discard_global_capability(c) {
 	}
 
 	if (c === AOW_RUSSIAN_STEPPE_WARRIORS) {
-		// TODO: make disband vassals manual state?
-		for (let v of data.steppe_warriors) {
-			if (is_vassal_mustered(v))
-				disband_vassal(v)
-			game.pieces.vassals[v] = VASSAL_UNAVAILABLE
-		}
+		for (let v of data.steppe_warriors)
+			if (is_vassal_ready(v))
+				game.pieces.vassals[v] = VASSAL_UNAVAILABLE
+		if (has_steppe_warriors())
+			push_state("disband_steppe_warriors")
 	}
+}
+
+function has_summer_crusaders() {
+	for (let v of data.summer_crusaders)
+		if (is_vassal_mustered(v))
+			return true
+	return false
+}
+
+function has_steppe_warriors() {
+	for (let v of data.steppe_warriors)
+		if (is_vassal_mustered(v))
+			return true
+	return false
+}
+
+function goto_discard_crusade_late_winter() {
+	if (has_global_capability(AOW_TEUTONIC_CRUSADE))
+		game.state = "discard_crusade_late_winter"
+	else
+		goto_levy_arts_of_war()
+}
+
+states.discard_crusade_late_winter = {
+	inactive: "Discard Crusade",
+	prompt() {
+		view.prompt = "Discard Summer Crusaders."
+		gen_action_card(AOW_TEUTONIC_CRUSADE)
+	},
+	card(c) {
+		log(`Discarded C${AOW_TEUTONIC_CRUSADE}.`)
+		set_delete(game.capabilities, c) // don't trigger disbanding here
+		for (let v of data.summer_crusaders)
+			if (is_vassal_ready(v))
+				game.pieces.vassals[v] = VASSAL_UNAVAILABLE
+		if (has_summer_crusaders())
+			game.state = "disband_summer_crusaders_late_winter"
+		else
+			goto_levy_arts_of_war()
+	},
+}
+
+states.disband_summer_crusaders_late_winter = {
+	inactive: "Disband Summer Crusaders",
+	prompt() {
+		view.prompt = "Disband Summer Crusaders."
+		for (let v of data.summer_crusaders)
+			if (is_vassal_mustered(v))
+				gen_action_vassal(v)
+	},
+	vassal(v) {
+		disband_vassal(v)
+		game.pieces.vassals[v] = VASSAL_UNAVAILABLE
+		if (!has_summer_crusaders())
+			goto_levy_arts_of_war()
+	},
+}
+
+states.disband_summer_crusaders = {
+	inactive: "Disband Summer Crusaders",
+	prompt() {
+		view.prompt = "Disband Summer Crusaders."
+		for (let v of data.summer_crusaders)
+			if (is_vassal_mustered(v))
+				gen_action_vassal(v)
+	},
+	vassal(v) {
+		disband_vassal(v)
+		game.pieces.vassals[v] = VASSAL_UNAVAILABLE
+		if (!has_summer_crusaders())
+			pop_state()
+	},
+}
+
+states.disband_steppe_warriors = {
+	inactive: "Disband Steppe Warriors",
+	prompt() {
+		view.prompt = "Disband Steppe Warriors."
+		for (let v of data.steppe_warriors)
+			if (is_vassal_mustered(v))
+				gen_action_vassal(v)
+	},
+	vassal(v) {
+		disband_vassal(v)
+		game.pieces.vassals[v] = VASSAL_UNAVAILABLE
+		if (!has_steppe_warriors())
+			pop_state()
+	},
 }
 
 // === LEVY: ARTS OF WAR (FIRST TURN) ===
@@ -3195,7 +3281,10 @@ function end_levy_arts_of_war_first() {
 // === LEVY: ARTS OF WAR ===
 
 function goto_levy_arts_of_war() {
-	log_br()
+	if (game.active === P1)
+		log_h2("Arts of War")
+	else
+		log_br()
 	game.what = draw_two_cards()
 	resume_levy_arts_of_war()
 }
@@ -3811,7 +3900,7 @@ function muster_summer_crusaders(v) {
 }
 
 states.summer_crusaders = {
-	inactive: "Summer Crusader",
+	inactive: "Summer Crusaders",
 	prompt() {
 		view.prompt = "Levy: Summer Crusaders."
 		for (let v of data.summer_crusaders)
@@ -10561,10 +10650,9 @@ function goto_advance_campaign() {
 	log_h1("Levy " + current_turn_name())
 
 	if (current_season() === LATE_WINTER)
-		discard_global_capability(AOW_TEUTONIC_CRUSADE)
-
-	log_h2("Arts of War")
-	goto_levy_arts_of_war()
+		goto_discard_crusade_late_winter()
+	else
+		goto_levy_arts_of_war()
 }
 
 // === GAME OVER ===
