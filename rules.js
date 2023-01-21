@@ -23,8 +23,6 @@ const RUSSIANS = "Russians"
 const P1 = TEUTONS
 const P2 = RUSSIANS
 
-// TODO: service shift before spoils ?
-
 const DIE_HIT = "01234567"
 const DIE_MISS = "01234567"
 
@@ -7930,7 +7928,6 @@ for each battle step:
 */
 
 function format_strike_step() {
-	// TODO: format strike group and target groups too?
 	if (game.battle.storm)
 		return storm_steps[game.battle.step].name
 	return battle_steps[game.battle.step].name
@@ -8536,8 +8533,6 @@ states.assign_hits = {
 
 		view.group = game.battle.strikers.map(p => game.battle.array[p])
 
-		// TODO: hits or xhits choice
-
 		if (game.battle.storm) {
 			if (is_attacker()) {
 				// Storm - attacker must apply hits to armored first
@@ -8654,7 +8649,8 @@ function action_assign_hits(lord, type) {
 	let protection = FORCE_PROTECTION[type]
 	let evade = FORCE_EVADE[type]
 
-	// TODO: manual choice of hit type
+	// TODO: hits or xhits choice
+
 	let ap = (is_armored_force(type) && game.battle.xhits > 0) ? 2 : 0
 
 	if (type === SERGEANTS || type === MEN_AT_ARMS)
@@ -9383,7 +9379,7 @@ function find_lone_friendly_lord_at(loc) {
 
 function goto_battle_spoils() {
 	set_active_victor()
-	if (has_any_spoils()) {
+	if (has_any_spoils() && has_friendly_lord(game.battle.where)) {
 		log_h3("Spoils")
 		log_spoils()
 		game.state = "battle_spoils"
