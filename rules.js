@@ -4605,8 +4605,10 @@ function march_with_group_2() {
 	let loot = count_group_assets(LOOT)
 	let laden = loot > 0 || prov > transport
 
-	if (group_has_teutonic_converts())
+	if (group_has_teutonic_converts()) {
+		log("Converts.")
 		spend_march_action(0)
+	}
 	else if (laden)
 		spend_march_action(2)
 	else
@@ -8770,8 +8772,7 @@ function end_battle() {
 	//	losses
 	//	spoils
 
-	log_br()
-	log(`${game.battle.loser} lost.`)
+	log_h3(`${game.battle.loser} Lost`)
 
 	if ((game.battle.sally || game.battle.relief) && game.battle.attacker === game.battle.loser) {
 		log("Raid removed Siege markers.")
@@ -9196,17 +9197,26 @@ function end_ransom_battle_remove() {
 
 // === ENDING THE BATTLE: LOSSES ===
 
+function has_battle_losses() {
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (lord_has_routed_units(lord))
+			return true
+	return false
+}
+
 function goto_battle_losses() {
+	clear_undo()
 	set_active(P1)
+	game.who = NOBODY
+	if (has_battle_losses())
+		log_h3("Teutonic Losses")
 	resume_battle_losses()
 }
 
 function resume_battle_losses() {
 	game.state = "battle_losses"
-	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-		if (lord_has_routed_units(lord))
-			return
-	goto_battle_losses_remove()
+	if (!has_battle_losses())
+		goto_battle_losses_remove()
 }
 
 function action_losses(lord, type) {
@@ -9226,13 +9236,18 @@ function action_losses(lord, type) {
 				target = 1
 	}
 
+	if (game.who !== lord) {
+		log(`L${lord}`)
+		game.who = lord
+	}
+
 	let die = roll_die()
 	if (die <= target) {
-		log(`L${lord} ${FORCE_TYPE_NAME[type]} ${die} <= ${target}`)
+		logi(`${FORCE_TYPE_NAME[type]} ${die} <= ${target}`)
 		add_lord_routed_forces(lord, type, -1)
 		add_lord_forces(lord, type, 1)
 	} else {
-		log(`L${lord} ${FORCE_TYPE_NAME[type]} ${die} > ${target}`)
+		logi(`${FORCE_TYPE_NAME[type]} ${die} > ${target}`)
 		add_lord_routed_forces(lord, type, -1)
 		if (type === SERFS)
 			game.pieces.smerdi++
@@ -9297,11 +9312,15 @@ function goto_battle_losses_remove() {
 }
 
 function end_battle_losses_remove() {
+	game.who = NOBODY
 	set_active_enemy()
-	if (game.active === P2)
+	if (game.active === P2) {
+		if (has_battle_losses())
+			log_h3("Russian Losses")
 		resume_battle_losses()
-	else
+	} else {
 		goto_battle_spoils()
+	}
 }
 
 states.battle_losses_remove = {
@@ -9331,6 +9350,23 @@ function end_ransom_battle_losses_remove() {
 
 // === ENDING THE BATTLE: SPOILS ===
 
+function log_spoils() {
+	if (game.spoils[PROV] > 0)
+		logi(game.spoils[PROV] + " Prov")
+	if (game.spoils[COIN] > 0)
+		logi(game.spoils[COIN] + " Coin")
+	if (game.spoils[LOOT] > 0)
+		logi(game.spoils[LOOT] + " Loot")
+	if (game.spoils[CART] > 0)
+		logi(game.spoils[CART] + " Cart")
+	if (game.spoils[SLED] > 0)
+		logi(game.spoils[SLED] + " Sled")
+	if (game.spoils[BOAT] > 0)
+		logi(game.spoils[BOAT] + " Boat")
+	if (game.spoils[SHIP] > 0)
+		logi(game.spoils[SHIP] + " Ship")
+}
+
 function find_lone_friendly_lord_at(loc) {
 	let who = NOBODY
 	let n = 0
@@ -9348,6 +9384,8 @@ function find_lone_friendly_lord_at(loc) {
 function goto_battle_spoils() {
 	set_active_victor()
 	if (has_any_spoils()) {
+		log_h3("Spoils")
+		log_spoils()
 		game.state = "battle_spoils"
 		game.who = find_lone_friendly_lord_at(game.battle.where)
 	} else {
@@ -9393,10 +9431,12 @@ states.battle_spoils = {
 
 function goto_battle_service() {
 	set_active_loser()
-	if (game.battle.retreated)
+	if (game.battle.retreated) {
+		log_h3("Service")
 		resume_battle_service()
-	else
+	} else {
 		goto_battle_aftermath()
+	}
 }
 
 function resume_battle_service() {
@@ -9421,6 +9461,7 @@ states.battle_service = {
 			add_lord_service(lord, -2)
 		else if (die <= 6)
 			add_lord_service(lord, -3)
+		log(`Shifted L${lord} to ${get_lord_service(lord)}.`)
 		set_delete(game.battle.retreated, lord)
 		set_lord_moved(lord, 1)
 		resume_battle_service()
@@ -9581,11 +9622,13 @@ states.feed = {
 	},
 	prov(lord) {
 		push_undo()
+		log(`Fed L${lord}.`)
 		add_lord_assets(lord, PROV, -1)
 		feed_lord(lord)
 	},
 	loot(lord) {
 		push_undo()
+		log(`Fed L${lord}.`)
 		add_lord_assets(lord, LOOT, -1)
 		feed_lord(lord)
 	},
@@ -9597,6 +9640,7 @@ states.feed = {
 	service_bad(lord) {
 		push_undo()
 		add_lord_service(lord, -1)
+		log(`Unfed L${lord} to ${get_lord_service(lord)}.`)
 		set_lord_unfed(lord, 0)
 	},
 	end_feed() {
@@ -9627,12 +9671,14 @@ states.feed_lord_shared = {
 	},
 	prov(lord) {
 		push_undo()
+		log(`Fed L${lord}.`)
 		add_lord_assets(lord, PROV, -1)
 		feed_lord(game.who)
 		resume_feed_lord_shared()
 	},
 	loot(lord) {
 		push_undo()
+		log(`Fed L${lord}.`)
 		add_lord_assets(lord, LOOT, -1)
 		feed_lord(game.who)
 		resume_feed_lord_shared()
@@ -9785,12 +9831,12 @@ function disband_lord(lord, permanently = false) {
 		set_lord_locale(lord, NOWHERE)
 		set_lord_service(lord, NEVER)
 	} else {
-		log(`Disbanded L${lord}.`)
 		if (is_levy_phase())
 			set_lord_locale(lord, CALENDAR + turn + data.lords[lord].service)
 		else
 			set_lord_locale(lord, CALENDAR + turn + data.lords[lord].service + 1)
 		set_lord_service(lord, NEVER)
+		log(`Disbanded L${lord} to ${get_lord_calendar(lord)}.`)
 	}
 
 	if (game.scenario === "Pleskau" || game.scenario === "Pleskau (Quickstart)") {
