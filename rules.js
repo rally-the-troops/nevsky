@@ -9313,6 +9313,8 @@ states.battle_losses_remove = {
 	},
 	lord(lord) {
 		set_delete(game.battle.retreated, lord)
+		if (game.active === game.battle.loser)
+			transfer_assets_except_ships(lord)
 		if (can_ransom_lord_battle(lord)) {
 			goto_ransom(lord)
 		} else {
