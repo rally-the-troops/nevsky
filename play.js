@@ -1811,7 +1811,7 @@ function on_update() {
 	action_button("capability", "Capability")
 
 	// Events
-	action_button("delay", "Delay") // delay Aleksandr/Andrey
+	action_button("decline", "Decline")
 	action_button("deploy", "Deploy")
 	action_button("discard", "Discard")
 	action_button("hold", "Hold")

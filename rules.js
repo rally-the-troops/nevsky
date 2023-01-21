@@ -3882,7 +3882,7 @@ states.novgorod_veche = {
 
 		if (is_lord_ready(LORD_ALEKSANDR) || is_lord_ready(LORD_ANDREY)) {
 			if (game.pieces.veche_vp < 8)
-				view.actions.delay = 1
+				view.actions.decline = 1
 		}
 
 		if (game.pieces.veche_vp > 0) {
@@ -3894,18 +3894,18 @@ states.novgorod_veche = {
 			}
 		}
 	},
-	delay() {
+	decline() {
 		push_undo()
 		game.state = "novgorod_veche_done"
 
 		if (is_lord_ready(LORD_ALEKSANDR)) {
 			let turn = current_turn() + 1
-			log(`Delayed L${LORD_ALEKSANDR} to ${turn}.`)
+			log(`Declined L${LORD_ALEKSANDR} to ${turn}.`)
 			set_lord_calendar(LORD_ALEKSANDR, turn)
 		}
 		if (is_lord_ready(LORD_ANDREY)) {
 			let turn = current_turn() + 1
-			log(`Delayed L${LORD_ANDREY} to ${turn}.`)
+			log(`Declined L${LORD_ANDREY} to ${turn}.`)
 			set_lord_calendar(LORD_ANDREY, turn)
 		}
 
