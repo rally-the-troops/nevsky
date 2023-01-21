@@ -1,5 +1,9 @@
 "use strict"
 
+// TODO: post-battle sequence
+//   rules: Loser retreat, P1 losses, P2 losses, Victor spoils, Loser service
+//   option: Loser retreat, Loser losses, Loser service, Victor losses, Victor spoils
+
 // FIXME: lift_sieges / besieged needs checking! (automatic after disband_lord, manual after move/sail, extra careful manual after battle)
 // FIXME: remove_legate_if_endangered needs checking! (automatic after disband_lord, manual after move/sail, manual after battle)
 
@@ -3906,6 +3910,7 @@ states.novgorod_veche = {
 		}
 
 		if (game.scenario === "Watland") {
+			// Decline of Andrey
 			log("Added 2 VP to Veche.")
 			add_veche_vp(2)
 		} else {
@@ -8742,6 +8747,18 @@ function end_battle_round() {
 
 // === ENDING THE BATTLE ===
 
+// Ending the Battle - optimized from rules as written
+//   Loser retreat / withdraw / remove
+//   Loser losses
+//   Loser service
+//   Victor losses
+//   Victor spoils
+
+// Ending the Storm
+//   Sack (loser removes lords)
+//   Victor losses
+//   Victor spoils
+
 function set_active_loser() {
 	set_active(game.battle.loser)
 }
@@ -8754,20 +8771,6 @@ function set_active_victor() {
 }
 
 function end_battle() {
-	// Ending the Battle
-	//	retreat, withdrawal, or removal
-	//		withdraw
-	//		retreat
-	//		remove
-	//	losses
-	//	spoils
-	//	service
-
-	// Ending the Storm
-	//	sack
-	//	losses
-	//	spoils
-
 	log_h3(`${game.battle.loser} Lost`)
 
 	if ((game.battle.sally || game.battle.relief) && game.battle.attacker === game.battle.loser) {
@@ -8781,7 +8784,7 @@ function end_battle() {
 		if (game.battle.attacker !== game.battle.loser)
 			goto_sack()
 		else
-			goto_battle_losses()
+			goto_battle_losses_loser()
 	} else {
 		goto_battle_withdraw()
 	}
@@ -8831,7 +8834,7 @@ function resume_sack() {
 	if (has_friendly_lord(game.battle.where))
 		game.state = "sack"
 	else
-		goto_battle_losses()
+		goto_battle_losses_loser()
 }
 
 states.sack = {
@@ -8843,7 +8846,6 @@ states.sack = {
 				gen_action_lord(lord)
 	},
 	lord(lord) {
-		log(`Disbanded L${lord}.`)
 		transfer_assets_except_ships(lord)
 		if (can_ransom_lord_battle(lord)) {
 			goto_ransom(lord)
@@ -9163,7 +9165,7 @@ function goto_battle_remove() {
 	if (count_unbesieged_friendly_lords(game.battle.where) > 0)
 		game.state = "battle_remove"
 	else
-		goto_battle_losses()
+		goto_battle_losses_loser()
 }
 
 states.battle_remove = {
@@ -9200,12 +9202,27 @@ function has_battle_losses() {
 	return false
 }
 
-function goto_battle_losses() {
+function goto_battle_losses_loser() {
 	clear_undo()
-	set_active(P1)
+	set_active_loser()
 	game.who = NOBODY
 	if (has_battle_losses())
-		log_h3("Teutonic Losses")
+		if (game.active === P1)
+			log_h3("Teutonic Losses")
+		else
+			log_h3("Russian Losses")
+	resume_battle_losses()
+}
+
+function goto_battle_losses_victor() {
+	clear_undo()
+	set_active_victor()
+	game.who = NOBODY
+	if (has_battle_losses())
+		if (game.active === P1)
+			log_h3("Teutonic Losses")
+		else
+			log_h3("Russian Losses")
 	resume_battle_losses()
 }
 
@@ -9309,14 +9326,10 @@ function goto_battle_losses_remove() {
 
 function end_battle_losses_remove() {
 	game.who = NOBODY
-	set_active_enemy()
-	if (game.active === P2) {
-		if (has_battle_losses())
-			log_h3("Russian Losses")
-		resume_battle_losses()
-	} else {
+	if (game.active === game.battle.loser)
+		goto_battle_service()
+	else
 		goto_battle_spoils()
-	}
 }
 
 states.battle_losses_remove = {
@@ -9344,7 +9357,7 @@ function end_ransom_battle_losses_remove() {
 	goto_battle_losses_remove()
 }
 
-// === ENDING THE BATTLE: SPOILS ===
+// === ENDING THE BATTLE: SPOILS (VICTOR) ===
 
 function log_spoils() {
 	if (game.spoils[PROV] > 0)
@@ -9378,7 +9391,6 @@ function find_lone_friendly_lord_at(loc) {
 }
 
 function goto_battle_spoils() {
-	set_active_victor()
 	if (has_any_spoils() && has_friendly_lord(game.battle.where)) {
 		log_h3("Spoils")
 		log_spoils()
@@ -9392,7 +9404,7 @@ function goto_battle_spoils() {
 function end_battle_spoils() {
 	game.who = NOBODY
 	game.spoils = 0
-	goto_battle_service()
+	goto_battle_aftermath()
 }
 
 states.battle_spoils = {
@@ -9423,15 +9435,14 @@ states.battle_spoils = {
 	},
 }
 
-// === ENDING THE BATTLE: SERVICE ===
+// === ENDING THE BATTLE: SERVICE (LOSER) ===
 
 function goto_battle_service() {
-	set_active_loser()
 	if (game.battle.retreated) {
 		log_h3("Service")
 		resume_battle_service()
 	} else {
-		goto_battle_aftermath()
+		end_battle_service()
 	}
 }
 
@@ -9439,7 +9450,7 @@ function resume_battle_service() {
 	if (game.battle.retreated.length > 0)
 		game.state = "battle_service"
 	else
-		goto_battle_aftermath()
+		end_battle_service()
 }
 
 states.battle_service = {
@@ -9462,6 +9473,10 @@ states.battle_service = {
 		set_lord_moved(lord, 1)
 		resume_battle_service()
 	},
+}
+
+function end_battle_service() {
+	goto_battle_losses_victor()
 }
 
 // === ENDING THE BATTLE: AFTERMATH ===
@@ -9819,7 +9834,7 @@ function disband_lord(lord, permanently = false) {
 	let turn = current_turn()
 
 	if (permanently) {
-		log(`Disbanded L${lord} permanently.`)
+		log(`Removed L${lord}.`)
 		set_lord_locale(lord, NOWHERE)
 		set_lord_service(lord, NEVER)
 	} else if (get_lord_service(lord) < current_turn()) {
