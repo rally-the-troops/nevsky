@@ -2096,7 +2096,7 @@ states.death_of_the_pope = {
 		view.prompt = "Death of the Pope: Discard William of Modena."
 		gen_action_card(AOW_TEUTONIC_WILLIAM_OF_MODENA)
 	},
-	card(card) {
+	card(_) {
 		discard_global_capability(AOW_TEUTONIC_WILLIAM_OF_MODENA)
 		end_immediate_event()
 	},
@@ -2251,7 +2251,7 @@ const RUSSIAN_MINDAUGAS = [
 function goto_teutonic_event_mindaugas() {
 	game.state = "teutonic_mindaugas"
 	for (let loc of TEUTONIC_MINDAUGAS)
-		if (!has_enemy_lord(loc) && !is_enemy_stronghold(loc))
+		if (!has_enemy_lord(loc) && !is_enemy_stronghold(loc) && !has_ravaged_marker(loc))
 			return
 	end_immediate_event()
 }
@@ -2259,7 +2259,7 @@ function goto_teutonic_event_mindaugas() {
 function goto_russian_event_mindaugas() {
 	game.state = "russian_mindaugas"
 	for (let loc of RUSSIAN_MINDAUGAS)
-		if (!has_enemy_lord(loc) && !is_enemy_stronghold(loc))
+		if (!has_enemy_lord(loc) && !is_enemy_stronghold(loc) && !has_ravaged_marker(loc))
 			return
 	end_immediate_event()
 }
@@ -2269,7 +2269,7 @@ states.teutonic_mindaugas = {
 	prompt() {
 		view.prompt = "Mindaugas: Place Ravaged near Ostrov."
 		for (let loc of TEUTONIC_MINDAUGAS)
-			if (!has_enemy_lord(loc) && !is_enemy_stronghold(loc))
+			if (!has_enemy_lord(loc) && !is_enemy_stronghold(loc) && !has_ravaged_marker(loc))
 				gen_action_locale(loc)
 	},
 	locale(loc) {
@@ -2284,7 +2284,7 @@ states.russian_mindaugas = {
 	prompt() {
 		view.prompt = "Mindaugas: Place Ravaged near Rositten."
 		for (let loc of RUSSIAN_MINDAUGAS)
-			if (!has_enemy_lord(loc) && !is_enemy_stronghold(loc))
+			if (!has_enemy_lord(loc) && !is_enemy_stronghold(loc) && !has_ravaged_marker(loc))
 				gen_action_locale(loc)
 	},
 	locale(loc) {
