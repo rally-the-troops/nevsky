@@ -4832,13 +4832,6 @@ function can_avoid_battle(to, way) {
 	return true
 }
 
-function select_all_lords(here) {
-	game.group = []
-	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-		if (get_lord_locale(lord) === here)
-			set_add(game.group, lord)
-}
-
 function goto_avoid_battle() {
 	clear_undo()
 	set_active_enemy()
@@ -4851,9 +4844,7 @@ function goto_avoid_battle() {
 function resume_avoid_battle() {
 	let here = game.march.to
 	if (has_unbesieged_friendly_lord(here)) {
-		// TODO: select all or no lords?
-		select_all_lords(here)
-		// game.group = []
+		game.group = []
 		game.state = "avoid_battle"
 	} else {
 		end_avoid_battle()
