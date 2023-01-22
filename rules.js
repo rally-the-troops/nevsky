@@ -4959,10 +4959,11 @@ states.avoid_battle_way = {
 		let to = game.march.avoid_to
 		let ways = list_ways(from, to)
 		for (let i = 1; i < ways.length; ++i)
-			gen_action_way(ways[i])
+			if (can_avoid_battle(to, ways[i]))
+				gen_action_way(ways[i])
 	},
 	way(way) {
-		game.avoid_way = way
+		game.march.avoid_way = way
 		avoid_battle_1()
 	},
 }
