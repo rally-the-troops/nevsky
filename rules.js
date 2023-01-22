@@ -6824,6 +6824,8 @@ states.relief_sally = {
 	},
 	lord(lord) {
 		push_undo()
+		log(`L${lord} Sallied.`)
+		set_lord_moved(lord, 1)
 		set_add(game.battle.reserves, lord)
 		game.battle.relief = 1
 	},
@@ -9947,14 +9949,14 @@ states.feed_lord_shared = {
 	},
 	prov(lord) {
 		push_undo()
-		log(`Fed L${lord}.`)
+		log(`Fed L${game.who}.`)
 		add_lord_assets(lord, PROV, -1)
 		feed_lord(game.who)
 		resume_feed_lord_shared()
 	},
 	loot(lord) {
 		push_undo()
-		log(`Fed L${lord}.`)
+		log(`Fed L${game.who}.`)
 		add_lord_assets(lord, LOOT, -1)
 		feed_lord(game.who)
 		resume_feed_lord_shared()
