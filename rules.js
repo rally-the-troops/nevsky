@@ -6286,7 +6286,7 @@ states.ravage = {
 function ravage_location(here, there) {
 	if (here !== there) {
 		if (is_teutonic_lord(game.command))
-			log(`Ravaged %${there} with C${which_lord_capability(game.command, AOW_TEUTONIC_RAIDERS)}.`)
+			log(`Ravaged %${there} with C${AOW_TEUTONIC_RAIDERS}.`)
 		else
 			log(`Ravaged %${there} with C${which_lord_capability(game.command, AOW_RUSSIAN_RAIDERS)}.`)
 	} else {
