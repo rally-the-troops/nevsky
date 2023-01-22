@@ -5954,12 +5954,11 @@ function can_supply() {
 function goto_supply() {
 	push_undo()
 
-	if (is_famine_in_play() && game.flags.famine === 0) {
+	if (is_famine_in_play() && !game.flags.famine) {
 		if (game.active === TEUTONS)
 			logevent(EVENT_RUSSIAN_FAMINE)
 		else
 			logevent(EVENT_TEUTONIC_FAMINE)
-		game.flags.famine = 1
 	}
 
 	if (init_lodya_supply()) {
@@ -6024,6 +6023,8 @@ states.supply_source = {
 			logi(`Seat at %${source}`)
 			game.supply.available--
 			array_remove_item(game.supply.seats, source)
+			if (is_famine_in_play())
+				game.flags.famine = 1
 		} else {
 			logi(`Seaport at %${source}`)
 			game.supply.ships--
