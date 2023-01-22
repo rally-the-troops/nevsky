@@ -41,6 +41,7 @@ const EVENT_TEUTONIC_FIELD_ORGAN = T10
 const AOW_TEUTONIC_TREBUCHETS = T14
 
 const RG2 = 10
+const SA2 = 7
 
 const MAP_DPI = 75
 
@@ -862,7 +863,7 @@ function on_blur_way_tip(way) {
 	ui.ways[way].classList.remove("tip")
 }
 
-function on_click_way(way) {
+function on_click_way_tip(way) {
 	ui.ways[way].scrollIntoView({ block:"center", inline:"center", behavior:"smooth" })
 }
 
@@ -1587,7 +1588,7 @@ function update_battle() {
 
 	if (view.battle.sally)
 		def_prot = count_siege_markers(view.battle.where)
-	if (view.battle.array[RG2] >= 0)
+	else if (view.battle.array[SA2] >= 0)
 		sally_prot = count_siege_markers(view.battle.where)
 
 	let att_ui, def_ui
