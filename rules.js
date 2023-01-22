@@ -3965,6 +3965,7 @@ states.black_sea_trade = {
 function goto_baltic_sea_trade() {
 	if (!is_winter() && has_global_capability(AOW_RUSSIAN_BALTIC_SEA_TRADE)) {
 		if (!has_conquered_marker(LOC_NOVGOROD) && !has_conquered_marker(LOC_NEVA)) {
+			init_lodya_baltic_sea_trade()
 			let t = count_all_teutonic_ships()
 			let r = count_all_russian_ships()
 			log(`C${AOW_RUSSIAN_BALTIC_SEA_TRADE}:`)
@@ -5429,6 +5430,17 @@ function init_lodya_march(type) {
 				game.flags.lodya = ships
 			log_lodya()
 		}
+	}
+}
+
+function init_lodya_baltic_sea_trade() {
+	let lord = find_lodya_lord_in_shared()
+	if (lord !== NOBODY) {
+		game.flags.lodya = -Math.min(2, get_lord_assets(lord, BOAT))
+		if (game.flags.lodya < 0)
+			log_lodya()
+	} else {
+		game.flags.lodya = 0
 	}
 }
 
