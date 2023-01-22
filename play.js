@@ -1222,8 +1222,8 @@ function update_legate() {
 		ui.legate.classList.toggle("action", is_legate_action())
 		ui.legate.classList.toggle("selected", is_legate_selected())
 		if (view.pieces.legate === LEGATE_ARRIVED) {
-			ui.legate.style.top = "1580px"
-			ui.legate.style.left = "170px"
+			ui.legate.style.top = "1356px"
+			ui.legate.style.left = "24px"
 		} else {
 			layout_locale_item(view.pieces.legate, ui.legate, 0)
 		}
