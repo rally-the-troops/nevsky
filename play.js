@@ -90,7 +90,6 @@ function make_locale_tip(loc, id) {
 	}
 	if (list.length > 0)
 		tip += " - " + list.join(", ")
-	console.log("loc.name", id, loc.name, loc.type, tip, loc.seats)
 	return tip
 }
 
@@ -1112,13 +1111,26 @@ function update_vassals(ready_parent, mustered_parent, lord_ix) {
 }
 
 function update_lord_mat(ix) {
-	update_assets(ix, ui.assets[ix], view.pieces.assets[ix])
-	update_vassals(ui.ready_vassals[ix], ui.mustered_vassals[ix], ix)
-	update_forces(ui.forces[ix], view.pieces.forces[ix], ix, false)
-	update_forces(ui.routed[ix], view.pieces.routed[ix], ix, true)
-	ui.lord_moved1[ix].classList.toggle("hide", is_levy_phase() || get_lord_moved(ix) < 1)
-	ui.lord_moved2[ix].classList.toggle("hide", is_levy_phase() || get_lord_moved(ix) < 2)
-	ui.lord_feed_x2[ix].classList.toggle("hide", count_lord_all_forces(ix) <= 6)
+	if (view.reveal & (1 << ix)) {
+		ui.lord_mat[ix].classList.remove("hidden")
+		update_assets(ix, ui.assets[ix], view.pieces.assets[ix])
+		update_vassals(ui.ready_vassals[ix], ui.mustered_vassals[ix], ix)
+		update_forces(ui.forces[ix], view.pieces.forces[ix], ix, false)
+		update_forces(ui.routed[ix], view.pieces.routed[ix], ix, true)
+		ui.lord_moved1[ix].classList.toggle("hide", is_levy_phase() || get_lord_moved(ix) < 1)
+		ui.lord_moved2[ix].classList.toggle("hide", is_levy_phase() || get_lord_moved(ix) < 2)
+		ui.lord_feed_x2[ix].classList.toggle("hide", count_lord_all_forces(ix) <= 6)
+	} else {
+		ui.lord_mat[ix].classList.add("hidden")
+		ui.assets[ix].replaceChildren()
+		ui.ready_vassals[ix].replaceChildren()
+		ui.mustered_vassals[ix].replaceChildren()
+		ui.forces[ix].replaceChildren()
+		ui.routed[ix].replaceChildren()
+		ui.lord_moved1[ix].classList.add("hide")
+		ui.lord_moved2[ix].classList.add("hide")
+		ui.lord_feed_x2[ix].classList.add("hide")
+	}
 }
 
 function is_lord_command(ix) {
@@ -1421,20 +1433,21 @@ function update_cards() {
 	for (let ix = 0; ix < data.lords.length; ++ix) {
 		let side = ix < 6 ? "teutonic" : "russian"
 		ui.lord_capabilities[ix].replaceChildren()
-		let c = view.pieces.capabilities[(ix << 1) + 0]
-		if (c >= 0)
-			ui.lord_capabilities[ix].appendChild(ui.cards[c])
-		c = view.pieces.capabilities[(ix << 1) + 1]
-		if (c >= 0)
-			ui.lord_capabilities[ix].appendChild(ui.cards[c])
-
 		ui.lord_events[ix].replaceChildren()
-		if (view.battle && view.battle.field_organ === ix)
-			ui.lord_events[ix].appendChild(ui.cards[EVENT_TEUTONIC_FIELD_ORGAN])
-		if (view.battle && view.battle.bridge && view.battle.bridge.lord1 === ix)
-			ui.lord_events[ix].appendChild(ui.cards[EVENT_RUSSIAN_BRIDGE])
-		if (view.battle && view.battle.bridge && view.battle.bridge.lord2 === ix)
-			ui.lord_events[ix].appendChild(ui.cards[EVENT_TEUTONIC_BRIDGE])
+		if (view.reveal & (1 << ix)) {
+			let c = view.pieces.capabilities[(ix << 1) + 0]
+			if (c >= 0)
+				ui.lord_capabilities[ix].appendChild(ui.cards[c])
+			c = view.pieces.capabilities[(ix << 1) + 1]
+			if (c >= 0)
+				ui.lord_capabilities[ix].appendChild(ui.cards[c])
+			if (view.battle && view.battle.field_organ === ix)
+				ui.lord_events[ix].appendChild(ui.cards[EVENT_TEUTONIC_FIELD_ORGAN])
+			if (view.battle && view.battle.bridge && view.battle.bridge.lord1 === ix)
+				ui.lord_events[ix].appendChild(ui.cards[EVENT_RUSSIAN_BRIDGE])
+			if (view.battle && view.battle.bridge && view.battle.bridge.lord2 === ix)
+				ui.lord_events[ix].appendChild(ui.cards[EVENT_TEUTONIC_BRIDGE])
+		}
 	}
 }
 

@@ -1564,7 +1564,7 @@ exports.setup = function (seed, scenario, options) {
 	game = {
 		seed,
 		scenario,
-		options,
+		hidden: options.hidden ? 1 : 0,
 
 		log: [],
 		undo: [],
@@ -2096,7 +2096,7 @@ function action_torzhok(lord, asset) {
 states.torzhok = {
 	inactive: "Torzhok",
 	prompt() {
-		// TODO: need to reveal Domash if hidden!
+		view.reveal |= (1 << LORD_DOMASH) // Reveal Domash if hidden mats
 		if (game.count > 0) {
 			if (game.count === 3)
 				view.prompt = "Torzhok: Remove up to 3 Assets from Domash or up to 3 Coin from Veche."
@@ -10890,6 +10890,9 @@ function gen_action_routed_serfs(lord) {
 	gen_action("routed_serfs", lord)
 }
 
+const P1_LORD_MASK = (1|2|4|8|16|32)
+const P2_LORD_MASK = (1|2|4|8|16|32) << 6
+
 exports.view = function (state, current) {
 	load_state(state)
 
@@ -10897,6 +10900,7 @@ exports.view = function (state, current) {
 		prompt: null,
 		actions: null,
 		log: game.log,
+		reveal: 0,
 
 		turn: game.turn,
 		end: scenario_last_turn[game.scenario],
@@ -10913,13 +10917,30 @@ exports.view = function (state, current) {
 		plan: null,
 	}
 
+	if (!game.hidden)
+		view.reveal = -1
+
 	if (current === P1) {
 		view.hand = game.hand1
 		view.plan = game.plan1
+		if (game.hidden)
+			view.reveal |= P1_LORD_MASK
 	}
 	if (current === P2) {
 		view.hand = game.hand2
 		view.plan = game.plan2
+		if (game.hidden)
+			view.reveal |= P2_LORD_MASK
+	}
+
+	if (game.battle) {
+		if (game.battle.array) {
+			for (let lord of game.battle.array)
+				if (lord !== NOBODY)
+					view.reveal |= (1 << lord)
+		}
+		for (let lord of game.battle.reserves)
+			view.reveal |= (1 << lord)
 	}
 
 	if (game.state === "game_over") {
