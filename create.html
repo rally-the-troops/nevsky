@@ -1,0 +1,71 @@
+<style>
+.scenario_info { display: none; font-style: italic }
+.scenario_info.show { display: block }
+.hide { display: none; }
+</style>
+
+<div class="scenario_info" id="Pleskau">
+<p>
+Pleskau - 1240
+<p>
+Frontier bishop Hermann von Buxhövden spurs a Latin lunge at the "schismatics" of Novgorod.
+</div>
+
+<div class="scenario_info show" id="Pleskau (Quickstart)">
+<p>
+Pleskau - 1240 (Quickstart)
+<p>
+Frontier bishop Hermann von Buxhövden spurs a Latin lunge at the "schismatics" of Novgorod.
+<p>
+NOTE: This is a quickstart setup for first time players who want to skip the first Levy phase.
+</div>
+
+<div class="scenario_info" id="Watland">
+<p>
+Watland - 1240
+<p>
+Following Hermann's success at Pskov, the Teutons agree on a plan to conquer another people under Novgorod's sway—the still mostly pagan Vodians.
+</div>
+
+<div class="scenario_info" id="Return of the Prince">
+<p>
+Return of the Prince - 1241 to 1242
+<p>
+With the Teutons settling into Rus and their raids almost reaching the great city, Novgorodans and the Grand Prince at last see eye-to-eye on a response.
+</div>
+
+<div class="scenario_info" id="Return of the Prince (Nicolle)">
+<p>
+Return of the Prince - Nicolle Variant
+<p>
+In contrast to the Novgorod Chronicle, David Nicolle in Lake Peipus 1242 (Osprey) dates the Teutonic assault on Pskov to 1241 rather than 1240, with the Teutons pressing south of Lake Chud while Aleksandr counterattacks in the north.
+</div>
+
+<div class="scenario_info" id="Peipus">
+<p>
+Peipus - 1242
+<p>
+Rather than pressing the Danes westward from his reconquest of Koporye, Aleksandr bolsters his army to liberate Pskov and wreak revenge on Dorpat.
+</div>
+
+<div class="scenario_info" id="Crusade on Novgorod">
+<p>
+Crusade on Novgorod - 1240 to 1242
+<p>
+With Aleksandr's repulse of the Swedes, the Veche feels safe to dismiss its Prince and let Novgorod see to its own defense. But over the lakes, reconciled Teutonic knights and Danes now eye Rus as a prize.
+</div>
+
+<p>
+<label><input type="checkbox" name="hidden" value="true">Hidden Mats</label>
+</p>
+
+</div>
+
+<script>
+let scenario = document.querySelector("select[name='scenario']")
+scenario.onchange = function (evt) {
+	document.querySelectorAll(".scenario_info").forEach(e=>e.classList.remove("show"))
+	document.getElementById(scenario.value).classList.add("show")
+}
+scenario.onchange()
+</script>
