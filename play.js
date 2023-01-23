@@ -1708,11 +1708,11 @@ function on_update() {
 	}
 
 	if (view.pieces.elr1)
-		ui.elr1.classList = `marker circle enemy_lords_removed teutonic ${view.pieces.elr1}`
+		ui.elr1.classList = `marker circle enemy_lords_removed teutonic v${view.pieces.elr1}`
 	else
 		ui.elr1.classList = `marker circle enemy_lords_removed teutonic hide`
 	if (view.pieces.elr2)
-		ui.elr2.classList = `marker circle enemy_lords_removed russian ${view.pieces.elr2}`
+		ui.elr2.classList = `marker circle enemy_lords_removed russian v${view.pieces.elr2}`
 	else
 		ui.elr2.classList = `marker circle enemy_lords_removed russian hide`
 
