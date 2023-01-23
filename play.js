@@ -1,20 +1,7 @@
 "use strict"
 
-// Feed x2 on lords with >6 units
-// End marker on Calendar
-// Remove battle mat.
-// Siege/Walls/Garrison display in battle array.
-
-// TODO: show sg and hg highlighting on battle mat (separate from view.group)
-
-// TODO: tooltip on cylinders
-//	fealty rating and starting assets + forces on calendar
-//	current assets and forces on map
-
-// TODO: battle.where marker on map, remove cylinders?
-
-// inactive command cylinder color - other color outline
-// moved/fought lord coloring - blue outline?
+// TODO: show strikers and targets highlighting on battle mat?
+// TODO: battle.where marker on map?
 
 function find_lord(name) {
 	return data.lords.findIndex((x) => x.name === name)
@@ -80,6 +67,34 @@ const SERFS = 6
 
 const force_action_name = [ "knights", "sergeants", "light_horse", "asiatic_horse", "men_at_arms", "militia", "serfs" ]
 const routed_force_action_name = [ "routed_knights", "routed_sergeants", "routed_light_horse", "routed_asiatic_horse", "routed_men_at_arms", "routed_militia", "routed_serfs" ]
+
+function make_locale_tip(loc, id) {
+	let tip = loc.name
+	if (loc.name !== "Novgorod") {
+		if (loc.type === "traderoute")
+			tip += " - Trade Route"
+		else
+			tip += " - " + loc.type[0].toUpperCase() + loc.type.substring(1)
+	}
+	// if (loc.stronghold) tip += ` [${loc.stronghold}]`
+	if (data.seaports.includes(id))
+		tip += " - Seaport"
+	let list = []
+	if (loc.name === "Adsel" || loc.name === "Fellin" || loc.name === "Leal" || loc.name === "Wenden")
+		list.push("Commandery")
+	if (loc.name === "Novgorod")
+		list.push("Archbishopric")
+	for (let lord = 0; lord < data.lords.length; ++lord) {
+		if (data.lords[lord].seats.includes(id))
+			list.push(data.lords[lord].name)
+	}
+	if (list.length > 0)
+		tip += " - " + list.join(", ")
+	console.log("loc.name", id, loc.name, loc.type, tip, loc.seats)
+	return tip
+}
+
+const locale_tip = data.locales.map(make_locale_tip)
 
 // asset types
 const PROV = 0
@@ -645,7 +660,7 @@ function on_click_locale(evt) {
 
 function on_focus_locale(evt) {
 	let id = evt.target.my_id
-	document.getElementById("status").textContent = `(${id}) ${data.locales[id].name} - ${data.locales[id].type}`
+	document.getElementById("status").textContent = locale_tip[id]
 }
 
 function on_click_way(evt) {
@@ -680,56 +695,19 @@ function on_focus_cylinder(evt) {
 	let lord = evt.target.my_id
 	let info = data.lords[lord]
 	let loc = view.pieces.locale[lord]
+	let tip = info.name
 	if (loc >= CALENDAR) {
-		document.getElementById("status").textContent = `${info.full_name} - ${info.fealty} Fealty`
+		if (lord !== LORD_ALEKSANDR)
+			tip += ` - ${info.fealty} Fealty`
 	} else {
-		let tip = `${info.full_name}`
-
 		/*
 		if (view.turn & 1)
 			tip += ` - ${info.command} Command`
 		else
 			tip += ` - ${info.lordship} Lordship`
 		*/
-
-		let first = true
-		let assets = view.pieces.assets[lord]
-		for (let i = 0; i < asset_type_count; ++i) {
-			let x = pack4_get(assets, i)
-			if (x > 0) {
-				if (first)
-					tip += " \u2013 "
-				else
-					tip += ", "
-				tip += `${x} ${asset_type_name[i]}`
-				first = false
-			}
-		}
-
-		first = true
-		let forces = view.pieces.forces[lord]
-		let routed = view.pieces.routed[lord]
-		for (let i = 0; i < force_type_count; ++i) {
-			let x = pack4_get(forces, i) + pack4_get(routed, i)
-			if (x > 0) {
-				if (first)
-					tip += " \u2013 "
-				else
-					tip += ", "
-				tip += `${x} ${force_type_tip[i]}`
-				first = false
-			}
-		}
-
-		let c = view.pieces.capabilities[(lord<<1)]
-		if (c >= 0)
-			tip += ` \u2013 ${data.cards[c].capability}`
-		c = view.pieces.capabilities[(lord<<1) + 1]
-		if (c >= 0)
-			tip += `, ${data.cards[c].capability}`
-
-		document.getElementById("status").textContent = tip
 	}
+	document.getElementById("status").textContent = tip
 }
 
 function on_click_lord_service_marker(evt) {
@@ -745,6 +723,10 @@ function on_click_calendar(evt) {
 		let id = evt.target.my_id
 		send_action('calendar', evt.target.my_id)
 	}
+}
+
+function on_focus_legate(evt) {
+	document.getElementById("status").textContent = "William of Modena"
 }
 
 function on_focus_lord_service_marker(evt) {
@@ -777,7 +759,7 @@ function on_focus_vassal_service_marker(evt) {
 	let id = evt.target.my_id
 	let vassal = data.vassals[id]
 	let lord = data.lords[vassal.lord]
-	document.getElementById("status").textContent = `(${id}) ${lord.name} / ${vassal.name}`
+	document.getElementById("status").textContent = `${lord.name} / ${vassal.name}`
 }
 
 function on_click_legate(evt) {
@@ -867,12 +849,6 @@ function on_click_way_tip(way) {
 	ui.ways[way].scrollIntoView({ block:"center", inline:"center", behavior:"smooth" })
 }
 
-function on_focus_lord_tip(lord) {
-}
-
-function on_blur_lord_tip(lord) {
-}
-
 function on_click_lord_tip(lord) {
 	ui.lord_mat[lord].scrollIntoView({ block:"center", inline:"center", behavior:"smooth" })
 }
@@ -886,7 +862,7 @@ function sub_locale_name(match, p1) {
 function sub_lord_name(match, p1) {
 	let x = p1 | 0
 	let n = data.lords[x].name
-	return `<span class="lord_tip" onmouseenter="on_focus_lord_tip(${x})" onmouseleave="on_blur_lord_tip(${x})" onclick="on_click_lord_tip(${x})">${n}</span>`
+	return `<span class="lord_tip" onclick="on_click_lord_tip(${x})">${n}</span>`
 }
 
 function sub_way_name(match, p1) {
@@ -2061,6 +2037,8 @@ function build_map() {
 		document.getElementById("pieces").appendChild(e)
 	})
 
+	document.getElementById("legate").addEventListener("mouseenter", on_focus_legate)
+	document.getElementById("legate").addEventListener("mouseleave", on_blur)
 	document.getElementById("legate").addEventListener("mousedown", on_click_legate)
 	ui.veche.addEventListener("mousedown", on_click_veche)
 
