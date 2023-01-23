@@ -8258,7 +8258,12 @@ function goto_strike() {
 			game.battle.strikers = [ A2 ]
 		else
 			game.battle.strikers = [ D2 ]
-		goto_strike_total_hits()
+		if (has_no_strikers_and_strike_targets()) {
+			log("None.")
+			goto_next_strike()
+		} else {
+			goto_strike_total_hits()
+		}
 	} else {
 		if (has_no_strikers_and_strike_targets())
 			log("None.")
