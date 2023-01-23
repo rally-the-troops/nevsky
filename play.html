@@ -117,7 +117,6 @@ body.Teutons #plan_actions .russian { display: none }
 
 #battle_grid {
 	display: grid;
-	gap: 18px;
 	grid-template-columns: auto auto auto;
 	margin: 0 auto;
 	justify-content: center;
@@ -128,12 +127,6 @@ body.Teutons #plan_actions .russian { display: none }
 	width: 376px;
 	height: 506px;
 	padding: 12px;
-}
-
-#battle_grid .grid_array.action {
-	background-image: url("images/battle_array_action.svg");
-	background-repeat: no-repeat;
-	background-position: top center;
 }
 
 #battle_grid #grid_ga {
@@ -148,6 +141,25 @@ body.Teutons #plan_actions .russian { display: none }
 #battle_grid #grid_sw:empty {
 	display: none;
 }
+
+.grid_array { background-repeat: no-repeat }
+
+.grid_array.action {
+	background-image: url(images/battle_array_action.svg);
+	background-position: top center;
+}
+
+#grid_a1 { background-position: 10% 60%; background-image: url(images/battlefield_hill1.png) }
+#grid_a1.action { background-position: top center, 10% 60%; background-image: url(images/battle_array_action.svg), url(images/battlefield_hill1.png) }
+#grid_a3 { background-position: 60% 90%, 20% 30%; background-image: url(images/battlefield_buildings.png), url(images/battlefield_trees1.png) }
+#grid_a3.action { background-position: top center, 60% 90%, 20% 30%; background-image: url(images/battle_array_action.svg), url(images/battlefield_buildings.png), url(images/battlefield_trees1.png) }
+
+#grid_d1 { background-position: 50% 70%; background-image: url(images/battlefield_trees2.png) }
+#grid_d1.action { background-position: top center, 50% 70%; background-image: url(images/battle_array_action.svg), url(images/battlefield_trees2.png) }
+#grid_d2 { background-position: 50% 95%; background-image: url(images/battlefield_trees3.png) }
+#grid_d2.action { background-position: top center, 50% 95%; background-image: url(images/battle_array_action.svg), url(images/battlefield_trees3.png) }
+#grid_d3 { background-position: 50% 60%; background-image: url(images/battlefield_hill2.png) }
+#grid_d3.action { background-position: top center, 50% 60%; background-image: url(images/battle_array_action.svg), url(images/battlefield_hill2.png) }
 
 #grid_rg1:empty:not(.action), #grid_rg2:empty:not(.action), #grid_rg3:empty:not(.action),
 #grid_sa1:empty:not(.action), #grid_sa2:empty:not(.action), #grid_sa3:empty:not(.action) {
