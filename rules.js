@@ -10635,7 +10635,8 @@ function goto_advance_campaign() {
 
 	log_h1("Levy " + current_turn_name())
 
-	if (current_season() === LATE_WINTER)
+	// First turns of late winter
+	if (current_turn() === 5 || current_turn() === 13)
 		goto_discard_crusade_late_winter()
 	else
 		goto_levy_arts_of_war()
