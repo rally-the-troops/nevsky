@@ -184,7 +184,7 @@ const R16 = find_card("R16")
 const R17 = find_card("R17")
 const R18 = find_card("R18")
 
-const GARRISON = -1
+const GARRISON = 100
 
 const LORD_ANDREAS = find_lord("Andreas")
 const LORD_HEINRICH = find_lord("Heinrich")
@@ -7766,8 +7766,6 @@ function assemble_melee_forces(lord) {
 	if (game.battle.bridge && (game.battle.bridge.lord1 === lord || game.battle.bridge.lord12 === lord)) {
 		let n = is_p1_lord(lord) ? game.battle.bridge.n1 : game.battle.bridge.n2
 
-		console.log("FORCES1", forces, n)
-
 		log(`Bridge L${lord}`)
 
 		if (is_horse_step()) {
@@ -7807,8 +7805,6 @@ function assemble_melee_forces(lord) {
 			if (forces.serfs > 0) logi(`${forces.serfs} Serfs`)
 			if (forces.men_at_arms + forces.militia + forces.serfs === 0) logi(`None`)
 		}
-
-		console.log("FORCES2", forces, n)
 
 		if (is_p1_lord(lord))
 			game.battle.bridge.n1 = n
@@ -7982,8 +7978,12 @@ function find_strike_target(S) {
 	}
 }
 
+function has_garrison() {
+	return game.battle.storm && game.battle.garrison
+}
+
 function has_strike_target(S) {
-	if (is_attacker_step() && game.battle.storm && game.battle.garrison)
+	if (is_attacker_step() && has_garrison())
 		return true
 	if (S === A1 || S === A2 || S === A3)
 		return filled(D1) || filled(D2) || filled(D3)
@@ -7996,6 +7996,9 @@ function has_strike_target(S) {
 }
 
 function has_no_strike_targets() {
+	if (is_defender_step() && has_garrison())
+		if (has_strike_target(D2))
+			return false
 	for (let striker of game.battle.strikers)
 		if (has_strike_target(striker))
 			return false
@@ -8003,6 +8006,14 @@ function has_no_strike_targets() {
 }
 
 function has_no_strikers_and_strike_targets() {
+	if (is_defender_step() && has_garrison()) {
+		if (is_archery_step() && game.battle.garrison.men_at_arms > 0)
+			if (has_strike_target(D2))
+				return false
+		if (is_melee_step() && game.battle.garrison.men_at_arms + game.battle.garrison.knights > 0)
+			if (has_strike_target(D2))
+				return false
+	}
 	for (let pos of current_strike_positions())
 		if (has_strike(pos) && has_strike_target(pos))
 			return false
@@ -8059,8 +8070,8 @@ function flanks_all_positions(S, TT) {
 	return true
 }
 
-function strike_left_or_right(gate, S2, T1, T2, T3) {
-	if (gate(S2)) {
+function strike_left_or_right(S2, T1, T2, T3) {
+	if (has_strike(S2)) {
 		if (filled(T2))
 			return T2
 		let has_t1 = filled(T1)
@@ -8072,7 +8083,7 @@ function strike_left_or_right(gate, S2, T1, T2, T3) {
 		if (has_t3)
 			return T3
 	}
-	return T2 // No target - safe default
+	return 1000 // No target!
 }
 
 function strike_defender_row() {
@@ -8239,42 +8250,28 @@ function goto_strike() {
 
 	// Strike left or right or defender
 	if (is_attacker_step())
-		game.battle.fc = strike_left_or_right(has_strike, A2, D1, D2, D3)
+		game.battle.fc = strike_left_or_right(A2, D1, D2, D3)
 	else
-		game.battle.fc = strike_left_or_right(has_strike, D2, A1, A2, A3)
+		game.battle.fc = strike_left_or_right(D2, A1, A2, A3)
 
 	if (is_sa_without_rg()) {
 		// NOTE: striking rearguard is handled in strike_group and assign_hits
 		game.battle.rc = RG2
 	} else {
 		if (is_attacker_step())
-			game.battle.rc = strike_left_or_right(has_strike, SA2, RG1, RG2, RG3)
+			game.battle.rc = strike_left_or_right(SA2, RG1, RG2, RG3)
 		else
-			game.battle.rc = strike_left_or_right(has_strike, RG2, SA1, SA2, SA3)
+			game.battle.rc = strike_left_or_right(RG2, SA1, SA2, SA3)
 	}
 
-	if (game.battle.storm) {
-		if (is_attacker_step())
-			game.battle.strikers = [ A2 ]
-		else
-			game.battle.strikers = [ D2 ]
-		if (has_no_strikers_and_strike_targets()) {
-			log("None.")
-			goto_next_strike()
-		} else {
-			goto_strike_total_hits()
-		}
-	} else {
-		if (has_no_strikers_and_strike_targets())
-			log("None.")
-		resume_strike()
-	}
+	if (has_no_strikers_and_strike_targets())
+		log("None.")
+
+	resume_strike()
 }
 
 function resume_strike() {
-	if (game.battle.storm)
-		goto_next_strike() // NOTE: only one strike group in a storm
-	else if (has_no_strikers_and_strike_targets())
+	if (has_no_strikers_and_strike_targets())
 		goto_next_strike()
 	else if (game.battle.fc < 0 || game.battle.rc < 0)
 		game.state = "strike_left_right"
@@ -8371,7 +8368,10 @@ function goto_strike_group() {
 }
 
 function select_strike_group(pos) {
-	if ((pos === SA1 || pos === SA2 || pos === SA3) && is_sa_without_rg()) {
+	if (pos < 0) {
+		// Garrison striking alone!
+		game.battle.strikers = []
+	} else if ((pos === SA1 || pos === SA2 || pos === SA3) && is_sa_without_rg()) {
 		game.battle.strikers = [ SA1, SA2, SA3 ]
 		game.battle.rc = strike_defender_row()
 	} else {
@@ -8404,7 +8404,7 @@ function goto_strike_total_hits() {
 	let slist = []
 
 	// STORM: Garrison strikes
-	if (is_defender_step() && game.battle.storm && game.battle.garrison) {
+	if (is_defender_step() && has_garrison()) {
 		let garr_hits = count_garrison_hits()
 		let garr_xhits = count_garrison_xhits()
 		if (garr_hits + garr_xhits > 0)
@@ -8427,8 +8427,6 @@ function goto_strike_total_hits() {
 			slist.push(lord_name[game.battle.array[pos]])
 			hits += game.battle.ah[pos]
 			xhits += game.battle.ahx[pos]
-			game.battle.ah[pos] = 0
-			game.battle.ahx[pos] = 0
 		}
 	}
 
@@ -8620,6 +8618,10 @@ function goto_assign_left_right() {
 }
 
 function end_assign_hits() {
+	for (let pos of game.battle.strikers) {
+		game.battle.ah[pos] = 0
+		game.battle.ahx[pos] = 0
+	}
 	game.who = NOBODY
 	game.battle.strikers = 0
 	game.battle.hits = 0
@@ -8632,6 +8634,12 @@ function end_assign_hits() {
 }
 
 function for_each_target(fn) {
+	if (is_defender_step() && has_garrison()) {
+		if (filled(A2))
+			fn(game.battle.array[A2])
+		return
+	}
+
 	let start = game.battle.strikers[0]
 
 	// SA without RG striking D, target is always flanked
@@ -8770,18 +8778,6 @@ states.assign_hits = {
 	},
 }
 
-function is_striking(pos) {
-	// Future strikes
-	if (has_strike(pos))
-		return true
-	// Remaining hits in current group
-	if (set_has(game.battle.strikers, pos) && game.battle.hits + game.battle.xhits > 0) {
-		let lord = game.battle.array[pos]
-		return count_lord_hits(lord) + count_lord_xhits(lord) > 0
-	}
-	return false
-}
-
 function rout_lord(lord) {
 	log(`L${lord} Routed.`)
 
@@ -8792,22 +8788,24 @@ function rout_lord(lord) {
 
 	// Strike left or right or defender
 
+console.log("ROUT LORD", pos)
+
 	if (pos >= A1 && pos <= A3) {
-		game.battle.fc = strike_left_or_right(is_striking, D2, A1, A2, A3)
+		game.battle.fc = strike_left_or_right(D2, A1, A2, A3)
 	}
 
 	else if (pos >= D1 && pos <= D3) {
-		game.battle.fc = strike_left_or_right(is_striking, A2, D1, D2, D3)
+		game.battle.fc = strike_left_or_right(A2, D1, D2, D3)
 		if (is_sa_without_rg())
 			game.battle.rc = strike_defender_row()
 	}
 
 	else if (pos >= SA1 && pos <= SA3) {
-		game.battle.rc = strike_left_or_right(is_striking, RG2, SA1, SA2, SA3)
+		game.battle.rc = strike_left_or_right(RG2, SA1, SA2, SA3)
 	}
 
 	else if (pos >= RG1 && pos <= RG3) {
-		game.battle.rc = strike_left_or_right(is_striking, SA2, RG1, RG2, RG3)
+		game.battle.rc = strike_left_or_right(SA2, RG1, RG2, RG3)
 	}
 }
 

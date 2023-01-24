@@ -41,6 +41,7 @@ const CALENDAR = 100
 
 const LEGATE_INDISPOSED = -2
 const LEGATE_ARRIVED = -1
+const GARRISON = 100
 
 const round = Math.round
 const floor = Math.floor
@@ -1551,9 +1552,9 @@ function update_battle() {
 	ui.garrison.replaceChildren()
 	if (view.battle.garrison) {
 		for (let i = 0; i < view.battle.garrison.knights; ++i)
-			add_force(ui.garrison, KNIGHTS, -1, 0)
+			add_force(ui.garrison, KNIGHTS, GARRISON, 0)
 		for (let i = 0; i < view.battle.garrison.men_at_arms; ++i)
-			add_force(ui.garrison, MEN_AT_ARMS, -1, 0)
+			add_force(ui.garrison, MEN_AT_ARMS, GARRISON, 0)
 	}
 
 	let here = view.battle.where
