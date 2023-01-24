@@ -8167,8 +8167,8 @@ function goto_first_strike() {
 	game.battle.step = 0
 
 	if (game.battle.bridge) {
-		game.battle.bridge.n1 = game.battle.round
-		game.battle.bridge.n2 = game.battle.round
+		game.battle.bridge.n1 = game.battle.round * 2
+		game.battle.bridge.n2 = game.battle.round * 2
 	}
 
 	if (filled(RG1) || filled(RG2) || filled(RG3))
