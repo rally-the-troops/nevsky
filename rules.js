@@ -3427,7 +3427,8 @@ states.levy_muster_lord = {
 				view.actions.take_sled = 1
 
 			// Add Capability
-			view.actions.capability = 1
+			if (can_muster_capability())
+				view.actions.capability = 1
 		}
 
 		view.actions.done = 1
@@ -3621,6 +3622,24 @@ function discard_lord_capability(lord, c) {
 	if (get_lord_capability(lord, 1) === c)
 		return set_lord_capability(lord, 1, NOTHING)
 	throw new Error("capability not found")
+}
+
+function can_muster_capability() {
+	let deck = list_deck()
+	for (let c of deck) {
+		if (is_no_event_card(c))
+			continue
+		if (!data.cards[c].lords || set_has(data.cards[c].lords, game.who)) {
+			if (data.cards[c].this_lord) {
+				if (!lord_already_has_capability(game.who, c))
+					return true
+			} else {
+				if (can_deploy_global_capability(c))
+					return true
+			}
+		}
+	}
+	return false
 }
 
 states.muster_capability = {
