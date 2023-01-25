@@ -149,17 +149,33 @@ body.Teutons #plan_actions .russian { display: none }
 	background-position: top center;
 }
 
-#grid_a1 { background-position: 10% 60%; background-image: url(images/battlefield_hill1.png) }
-#grid_a1.action { background-position: top center, 10% 60%; background-image: url(images/battle_array_action.svg), url(images/battlefield_hill1.png) }
-#grid_a3 { background-position: 60% 90%, 20% 30%; background-image: url(images/battlefield_buildings.png), url(images/battlefield_trees1.png) }
-#grid_a3.action { background-position: top center, 60% 90%, 20% 30%; background-image: url(images/battle_array_action.svg), url(images/battlefield_buildings.png), url(images/battlefield_trees1.png) }
+#battle_grid {
+	background-repeat: no-repeat;
+	background-position:
+		95% 350px,
+		85% 175px,
+		10% 300px,
+		90% 800px,
+		10% 850px,
+		40% 1000px;
+	background-image:
+		url(images/battlefield_buildings.png),
+		url(images/battlefield_trees1.png),
+		url(images/battlefield_hill1.png),
+		url(images/battlefield_hill2.png),
+		url(images/battlefield_trees2.png),
+		url(images/battlefield_trees3.png);
+}
 
-#grid_d1 { background-position: 50% 70%; background-image: url(images/battlefield_trees2.png) }
-#grid_d1.action { background-position: top center, 50% 70%; background-image: url(images/battle_array_action.svg), url(images/battlefield_trees2.png) }
-#grid_d2 { background-position: 50% 95%; background-image: url(images/battlefield_trees3.png) }
-#grid_d2.action { background-position: top center, 50% 95%; background-image: url(images/battle_array_action.svg), url(images/battlefield_trees3.png) }
-#grid_d3 { background-position: 50% 60%; background-image: url(images/battlefield_hill2.png) }
-#grid_d3.action { background-position: top center, 50% 60%; background-image: url(images/battle_array_action.svg), url(images/battlefield_hill2.png) }
+#battle_grid.attacker {
+	background-position:
+		10% 900px,
+		5% 725px,
+		90% 850px,
+		10% 250px,
+		90% 250px,
+		60% 100px;
+}
 
 #grid_rg1:empty:not(.action), #grid_rg2:empty:not(.action), #grid_rg3:empty:not(.action),
 #grid_sa1:empty:not(.action), #grid_sa2:empty:not(.action), #grid_sa3:empty:not(.action) {
