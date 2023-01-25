@@ -3337,7 +3337,7 @@ function end_levy_muster() {
 }
 
 states.levy_muster = {
-	inactive: "Levy",
+	inactive: "Muster",
 	prompt() {
 		view.prompt = "Levy: Muster with your Lords."
 
@@ -3380,7 +3380,7 @@ function resume_levy_muster_lord() {
 }
 
 states.levy_muster_lord = {
-	inactive: "Levy",
+	inactive: "Muster",
 	prompt() {
 		if (game.count === 1)
 			view.prompt = `Levy: ${lord_name[game.who]} has ${game.count} action.`
@@ -3488,7 +3488,7 @@ states.levy_muster_lord = {
 }
 
 states.muster_lord_at_seat = {
-	inactive: "Levy",
+	inactive: "Muster",
 	prompt() {
 		view.prompt = `Muster: Select Seat for ${lord_name[game.who]}.`
 		for_each_seat(game.who, seat => {
@@ -3518,7 +3518,7 @@ function resume_muster_lord_transport() {
 }
 
 states.muster_lord_transport = {
-	inactive: "Levy",
+	inactive: "Muster",
 	prompt() {
 		if (game.state === "veliky_knyaz")
 			view.prompt = `Veliky Knyaz: Select Transport for ${lord_name[game.who]}.`
@@ -3642,7 +3642,7 @@ function can_muster_capability() {
 }
 
 states.muster_capability = {
-	inactive: "Levy",
+	inactive: "Muster",
 	prompt() {
 		let deck = list_deck()
 		view.prompt = `Muster: Select a new Capability for ${lord_name[game.who]}.`
@@ -3679,7 +3679,7 @@ states.muster_capability = {
 }
 
 states.muster_capability_discard = {
-	inactive: "Levy",
+	inactive: "Muster",
 	prompt() {
 		view.prompt = `Muster: Remove a Capability from ${lord_name[game.who]}.`
 		gen_action_card(get_lord_capability(game.who, 0))
