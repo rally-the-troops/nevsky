@@ -1,6 +1,5 @@
 "use strict"
 
-// TODO: die rolls in log - circled numbers/icons
 
 // FIXME: lift_sieges / besieged needs checking! (automatic after disband_lord, manual after move/sail, extra careful manual after battle)
 // FIXME: remove_legate_if_endangered needs checking! (automatic after disband_lord, manual after move/sail, manual after battle)
