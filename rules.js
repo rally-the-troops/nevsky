@@ -3563,12 +3563,9 @@ states.muster_lord_transport = {
 }
 
 function lord_has_capability_card(lord, c) {
-	let name = data.cards[c].capability
-	let c1 = get_lord_capability(lord, 0)
-	if (c1 >= 0 && data.cards[c1].capability === name)
+	if (get_lord_capability(lord, 0) === c)
 		return true
-	let c2 = get_lord_capability(lord, 1)
-	if (c2 >= 0 && data.cards[c2].capability === name)
+	if (get_lord_capability(lord, 1) === c)
 		return true
 	return false
 }
@@ -10528,9 +10525,9 @@ function action_wastage(lord, type) {
 	add_lord_assets(lord, type, -1)
 }
 
-function find_lord_capability(c) {
+function find_lord_with_capability_card(c) {
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-		if (lord_has_capability(lord, c))
+		if (lord_has_capability_card(lord, c))
 			return lord
 	return NOBODY
 }
@@ -10554,7 +10551,7 @@ states.wastage = {
 	},
 	card(c) {
 		push_undo()
-		let lord = find_lord_capability(c)
+		let lord = find_lord_with_capability_card(c)
 		set_lord_moved(lord, 0)
 		discard_lord_capability(lord, c)
 	},
@@ -10626,7 +10623,7 @@ states.reset = {
 			log("Discarded Held card.")
 			set_delete(game.hand2, c)
 		} else {
-			let lord = find_lord_capability(c)
+			let lord = find_lord_with_capability_card(c)
 			if (lord !== NOBODY) {
 				discard_lord_capability(lord, c)
 			}
