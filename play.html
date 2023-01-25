@@ -304,6 +304,10 @@ body.Teutons #plan_actions .russian { display: none }
 	filter: grayscale(50%)
 }
 
+#battle_grid .mat.ambushed .background {
+	filter: grayscale(50%)
+}
+
 .court_body .mat.hidden .background {
 	filter: grayscale(100%)
 }
@@ -430,7 +434,10 @@ body.shift .mustered_vassals {
 	margin-top: -38px;
 }
 
-.mat .shield { position: absolute; }
+.mat .shield {
+	position: absolute;
+	background-repeat: no-repeat;
+}
 
 .mat.teutonic .shield {
 	top: 10px; left: 6px;
@@ -447,13 +454,13 @@ body.shift .mustered_vassals {
 	filter: drop-shadow(0 0 3px white);
 }
 
-.mat.russian .shield.action, .mat.yaroslav .shield.action {
-	background-image: url(images/shield_russian.svg);
+.mat.teutonic .shield.action {
+	background-image: url(images/shield_teutonic.svg);
 	filter: drop-shadow(0 0 3px white);
 }
 
-.mat.teutonic .shield.action {
-	background-image: url(images/shield_teutonic.svg);
+.mat.russian .shield.action, .mat.yaroslav .shield.action {
+	background-image: url(images/shield_russian.svg);
 	filter: drop-shadow(0 0 3px white);
 }
 

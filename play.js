@@ -27,8 +27,18 @@ const EVENT_TEUTONIC_FIELD_ORGAN = T10
 
 const AOW_TEUTONIC_TREBUCHETS = T14
 
-const RG2 = 10
+const A1 = 0 // attackers
+const A2 = 1
+const A3 = 2
+const D1 = 3 // defenders
+const D2 = 4
+const D3 = 5
+const SA1 = 6 // relief sally: attackers
 const SA2 = 7
+const SA3 = 8
+const RG1 = 9 // relief sally: rearguard
+const RG2 = 10
+const RG3 = 11
 
 const MAP_DPI = 75
 
@@ -234,12 +244,49 @@ function pack4_get(word, n) {
 	return (word >>> n) & 15
 }
 
+function is_p1_lord(lord) {
+	return lord >= first_p1_lord && lord <= last_p1_lord
+}
+
+function is_p2_lord(lord) {
+	return lord >= first_p2_lord && lord <= last_p2_lord
+}
+
 function is_lord_besieged(lord) {
 	let besieged = pack1_get(view.pieces.besieged, lord)
 	// show sallying lords as not besieged
 	if (view.battle && view.battle.reserves.includes(lord))
 		return false
 	return besieged
+}
+
+function is_lord_on_left_or_right(lord) {
+	if (view.battle.array[A1] === lord) return true
+	if (view.battle.array[A3] === lord) return true
+	if (view.battle.array[D1] === lord) return true
+	if (view.battle.array[D3] === lord) return true
+	if (view.battle.array[SA1] === lord) return true
+	if (view.battle.array[SA3] === lord) return true
+	if (view.battle.array[RG1] === lord) return true
+	if (view.battle.array[RG3] === lord) return true
+	return false
+}
+
+function is_lord_ambushed(lord) {
+	if (view.battle) {
+		if (view.battle.attacker === "Teutons") {
+			if ((view.battle.ambush & 2) && is_p1_lord(lord))
+				return is_lord_on_left_or_right(lord)
+			if ((view.battle.ambush & 1) && is_p2_lord(lord))
+				return is_lord_on_left_or_right(lord)
+		} else {
+			if ((view.battle.ambush & 2) && is_p2_lord(lord))
+				return is_lord_on_left_or_right(lord)
+			if ((view.battle.ambush & 1) && is_p1_lord(lord))
+				return is_lord_on_left_or_right(lord)
+		}
+	}
+	return false
 }
 
 function is_teutonic_lord(lord) {
@@ -1203,6 +1250,7 @@ function update_lord(ix) {
 	ui.lord_mat[ix].classList.toggle("command", is_lord_command(ix))
 
 	ui.lord_mat[ix].classList.toggle("besieged", is_lord_besieged(ix))
+	ui.lord_mat[ix].classList.toggle("ambushed", is_lord_ambushed(ix))
 }
 
 function update_legate() {
