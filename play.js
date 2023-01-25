@@ -1167,8 +1167,6 @@ function update_lord_mat(ix) {
 		update_vassals(ui.ready_vassals[ix], ui.mustered_vassals[ix], ix)
 		update_forces(ui.forces[ix], view.pieces.forces[ix], ix, false)
 		update_forces(ui.routed[ix], view.pieces.routed[ix], ix, true)
-		ui.lord_moved1[ix].classList.toggle("hide", is_levy_phase() || get_lord_moved(ix) < 1)
-		ui.lord_moved2[ix].classList.toggle("hide", is_levy_phase() || get_lord_moved(ix) < 2)
 		ui.lord_feed_x2[ix].classList.toggle("hide", count_lord_all_forces(ix) <= 6)
 	} else {
 		ui.lord_mat[ix].classList.add("hidden")
@@ -1181,6 +1179,9 @@ function update_lord_mat(ix) {
 		ui.lord_moved2[ix].classList.add("hide")
 		ui.lord_feed_x2[ix].classList.add("hide")
 	}
+	let m = get_lord_moved(ix)
+	ui.lord_moved1[ix].classList.toggle("hide", is_levy_phase() || (m !== 1 && m !== 2))
+	ui.lord_moved2[ix].classList.toggle("hide", is_levy_phase() || (m !== 2))
 }
 
 function is_lord_command(ix) {

@@ -10466,7 +10466,7 @@ function goto_wastage() {
 	let done = true
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 		if (check_lord_wastage(lord)) {
-			set_lord_moved(lord, 1)
+			set_lord_moved(lord, 3)
 			done = false
 		}
 	}
