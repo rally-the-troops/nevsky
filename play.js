@@ -954,8 +954,10 @@ function layout_locale_cylinders(loc) {
 			y -= 18
 			z = 2
 		}
-		if (e === ui.legate)
+		if (e === ui.legate) {
 			y -= 16
+			z = 3
+		}
 		e.style.top = (y - 23) + "px"
 		e.style.left = (x - 23) + "px"
 		e.style.zIndex = z
