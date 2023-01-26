@@ -8600,10 +8600,10 @@ function roll_for_ravens_rock() {
 		prot--
 	}
 	if (prot > 0) {
-		game.battle.xhits = roll_for_protection(`C${EVENT_RUSSIAN_RAVENS_ROCK} ${range(prot)}`, true, prot, game.battle.xhits)
-		game.battle.hits = roll_for_protection(`C${EVENT_RUSSIAN_RAVENS_ROCK} ${range(prot)}`, false, prot, game.battle.hits)
+		game.battle.xhits = roll_for_protection(`E${EVENT_RUSSIAN_RAVENS_ROCK} ${range(prot)}`, true, prot, game.battle.xhits)
+		game.battle.hits = roll_for_protection(`E${EVENT_RUSSIAN_RAVENS_ROCK} ${range(prot)}`, false, prot, game.battle.hits)
 	} else {
-		logi(`No C${EVENT_RUSSIAN_RAVENS_ROCK}.`)
+		logi(`No E${EVENT_RUSSIAN_RAVENS_ROCK}.`)
 	}
 }
 
@@ -9834,7 +9834,7 @@ states.hillforts = {
 	},
 	lord(lord) {
 		push_undo()
-		logcap(AOW_TEUTONIC_HILLFORTS)
+		log(`C${AOW_TEUTONIC_HILLFORTS} skipped L${lord}.`)
 		feed_lord_skip(lord)
 		if (has_friendly_lord_who_must_feed())
 			game.state = "feed"
