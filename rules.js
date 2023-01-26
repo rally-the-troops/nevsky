@@ -1,6 +1,5 @@
 "use strict"
 
-
 // FIXME: lift_sieges / besieged needs checking! (automatic after disband_lord, manual after move/sail, extra careful manual after battle)
 // FIXME: remove_legate_if_endangered needs checking! (automatic after disband_lord, manual after move/sail, manual after battle)
 
@@ -4862,6 +4861,14 @@ function spoil_loot(lord) {
 	add_spoils(LOOT, 1)
 }
 
+function can_any_avoid_battle() {
+        let here = game.march.to
+        for (let [to, way] of data.locales[here].ways)
+                if (can_avoid_battle(to, way))
+                        return true
+        return false
+}
+
 function can_avoid_battle(to, way) {
 	if (way === game.march.approach)
 		return false
@@ -4875,10 +4882,15 @@ function can_avoid_battle(to, way) {
 function goto_avoid_battle() {
 	clear_undo()
 	set_active_enemy()
-	game.march.group = game.group // save group
-	game.state = "avoid_battle"
-	game.spoils = 0
-	resume_avoid_battle()
+	if (can_any_avoid_battle()) {
+		// TODO: pre-select lone lord?
+		game.march.group = game.group // save group
+		game.state = "avoid_battle"
+		game.spoils = 0
+		resume_avoid_battle()
+	} else {
+		goto_march_withdraw()
+	}
 }
 
 function resume_avoid_battle() {
