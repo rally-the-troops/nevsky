@@ -35,6 +35,17 @@ function frac(x) {
 	return x >> 1
 }
 
+function range(x) {
+	switch (x) {
+	case 1: return "1"
+	case 2: return "1-2"
+	case 3: return "1-3"
+	case 4: return "1-4"
+	case 5: return "1-5"
+	case 6: return "1-6"
+	}
+}
+
 let game = null
 let view = null
 let states = {}
@@ -3452,11 +3463,11 @@ states.levy_muster_lord = {
 		let die = roll_die()
 		let fealty = data.lords[other].fealty
 		if (die <= fealty) {
-			log(`L${other} 1-${fealty}: ${HIT[die]}`)
+			log(`L${other} ${range(fealty)}: ${HIT[die]}`)
 			push_state("muster_lord_at_seat")
 			game.who = other
 		} else {
-			log(`L${other} 1-${fealty}: ${MISS[die]}`)
+			log(`L${other} 1-${range(fealty)}: ${MISS[die]}`)
 			resume_levy_muster_lord()
 		}
 	},
@@ -5306,11 +5317,11 @@ states.surrender = {
 		let die = roll_die()
 		let n = count_siege_markers(here)
 		if (die <= n) {
-			log(`Surrender 1-${n}: ${HIT[die]}`)
+			log(`Surrender ${range(n)}: ${HIT[die]}`)
 			surrender_stronghold(here)
 			end_siege()
 		} else {
-			log(`Surrender 1-${n}: ${MISS[die]}`)
+			log(`Surrender ${range(n)}: ${MISS[die]}`)
 			build_siegeworks()
 		}
 	},
@@ -8547,8 +8558,8 @@ function roll_for_walls() {
 		prot--
 	}
 	if (prot > 0) {
-		game.battle.xhits = roll_for_protection(`Walls 1-${prot}`, true, prot, game.battle.xhits)
-		game.battle.hits = roll_for_protection(`Walls 1-${prot}`, false, prot, game.battle.hits)
+		game.battle.xhits = roll_for_protection(`Walls ${range(prot)}`, true, prot, game.battle.xhits)
+		game.battle.hits = roll_for_protection(`Walls ${range(prot)}`, false, prot, game.battle.hits)
 	} else {
 		logi("No walls.")
 	}
@@ -8561,8 +8572,8 @@ function roll_for_siegeworks() {
 		prot--
 	}
 	if (prot > 0) {
-		game.battle.xhits = roll_for_protection(`Siegeworks 1-${prot}`, true, prot, game.battle.xhits)
-		game.battle.hits = roll_for_protection(`Siegeworks 1-${prot}`, false, prot, game.battle.hits)
+		game.battle.xhits = roll_for_protection(`Siegeworks ${range(prot)}`, true, prot, game.battle.xhits)
+		game.battle.hits = roll_for_protection(`Siegeworks ${range(prot)}`, false, prot, game.battle.hits)
 	} else {
 		logi("No siegeworks.")
 	}
@@ -8575,8 +8586,8 @@ function roll_for_ravens_rock() {
 		prot--
 	}
 	if (prot > 0) {
-		game.battle.xhits = roll_for_protection(`C${EVENT_RUSSIAN_RAVENS_ROCK} 1-${prot}`, true, prot, game.battle.xhits)
-		game.battle.hits = roll_for_protection(`C${EVENT_RUSSIAN_RAVENS_ROCK} 1-${prot}`, false, prot, game.battle.hits)
+		game.battle.xhits = roll_for_protection(`C${EVENT_RUSSIAN_RAVENS_ROCK} ${range(prot)}`, true, prot, game.battle.xhits)
+		game.battle.hits = roll_for_protection(`C${EVENT_RUSSIAN_RAVENS_ROCK} ${range(prot)}`, false, prot, game.battle.hits)
 	} else {
 		logi(`No C${EVENT_RUSSIAN_RAVENS_ROCK}.`)
 	}
@@ -8894,24 +8905,24 @@ function action_assign_hits(lord, type) {
 	if (evade > 0 && !game.battle.storm && is_melee_step()) {
 		let die = roll_die()
 		if (die <= evade) {
-			logi(`${FORCE_TYPE_NAME[type]} 1-${evade}: ${MISS[die]}`)
+			logi(`${FORCE_TYPE_NAME[type]} ${range(evade)}: ${MISS[die]}`)
 		} else {
-			logi(`${FORCE_TYPE_NAME[type]} 1-${evade}: ${HIT[die]}`)
+			logi(`${FORCE_TYPE_NAME[type]} ${range(evade)}: ${HIT[die]}`)
 			rout_unit(lord, type)
 		}
 	} else if (protection > 0) {
 		let die = roll_die()
 		if (die <= protection - ap) {
-			logi(`${FORCE_TYPE_NAME[type]} 1-${protection-ap}: ${MISS[die]}`)
+			logi(`${FORCE_TYPE_NAME[type]} ${range(protection-ap)}: ${MISS[die]}`)
 		} else {
-			logi(`${FORCE_TYPE_NAME[type]} 1-${protection-ap}: ${HIT[die]}`)
+			logi(`${FORCE_TYPE_NAME[type]} ${range(protection-ap)}: ${HIT[die]}`)
 			if (use_warrior_monks(lord, type)) {
 				let card = which_lord_capability(lord, AOW_TEUTONIC_WARRIOR_MONKS)
 				die = roll_die()
 				if (die <= protection - ap) {
-					logi(`C${card} 1-${protection-ap}: ${MISS[die]}`)
+					logi(`C${card} ${range(protection-ap)}: ${MISS[die]}`)
 				} else {
-					logi(`C${card} 1-${protection-ap}: ${HIT[die]}`)
+					logi(`C${card} ${range(protection-ap)}: ${HIT[die]}`)
 					rout_unit(lord, type)
 				}
 			} else {
@@ -9491,11 +9502,11 @@ function action_losses(lord, type) {
 
 	let die = roll_die()
 	if (die <= target) {
-		logi(`${FORCE_TYPE_NAME[type]} 1-${target}: ${MISS[die]}`)
+		logi(`${FORCE_TYPE_NAME[type]} ${range(target)}: ${MISS[die]}`)
 		add_lord_routed_forces(lord, type, -1)
 		add_lord_forces(lord, type, 1)
 	} else {
-		logi(`${FORCE_TYPE_NAME[type]} 1-${target}: ${HIT[die]}`)
+		logi(`${FORCE_TYPE_NAME[type]} ${range(target)}: ${HIT[die]}`)
 		add_lord_routed_forces(lord, type, -1)
 		if (type === SERFS)
 			game.pieces.smerdi++
