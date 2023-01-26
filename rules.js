@@ -2162,15 +2162,27 @@ states.tempest = {
 	inactive: "Tempest",
 	prompt() {
 		view.prompt = "Tempest: Remove all Ships from a Teutonic Lord (half if he has Cogs)."
-		for (let lord = first_enemy_lord; lord <= last_enemy_lord; ++lord)
-			if (get_lord_assets(lord, SHIP) > 0)
-				gen_action_ship(lord)
+		for (let lord = first_enemy_lord; lord <= last_enemy_lord; ++lord) {
+			if (game.hidden) {
+				gen_action_lord(lord)
+			} else {
+				if (get_lord_assets(lord, SHIP) > 0)
+					gen_action_ship(lord)
+			}
+		}
+	},
+	lord(lord) {
+		this.ship(lord)
 	},
 	ship(lord) {
-		log(`Removed Ships from L${lord}.`)
 		let n = 0
-		if (lord_has_capability(lord, AOW_TEUTONIC_COGS))
+		if (lord_has_capability(lord, AOW_TEUTONIC_COGS)) {
+			logcap(AOW_TEUTONIC_COGS)
+			log(`Removed half Ships from L${lord}.`)
 			n = get_lord_assets(lord, SHIP) >> 1
+		} else {
+			log(`Removed all Ships from L${lord}.`)
+		}
 		set_lord_assets(lord, SHIP, n)
 		end_immediate_event()
 	},
