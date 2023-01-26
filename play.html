@@ -135,21 +135,11 @@ body.Teutons #plan_actions .russian { display: none }
 #battle_grid .grid_array {
 	width: 376px;
 	height: 506px;
-	padding: 12px;
+	padding: 36px 12px 12px 12px;
 }
 
-#battle_grid #grid_ga {
-	height: auto;
-	min-height: 80px;
-}
-
-#battle_grid #grid_sw {
-	height: auto;
-}
-
-#battle_grid #grid_sw:empty {
-	display: none;
-}
+#battle_grid #grid_ga { height: auto; }
+#battle_grid #grid_sw { height: auto; }
 
 .grid_array { background-repeat: no-repeat }
 
@@ -263,9 +253,13 @@ body.Teutons #plan_actions .russian { display: none }
 	flex-wrap: wrap;
 	justify-content: center;
 	gap: 4px;
+	margin: 12px;
 }
 
+.siegeworks:empty { display: none }
+
 #garrison {
+	background-image: url(images/garrison.svg);
 	background-repeat: no-repeat;
 	background-position: center;
 	display: flex;
@@ -275,16 +269,12 @@ body.Teutons #plan_actions .russian { display: none }
 	width: 376px;
 	height: 80px;
 	gap: 2px;
+	margin: 0 auto;
 }
 
 #garrison.hide { display: none }
 
-.attacker #garrison { background-image: url(images/garrison_attacker.svg); }
-.defender #garrison { background-image: url(images/garrison_defender.svg); }
-
-#garrison .unit {
-	position: static
-}
+#garrison .unit { position: static }
 
 /* MATS */
 
@@ -374,7 +364,7 @@ body.Teutons #plan_actions .russian { display: none }
 	z-index: 5;
 }
 
-.mat .feed_x2 { left: 8px; top: 178px; }
+.mat .feed_x2 { left: 8px; top: 164px; }
 .mat .moved_fought.one { right: 72px; top: 12px; }
 .mat .moved_fought.two { right: 66px; top: 6px; }
 
@@ -1370,11 +1360,13 @@ body.shift .mustered_vassals {
 <div id="battle_panel" class="panel hide">
 <div id="battle_header" class="panel_header">Battle</div>
 <div id="battle_grid">
-	<div class="grid_array" id="grid_ga">
+	<div id="grid_ga">
 		<div id="pursuit" class="marker rectangle pursuit russian hide"></div>
 		<div id="battle_walls1" class="siegeworks"></div>
-		<div id="garrison"></div>
 		<div id="battle_walls2" class="siegeworks"></div>
+		<div id="garrison"></div>
+		<div id="battle_walls3" class="siegeworks"></div>
+		<div id="battle_walls4" class="siegeworks"></div>
 	</div>
 	<div class="grid_array att" id="grid_a1"></div>
 	<div class="grid_array att" id="grid_a2"></div>
@@ -1385,7 +1377,7 @@ body.shift .mustered_vassals {
 	<div class="grid_array att" id="grid_rg1"></div>
 	<div class="grid_array att" id="grid_rg2"></div>
 	<div class="grid_array att" id="grid_rg3"></div>
-	<div class="grid_array siegeworks" id="grid_sw"></div>
+	<div class="siegeworks" id="grid_sw"></div>
 	<div class="grid_array def" id="grid_sa1"></div>
 	<div class="grid_array def" id="grid_sa2"></div>
 	<div class="grid_array def" id="grid_sa3"></div>

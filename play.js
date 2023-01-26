@@ -646,8 +646,12 @@ const ui = {
 	court1: document.getElementById("court1"),
 	court2: document.getElementById("court2"),
 	garrison: document.getElementById("garrison"),
-	battle_walls1: document.getElementById("battle_walls1"),
-	battle_walls2: document.getElementById("battle_walls2"),
+	battle_walls: [
+		document.getElementById("battle_walls1"),
+		document.getElementById("battle_walls2"),
+		document.getElementById("battle_walls3"),
+		document.getElementById("battle_walls4"),
+	],
 	battle_siegeworks: document.getElementById("grid_sw"),
 	battle_panel: document.getElementById("battle_panel"),
 	battle_header: document.getElementById("battle_header"),
@@ -1648,26 +1652,17 @@ function update_battle() {
 		sally_prot = count_siege_markers(view.battle.where)
 
 	let att_ui, def_ui
-
-	if (view.battle.attacker === "Teutons") {
-		if (player === "Russians") {
-			att_ui = ui.battle_walls1
-			def_ui = ui.battle_walls2
-		} else {
-			att_ui = ui.battle_walls2
-			def_ui = ui.battle_walls1
-		}
+	if (player === view.battle.attacker) {
+		att_ui = ui.battle_walls[3]
+		def_ui = ui.battle_walls[2]
 	} else {
-		if (player === "Russians") {
-			att_ui = ui.battle_walls2
-			def_ui = ui.battle_walls1
-		} else {
-			att_ui = ui.battle_walls1
-			def_ui = ui.battle_walls2
-		}
+		att_ui = ui.battle_walls[0]
+		def_ui = ui.battle_walls[1]
 	}
 
-	def_ui.replaceChildren()
+	for (let i = 0; i < 4; ++i)
+		ui.battle_walls[i].replaceChildren()
+
 	for (let i = 0; i < def_prot; ++i)
 		if (view.battle.attacker === "Teutons")
 			def_ui.appendChild(get_cached_element("marker square russian siege"))
@@ -1683,7 +1678,6 @@ function update_battle() {
 		else
 			ui.battle_siegeworks.appendChild(get_cached_element("marker square teutonic siege"))
 
-	att_ui.replaceChildren()
 	for (let i = 0; i < att_prot; ++i)
 		if (view.battle.attacker === "Teutons")
 			att_ui.appendChild(get_cached_element("marker square teutonic siege"))
