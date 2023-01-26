@@ -1944,7 +1944,6 @@ function end_setup_lords() {
 	set_active_enemy()
 	if (game.active === P1) {
 		log_h1("Levy " + current_turn_name())
-		log_h2("Arts of War")
 		goto_levy_arts_of_war_first()
 	}
 }
@@ -3202,7 +3201,10 @@ function discard_card_event(c) {
 }
 
 function goto_levy_arts_of_war_first() {
-	log_br()
+	if (game.active === TEUTONS)
+		log_h2("Teutonic Arts of War")
+	else
+		log_h2("Russian Arts of War")
 	game.state = "levy_arts_of_war_first"
 	game.what = draw_two_cards()
 }
@@ -3273,10 +3275,10 @@ function end_levy_arts_of_war_first() {
 // === LEVY: ARTS OF WAR ===
 
 function goto_levy_arts_of_war() {
-	if (game.active === P1)
-		log_h2("Arts of War")
+	if (game.active === TEUTONS)
+		log_h2("Teutonic Arts of War")
 	else
-		log_br()
+		log_h2("Russian Arts of War")
 	game.what = draw_two_cards()
 	resume_levy_arts_of_war()
 }
@@ -6702,7 +6704,7 @@ function init_battle(here, is_storm, is_sally) {
 function start_battle() {
 	let here = get_lord_locale(game.command)
 
-	log_h2(`Battle at %${here}`)
+	log_h3(`Battle at %${here}`)
 
 	init_battle(here, 0, 0)
 
@@ -6735,7 +6737,7 @@ function start_battle() {
 function start_sally() {
 	let here = get_lord_locale(game.command)
 
-	log_h2(`Sally at %${here}`)
+	log_h3(`Sally at %${here}`)
 
 	init_battle(here, 0, 1)
 
@@ -6758,7 +6760,7 @@ function init_garrison(knights, men_at_arms) {
 function start_storm() {
 	let here = get_lord_locale(game.command)
 
-	log_h2(`Storm at %${here}`)
+	log_h3(`Storm at %${here}`)
 
 	init_battle(here, 1, 0)
 
@@ -7375,13 +7377,13 @@ function goto_battle_rounds() {
 function goto_concede() {
 	// No concede during first round of Storm
 	if (game.battle.storm) {
-		log_h3(`Storm Round ${game.battle.round} / ${count_siege_markers(game.battle.where)}`)
+		log_h4(`Storm Round ${game.battle.round} / ${count_siege_markers(game.battle.where)}`)
 		if (game.battle.round === 1)
 			goto_first_strike()
 		else
 			game.state = "concede_storm"
 	} else {
-		log_h3(`Battle Round ${game.battle.round}`)
+		log_h4(`Battle Round ${game.battle.round}`)
 		game.state = "concede_battle"
 	}
 }
@@ -8220,9 +8222,9 @@ function goto_strike() {
 		set_active_defender()
 
 	if (game.battle.storm)
-		log_h4(storm_steps[game.battle.step].name)
+		log_h5(storm_steps[game.battle.step].name)
 	else
-		log_h4(battle_steps[game.battle.step].name)
+		log_h5(battle_steps[game.battle.step].name)
 
 	// Once per Archery and once per Melee.
 	if (game.battle.step === 0 || game.battle.step === 2) {
@@ -9011,7 +9013,7 @@ function set_active_victor() {
 }
 
 function end_battle() {
-	log_h3(`${game.battle.loser} Lost`)
+	log_h4(`${game.battle.loser} Lost`)
 
 	if ((game.battle.sally || game.battle.relief) && game.battle.attacker === game.battle.loser) {
 		log("Raid removed Siege markers.")
@@ -9454,9 +9456,9 @@ function goto_battle_losses_loser() {
 	game.who = NOBODY
 	if (has_battle_losses())
 		if (game.active === P1)
-			log_h3("Teutonic Losses")
+			log_h4("Teutonic Losses")
 		else
-			log_h3("Russian Losses")
+			log_h4("Russian Losses")
 	resume_battle_losses()
 }
 
@@ -9466,9 +9468,9 @@ function goto_battle_losses_victor() {
 	game.who = NOBODY
 	if (has_battle_losses())
 		if (game.active === P1)
-			log_h3("Teutonic Losses")
+			log_h4("Teutonic Losses")
 		else
-			log_h3("Russian Losses")
+			log_h4("Russian Losses")
 	resume_battle_losses()
 }
 
@@ -9640,7 +9642,7 @@ function find_lone_friendly_lord_at(loc) {
 
 function goto_battle_spoils() {
 	if (has_any_spoils() && has_friendly_lord(game.battle.where)) {
-		log_h3("Spoils")
+		log_h4("Spoils")
 		log_spoils()
 		game.state = "battle_spoils"
 		game.who = find_lone_friendly_lord_at(game.battle.where)
@@ -9688,7 +9690,7 @@ states.battle_spoils = {
 
 function goto_battle_service() {
 	if (game.battle.retreated) {
-		log_h3("Service")
+		log_h4("Service")
 		resume_battle_service()
 	} else {
 		end_battle_service()
@@ -10749,18 +10751,30 @@ function log_h1(msg) {
 
 function log_h2(msg) {
 	log_br()
-	log(".h2 " + msg)
+	if (game.active === TEUTONS)
+		log(".h2t " + msg)
+	else
+		log(".h2r " + msg)
 	log_br()
 }
 
 function log_h3(msg) {
 	log_br()
-	log(".h3 " + msg)
+	if (game.active === TEUTONS)
+		log(".h3t " + msg)
+	else
+		log(".h3r " + msg)
+	log_br()
 }
 
 function log_h4(msg) {
 	log_br()
 	log(".h4 " + msg)
+}
+
+function log_h5(msg) {
+	log_br()
+	log(".h5 " + msg)
 }
 
 function gen_action(action, argument) {

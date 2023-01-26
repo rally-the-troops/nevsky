@@ -945,22 +945,37 @@ function on_log(text) {
 		text = text.substring(4)
 		p.className = "h1"
 	}
-	if (text.match(/^\.h2/)) {
-		text = text.substring(4)
-		if (text.startsWith("Teuton"))
-			p.className = "h2 teutonic"
-		else if (text.startsWith("Russian"))
-			p.className = "h2 russian"
-		else
-			p.className = "h2"
+	else if (text.match(/^\.h2t/)) {
+		text = text.substring(5)
+		p.className = "h2 teutonic"
 	}
-	if (text.match(/^\.h3/)) {
+	else if (text.match(/^\.h2r/)) {
+		text = text.substring(5)
+		p.className = "h2 russian"
+	}
+	else if (text.match(/^\.h2/)) {
+		text = text.substring(4)
+		p.className = "h2"
+	}
+	else if (text.match(/^\.h3t/)) {
+		text = text.substring(5)
+		p.className = "h3 teutonic"
+	}
+	else if (text.match(/^\.h3r/)) {
+		text = text.substring(5)
+		p.className = "h3 russian"
+	}
+	else if (text.match(/^\.h3/)) {
 		text = text.substring(4)
 		p.className = "h3"
 	}
-	if (text.match(/^\.h4/)) {
+	else if (text.match(/^\.h4/)) {
 		text = text.substring(4)
 		p.className = "h4"
+	}
+	else if (text.match(/^\.h5/)) {
+		text = text.substring(4)
+		p.className = "h5"
 	}
 
 	p.innerHTML = text
