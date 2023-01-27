@@ -3468,7 +3468,7 @@ states.levy_muster_lord = {
 			push_state("muster_lord_at_seat")
 			game.who = other
 		} else {
-			log(`L${other} 1-${range(fealty)}: ${MISS[die]}`)
+			log(`L${other} ${range(fealty)}: ${MISS[die]}`)
 			resume_levy_muster_lord()
 		}
 	},
