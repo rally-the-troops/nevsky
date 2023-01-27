@@ -10110,9 +10110,9 @@ function disband_lord(lord, permanently = false) {
 		set_lord_service(lord, NEVER)
 	} else {
 		if (is_levy_phase())
-			set_lord_locale(lord, CALENDAR + turn + data.lords[lord].service)
+			set_lord_cylinder_on_calendar(lord, turn + data.lords[lord].service)
 		else
-			set_lord_locale(lord, CALENDAR + turn + data.lords[lord].service + 1)
+			set_lord_cylinder_on_calendar(lord, turn + data.lords[lord].service + 1)
 		set_lord_service(lord, NEVER)
 		log(`Disbanded L${lord} to ${get_lord_calendar(lord)}.`)
 	}
