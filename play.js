@@ -750,6 +750,7 @@ function on_focus_cylinder(evt) {
 	if (loc >= CALENDAR) {
 		if (lord !== LORD_ALEKSANDR)
 			tip += ` - ${info.fealty} Fealty`
+		tip += ` - ${info.service} Service`
 	} else {
 		/*
 		if (view.turn & 1)
