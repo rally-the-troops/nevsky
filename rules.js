@@ -5399,6 +5399,13 @@ function goto_sally() {
 // NOTE: Lodya > 0 is ships as boats
 // NOTE: Lodya < 0 is boats as ships
 
+function find_lodya_lord_on_map() {
+	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
+		if (is_lord_on_map(lord) && lord_has_capability(lord, AOW_RUSSIAN_LODYA))
+			return lord
+	return NOBODY
+}
+
 function find_lodya_lord_in_shared() {
 	let here = get_lord_locale(game.command)
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
@@ -5443,7 +5450,7 @@ function init_lodya_march(type) {
 }
 
 function init_lodya_baltic_sea_trade() {
-	let lord = find_lodya_lord_in_shared()
+	let lord = find_lodya_lord_on_map()
 	if (lord !== NOBODY) {
 		game.flags.lodya = -Math.min(2, get_lord_assets(lord, BOAT))
 		if (game.flags.lodya < 0)
