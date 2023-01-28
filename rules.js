@@ -8859,6 +8859,11 @@ function rout_unit(lord, type) {
 	}
 }
 
+function remove_serf(lord) {
+	add_lord_forces(lord, SERFS, -1)
+	game.pieces.smerdi++
+}
+
 function use_warrior_monks(lord, type) {
 	if (type === KNIGHTS) {
 		let bit = 1 << lord
@@ -8925,9 +8930,12 @@ function action_assign_hits(lord, type) {
 				rout_unit(lord, type)
 			}
 		}
-	} else {
+	} else if (type !== SERFS) {
 		logi(`${FORCE_TYPE_NAME[type]} unprotected`)
 		rout_unit(lord, type)
+	} else {
+		logi(`${FORCE_TYPE_NAME[type]} removed`)
+		remove_serf(lord, type)
 	}
 
 	if (game.battle.xhits)
@@ -9504,8 +9512,6 @@ function action_losses(lord, type) {
 	} else {
 		logi(`${FORCE_TYPE_NAME[type]} ${range(target)}: ${HIT[die]}`)
 		add_lord_routed_forces(lord, type, -1)
-		if (type === SERFS)
-			game.pieces.smerdi++
 	}
 
 	resume_battle_losses()
