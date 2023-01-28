@@ -5547,7 +5547,7 @@ function end_supply_lodya() {
 
 function log_lodya() {
 	if (game.flags.lodya === 0)
-		log("C${AOW_RUSSIAN_LODYA}: Boats as 2 Boats each.")
+		log(`C${AOW_RUSSIAN_LODYA}: Boats as 2 Boats each.`)
 	else if (game.flags.lodya < 0)
 		log(`C${AOW_RUSSIAN_LODYA}: ${-game.flags.lodya} Boats as Ships.`)
 	else
@@ -6309,9 +6309,9 @@ states.ravage = {
 function ravage_location(here, there) {
 	if (here !== there) {
 		if (is_teutonic_lord(game.command))
-			log(`Ravaged %${there} with C${AOW_TEUTONIC_RAIDERS}.`)
+			log(`Ravaged %${there} (C${AOW_TEUTONIC_RAIDERS}).`)
 		else
-			log(`Ravaged %${there} with C${which_lord_capability(game.command, AOW_RUSSIAN_RAIDERS)}.`)
+			log(`Ravaged %${there} (C${which_lord_capability(game.command, AOW_RUSSIAN_RAIDERS)}).`)
 	} else {
 		log(`Ravaged %${there}.`)
 	}
