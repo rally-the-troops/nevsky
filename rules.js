@@ -52,14 +52,13 @@ let states = {}
 exports.roles = [ P1, P2 ]
 
 exports.scenarios = [
+	"Pleskau (Quickstart)",
 	"Pleskau",
 	"Watland",
-	"Peipus",
 	"Return of the Prince",
 	"Return of the Prince (Nicolle)",
+	"Peipus",
 	"Crusade on Novgorod",
-	"Pleskau (Quickstart)",
-	"Test",
 ]
 
 const scenario_last_turn = {
@@ -70,7 +69,6 @@ const scenario_last_turn = {
 	"Return of the Prince (Nicolle)": 16,
 	"Crusade on Novgorod": 16,
 	"Pleskau (Quickstart)": 2,
-	"Test": 2,
 }
 
 function should_remove_no_event_card() {
@@ -1669,9 +1667,6 @@ exports.setup = function (seed, scenario, options) {
 		case "Pleskau (Quickstart)":
 			setup_pleskau_quickstart()
 			break
-		case "Test":
-			setup_test()
-			break
 	}
 
 	return game
@@ -1883,26 +1878,6 @@ function setup_pleskau_quickstart() {
 	game.plan2 = [ LORD_GAVRILO, LORD_VLADISLAV, LORD_DOMASH, LORD_GAVRILO, LORD_DOMASH, LORD_DOMASH ]
 
 	// goto_command_activation()
-}
-
-function setup_test() {
-	setup_pleskau_quickstart()
-	set_add(game.capabilities, AOW_TEUTONIC_RANSOM)
-	set_add(game.capabilities, AOW_RUSSIAN_RANSOM)
-
-	set_lord_locale(LORD_KNUD_ABEL, LOC_ODENPAH)
-	set_lord_locale(LORD_HERMANN, LOC_ODENPAH)
-	set_lord_locale(LORD_RUDOLF, LOC_ODENPAH)
-
-	set_lord_locale(LORD_DOMASH, LOC_PSKOV)
-	set_lord_locale(LORD_VLADISLAV, LOC_IZBORSK)
-
-	for (let c = first_p1_card; c <= last_p1_card; ++c)
-		if (data.cards[c].when === "hold")
-			game.hand1.push(c)
-	for (let c = first_p2_card; c <= last_p2_card; ++c)
-		if (data.cards[c].when === "hold")
-			game.hand2.push(c)
 }
 
 states.setup_lords = {
