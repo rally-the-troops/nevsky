@@ -1001,6 +1001,24 @@ function is_lord_at_friendly_locale(lord) {
 	return is_friendly_locale(loc)
 }
 
+function used_seat_capability(lord, where, extra) {
+	let seats = data.lords[lord].seats
+	if (extra) {
+		if (set_has(seats, where) && !extra.includes(where))
+			return
+	} else {
+		if (set_has(seats, where))
+			return
+	}
+	if (is_teutonic_lord(lord))
+		if (has_global_capability(AOW_TEUTONIC_ORDENSBURGEN))
+			return AOW_TEUTONIC_ORDENSBURGEN
+	if (is_russian_lord(lord))
+		if (has_global_capability(AOW_RUSSIAN_ARCHBISHOPRIC))
+			return AOW_RUSSIAN_ARCHBISHOPRIC
+	return -1
+}
+
 function for_each_seat(lord, fn, repeat = false) {
 	let list = data.lords[lord].seats
 
@@ -3498,7 +3516,11 @@ states.muster_lord_at_seat = {
 	locale(loc) {
 		push_undo()
 
-		log(`Mustered L${game.who} at %${loc}.`)
+		let cap = used_seat_capability(game.who, loc)
+		if (cap >= 0)
+			log(`L${game.who} to %${loc} (C${cap}).`)
+		else
+			log(`L${game.who} to %${loc}.`)
 
 		// FIXME: clean up these transitions
 		set_lord_moved(game.who, 1)
@@ -3803,7 +3825,11 @@ states.papal_legate_active = {
 		game.state = "papal_legate_done"
 
 		if (is_lord_ready(lord)) {
-			log(`Mustered L${lord} at %${here}.`)
+			let cap = used_seat_capability(lord, here)
+			if (cap >= 0)
+				log(`L${lord} to %${here} (C${cap}).`)
+			else
+				log(`L${lord} to %${here}.`)
 
 			// FIXME: clean up these transitions
 			muster_lord(lord, here)
@@ -5513,7 +5539,7 @@ states.supply_lodya = {
 function end_supply_lodya() {
 	push_undo()
 	log_lodya()
-	log(`Supplied from`)
+	log(`Supplied`)
 	init_supply()
 	resume_supply()
 	game.state = "supply_source"
@@ -5954,7 +5980,7 @@ function goto_supply() {
 	if (init_lodya_supply()) {
 		game.state = "supply_lodya"
 	} else {
-		log(`Supplied from`)
+		log(`Supplied`)
 		init_supply()
 		resume_supply()
 		game.state = "supply_source"
@@ -6010,9 +6036,15 @@ states.supply_source = {
 	},
 	locale(source) {
 		if (game.supply.seats.includes(source)) {
-			logi(`Seat at %${source}`)
-			game.supply.available--
 			array_remove_item(game.supply.seats, source)
+
+			let cap = used_seat_capability(game.command, source, game.supply.seats)
+			if (cap >= 0)
+				logi(`Seat at %${source} (C${cap})`)
+			else
+				logi(`Seat at %${source}`)
+
+			game.supply.available--
 			if (is_famine_in_play())
 				game.flags.famine = 1
 		} else {
