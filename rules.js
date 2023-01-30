@@ -667,7 +667,10 @@ function feed_lord_skip(lord) {
 
 function feed_lord(lord) {
 	// reuse "moved" flag for hunger
-	set_lord_moved(lord, get_lord_moved(lord) - 1)
+	let n = get_lord_moved(lord) - 1
+	set_lord_moved(lord, n)
+	if (n === 0)
+		log(`Fed L${lord}.`)
 }
 
 function get_lord_array_position(lord) {
@@ -9918,13 +9921,11 @@ states.feed = {
 	},
 	prov(lord) {
 		push_undo()
-		log(`Fed L${lord}.`)
 		add_lord_assets(lord, PROV, -1)
 		feed_lord(lord)
 	},
 	loot(lord) {
 		push_undo()
-		log(`Fed L${lord}.`)
 		add_lord_assets(lord, LOOT, -1)
 		feed_lord(lord)
 	},
@@ -9968,14 +9969,12 @@ states.feed_lord_shared = {
 	},
 	prov(lord) {
 		push_undo()
-		log(`Fed L${game.who}.`)
 		add_lord_assets(lord, PROV, -1)
 		feed_lord(game.who)
 		resume_feed_lord_shared()
 	},
 	loot(lord) {
 		push_undo()
-		log(`Fed L${game.who}.`)
 		add_lord_assets(lord, LOOT, -1)
 		feed_lord(game.who)
 		resume_feed_lord_shared()
