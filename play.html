@@ -13,6 +13,25 @@
 <script defer src="play.js"></script>
 <style>
 
+@media (min-width: 2800px) {
+	main { display: grid; gap: 0 12px; }
+	main { grid-template-columns: 0 1275px auto 0; }
+	#sec_map { grid-row: 1; grid-column: 2 }
+	#sec_battle { grid-row: 2; grid-column: 2 }
+	#sec_lords { grid-row: 1 / 3; grid-column: 3 }
+}
+
+@media (min-width: 3200px) {
+	main { grid-template-columns: 36px 1275px auto 0; }
+}
+
+@media (min-width: 4100px) {
+	main { grid-template-columns: 0 1275px 1fr 1275px 0; }
+	#sec_map { grid-row: 1; grid-column: 2 }
+	#sec_lords { grid-row: 1; grid-column: 3 }
+	#sec_battle { grid-row: 1; grid-column: 4 }
+}
+
 main { background-color: dimgray; }
 #roles { background-color: gray; }
 header { background-color: silver; }
@@ -35,12 +54,6 @@ header.your_turn { background-color: orange; }
 #log .h3.teutonic { background-color: hsl(210,30%,90%); }
 #log .h3.russian { background-color: hsl(35,40%,90%); }
 
-/*
-#log > .i { padding-left: 20px; }
-#log > .ii { padding-left: 32px; }
-#log > div > .i { padding-left: 12px; }
-*/
-
 #log div { padding-left: 20px; text-indent: -12px; }
 #log div.i { padding-left: 32px; text-indent: -12px; }
 #log div.ii { padding-left: 44px; text-indent: -12px; }
@@ -62,9 +75,9 @@ header.your_turn { background-color: orange; }
 /* PANELS */
 
 .panel {
+	min-width: 1275px;
 	max-width: 1275px;
-	margin: 36px auto;
-	//box-shadow: 0px 0px 4px #0008;
+	margin: 12px auto 36px auto;
 	background-color: #555;
 }
 
@@ -87,7 +100,6 @@ header.your_turn { background-color: orange; }
 
 .court_panel {
 	max-width: fit-content;
-	min-width: min(1275px, 100%);
 }
 
 .court_body {
@@ -701,10 +713,6 @@ body.shift .mustered_vassals {
 	gap: 16px;
 }
 
-.hand:empty {
-	display: none;
-}
-
 .card {
 	background-size: 186px 260px;
 	width: 186px;
@@ -1314,6 +1322,9 @@ body.shift .mustered_vassals {
 
 <main>
 
+<!-- MAP, TUCKED, EVENTS -->
+<section id="sec_map">
+
 <div id="mapwrap">
 <div id="map">
 
@@ -1350,21 +1361,20 @@ body.shift .mustered_vassals {
 <div id="capabilities2"></div>
 </div>
 
-<div id="arts_of_war_panel" class="panel hide">
-<div id="arts_of_war_header" class="panel_header">Arts of War</div>
-<div id="arts_of_war" class="panel_body"></div>
-</div>
-
 <div id="events_panel" class="panel hide">
 <div id="events_header" class="panel_header">Events</div>
 <div id="events" class="panel_body"></div>
 </div>
 </div>
 
-<div id="hand_panel" class="panel hide">
-<div id="hand_header" class="panel_header">Hand</div>
-<div id="hand" class="panel_body"></div>
-</div>
+</section>
+
+<!-- BATTLE / ARTS OF WAR -->
+<section id="sec_battle">
+
+<div id="arts_of_war_panel" class="panel hide">
+<div id="arts_of_war_header" class="panel_header">Arts of War</div>
+<div id="arts_of_war" class="panel_body"></div>
 </div>
 
 <div id="battle_panel" class="panel hide">
@@ -1394,9 +1404,20 @@ body.shift .mustered_vassals {
 </div>
 </div>
 
+</section>
+
+<!-- LORD MATS, HAND, PLAN -->
+<section id="sec_lords">
+
 <div class="panel court_panel">
 <div id="court1_header" class="panel_header">Lords</div>
 <div id="court1" class="panel_body court_body"></div>
+</div>
+
+<div id="hand_panel" class="panel hide">
+<div id="hand_header" class="panel_header">Hand</div>
+<div id="hand" class="panel_body"></div>
+</div>
 </div>
 
 <div id="plan_panel" class="panel hide">
@@ -1409,6 +1430,8 @@ body.shift .mustered_vassals {
 <div id="court2_header" class="panel_header">Lords</div>
 <div id="court2" class="panel_body court_body"></div>
 </div>
+
+</section>
 
 </main>
 
