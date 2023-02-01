@@ -321,6 +321,10 @@ function is_veche_action() {
 	return !!(view.actions && view.actions.veche === 1)
 }
 
+function is_garrison_action() {
+	return !!(view.actions && view.actions.garrison === 1)
+}
+
 function is_calendar_action(turn) {
 	return !!(view.actions && view.actions.calendar && set_has(view.actions.calendar, turn))
 }
@@ -822,6 +826,11 @@ function on_click_legate(evt) {
 function on_click_array(evt) {
 	if (evt.button === 0)
 		send_action('array', evt.target.my_id)
+}
+
+function on_click_garrison(evt) {
+	if (evt.button === 0)
+		send_action('garrison')
 }
 
 function on_blur(evt) {
@@ -1619,6 +1628,7 @@ function update_battle() {
 	}
 
 	ui.garrison.classList.toggle("hide", !view.battle.storm)
+	ui.garrison.classList.toggle("action", is_garrison_action())
 
 	ui.garrison.replaceChildren()
 	if (view.battle.garrison) {
@@ -2163,6 +2173,8 @@ function build_map() {
 	build_way("Wirz", ".way.wirz")
 
 	build_plan()
+
+	ui.garrison.addEventListener("mousedown", on_click_garrison)
 
 	for (let i = 0; i < 12; ++i) {
 		ui.battle_grid_array[i].my_id = i
