@@ -6,11 +6,7 @@
 // WONTFIX: choose crossbow/normal hit application order
 
 // Check all push/clear_undo
-// Remove push_state/pop_state stuff - use explicit substates with common functions instead
 // Optimize lift_sieges (only check specific locales based on where the check is)
-// Use game.levy or game.command instead of game.who for levy (like game.command for campaign)
-// Clean up game.who (use only in muster / events, not for command)
-// drop game.who from push_state
 
 const data = require("./data.js")
 
@@ -2045,7 +2041,7 @@ function goto_immediate_event(c) {
 			return goto_russian_event_tempest()
 
 		default:
-			log("TODO")
+			log("NOT IMPLEMENTED")
 			return end_immediate_event()
 	}
 }
@@ -4727,7 +4723,7 @@ states.march_laden = {
 		let prov = count_group_assets(PROV)
 		let loot = count_group_assets(LOOT)
 
-		view.prompt = `March with ${loot} Loot, ${prov} Provender, and ${transport} Transport.`
+		view.prompt = `March: Hindered with ${loot} Loot, ${prov} Provender, and ${transport} Transport.`
 		view.group = game.group
 
 		if (prov <= transport * 2) {
@@ -4922,7 +4918,7 @@ function resume_avoid_battle() {
 states.avoid_battle = {
 	inactive: "Avoid Battle",
 	prompt() {
-		view.prompt = `March: You may Avoid Battle.`
+		view.prompt = "March: Select Lords and destination to Avoid Battle."
 		view.group = game.group
 
 		let here = game.march.to
@@ -4977,7 +4973,7 @@ states.avoid_battle = {
 states.avoid_battle_way = {
 	inactive: "Avoid Battle",
 	prompt() {
-		view.prompt = `Avoid Battle: Select Way.`
+		view.prompt = `Avoid Battle: Select Way to destination.`
 		view.group = game.group
 		let from = game.march.to
 		let to = game.march.avoid_to
@@ -5012,7 +5008,7 @@ states.avoid_battle_laden = {
 		let prov = count_group_assets(PROV)
 		let loot = count_group_assets(LOOT)
 
-		view.prompt = `Avoid Battle with ${prov} Provender and ${transport} Transport.`
+		view.prompt = `Avoid Battle: Hindered with ${prov} Provender and ${transport} Transport.`
 		view.group = game.group
 
 		if (loot > 0) {
@@ -5093,7 +5089,7 @@ function goto_march_withdraw() {
 states.march_withdraw = {
 	inactive: "Withdraw",
 	prompt() {
-		view.prompt = `March: You may Withdraw Lords into Stronghold.`
+		view.prompt = "March: Select Lords to Withdraw into Stronghold."
 
 		let here = get_lord_locale(game.command)
 		let capacity = stronghold_capacity(here)
@@ -8944,8 +8940,6 @@ function action_assign_hits(lord, type) {
 	let protection = FORCE_PROTECTION[type]
 	let evade = FORCE_EVADE[type]
 
-	// TODO: hits or xhits choice
-
 	if (game.who !== lord) {
 		game.who = lord
 		if (lord === GARRISON)
@@ -8994,7 +8988,6 @@ function action_assign_hits(lord, type) {
 		game.battle.hits--
 
 	if (!lord_has_unrouted_units(lord))
-		// TODO: log list of new targets... after assign left/right
 		rout_lord(lord)
 
 	goto_assign_hits()
@@ -9197,7 +9190,7 @@ states.battle_withdraw = {
 		let here = game.battle.where
 		let capacity = stronghold_capacity(here)
 
-		view.prompt = "Battle: You may Withdraw losing Lords into Stronghold."
+		view.prompt = "Battle: Select Lords to Withdraw into Stronghold."
 
 		// NOTE: Sallying lords are still flagged "besieged" and are thus already withdrawn!
 
@@ -9250,7 +9243,6 @@ function count_retreat_assets(type) {
 	return n
 }
 
-// TODO: manually lose all assets!?
 function transfer_assets_except_ships(lord) {
 	add_spoils(PROV, get_lord_assets(lord, PROV))
 	add_spoils(COIN, get_lord_assets(lord, COIN))
@@ -9402,7 +9394,7 @@ states.retreat_laden = {
 		let prov = count_retreat_assets(PROV)
 		let loot = count_retreat_assets(LOOT)
 
-		view.prompt = `Retreat with ${prov} Provender and ${transport} Transport.`
+		view.prompt = `Retreat: Hindered with ${prov} Provender and ${transport} Transport.`
 		view.group = game.battle.retreated
 
 		if (loot > 0) {
