@@ -8589,7 +8589,7 @@ function roll_for_walls() {
 		prot--
 	}
 	if (prot > 0) {
-		game.battle.xhits = roll_for_protection(`Walls ${range(prot)}`, true, prot, game.battle.xhits)
+		game.battle.xhits = roll_for_protection(`Walls ${range(prot)}`, game.battle.hits > 0, prot, game.battle.xhits)
 		game.battle.hits = roll_for_protection(`Walls ${range(prot)}`, false, prot, game.battle.hits)
 	} else {
 		logi("No walls.")
@@ -8599,11 +8599,11 @@ function roll_for_walls() {
 function roll_for_siegeworks() {
 	let prot = count_siege_markers(game.battle.where)
 	if (enemy_has_trebuchets()) {
-		logi("C${AOW_TEUTONIC_TREBUCHETS}.")
+		logi(`C${AOW_TEUTONIC_TREBUCHETS}.`)
 		prot--
 	}
 	if (prot > 0) {
-		game.battle.xhits = roll_for_protection(`Siegeworks ${range(prot)}`, true, prot, game.battle.xhits)
+		game.battle.xhits = roll_for_protection(`Siegeworks ${range(prot)}`, game.battle.hits > 0, prot, game.battle.xhits)
 		game.battle.hits = roll_for_protection(`Siegeworks ${range(prot)}`, false, prot, game.battle.hits)
 	} else {
 		logi("No siegeworks.")
@@ -8612,16 +8612,15 @@ function roll_for_siegeworks() {
 
 function roll_for_ravens_rock() {
 	let prot = 2
-	if (enemy_has_trebuchets()) {
-		logi("C${AOW_TEUTONIC_TREBUCHETS}.")
-		prot--
+	// Trebuchets only count vs Raven's Rock in Sally or Relief Sally battles
+	if (count_siege_markers(game.battle.where) > 0) {
+		if (enemy_has_trebuchets()) {
+			logi(`C${AOW_TEUTONIC_TREBUCHETS}.`)
+			prot--
+		}
 	}
-	if (prot > 0) {
-		game.battle.xhits = roll_for_protection(`E${EVENT_RUSSIAN_RAVENS_ROCK} ${range(prot)}`, true, prot, game.battle.xhits)
-		game.battle.hits = roll_for_protection(`E${EVENT_RUSSIAN_RAVENS_ROCK} ${range(prot)}`, false, prot, game.battle.hits)
-	} else {
-		logi(`No E${EVENT_RUSSIAN_RAVENS_ROCK}.`)
-	}
+	game.battle.xhits = roll_for_protection(`E${EVENT_RUSSIAN_RAVENS_ROCK} ${range(prot)}`, game.battle.hits > 0, prot, game.battle.xhits)
+	game.battle.hits = roll_for_protection(`E${EVENT_RUSSIAN_RAVENS_ROCK} ${range(prot)}`, false, prot, game.battle.hits)
 }
 
 function roll_for_protection(name, crossbow, prot, n) {
@@ -8638,7 +8637,7 @@ function roll_for_protection(name, crossbow, prot, n) {
 			}
 		}
 		if (crossbow)
-			logi(name + " vs crossbow:")
+			logi(name + " vs Crossbow:")
 		else
 			logi(name + ":")
 		logii(rolls.join(""))
@@ -8917,6 +8916,18 @@ function which_lord_capability(lord, list) {
 	return -1
 }
 
+function assign_hit_roll(what, prot, extra) {
+	let die = roll_die()
+	if (die <= prot) {
+		logi(`${what} ${range(prot)}: ${MISS[die]}${extra}`)
+		return false
+	} else {
+		logi(`${what} ${range(prot)}: ${HIT[die]}${extra}`)
+		return true
+	}
+
+}
+
 function action_assign_hits(lord, type) {
 	let protection = FORCE_PROTECTION[type]
 	let evade = FORCE_EVADE[type]
@@ -8931,43 +8942,35 @@ function action_assign_hits(lord, type) {
 			log(`L${lord}`)
 	}
 
-	let ap = (is_armored_force(type) && game.battle.xhits > 0) ? 2 : 0
+	let extra = ""
 
-	if (type === SERGEANTS || type === MEN_AT_ARMS)
-		if (lord_has_capability(lord, AOW_TEUTONIC_HALBBRUDER))
+	let crossbow = 0
+	if (is_armored_force(type) && game.battle.xhits > 0) {
+		extra += " (-2 Crossbow)"
+		crossbow = 2
+	}
+
+	if (type === SERGEANTS || type === MEN_AT_ARMS) {
+		if (lord_has_capability(lord, AOW_TEUTONIC_HALBBRUDER)) {
+			extra += ` (C${which_lord_capability(lord, AOW_TEUTONIC_HALBBRUDER)})`
 			protection += 1
+		}
+	}
 
 	// Evade only in Battle Melee steps
 	if (evade > 0 && !game.battle.storm && is_melee_step()) {
-		let die = roll_die()
-		if (die <= evade) {
-			logi(`${FORCE_TYPE_NAME[type]} ${range(evade)}: ${MISS[die]}`)
-		} else {
-			logi(`${FORCE_TYPE_NAME[type]} ${range(evade)}: ${HIT[die]}`)
+		if (assign_hit_roll(FORCE_TYPE_NAME[type], evade, extra))
 			rout_unit(lord, type)
-		}
 	} else if (protection > 0) {
-		let die = roll_die()
-		if (die <= protection - ap) {
-			logi(`${FORCE_TYPE_NAME[type]} ${range(protection-ap)}: ${MISS[die]}`)
-		} else {
-			logi(`${FORCE_TYPE_NAME[type]} ${range(protection-ap)}: ${HIT[die]}`)
+		if (assign_hit_roll(FORCE_TYPE_NAME[type], protection - crossbow, extra)) {
 			if (use_warrior_monks(lord, type)) {
-				let card = which_lord_capability(lord, AOW_TEUTONIC_WARRIOR_MONKS)
-				die = roll_die()
-				if (die <= protection - ap) {
-					logi(`C${card} ${range(protection-ap)}: ${MISS[die]}`)
-				} else {
-					logi(`C${card} ${range(protection-ap)}: ${HIT[die]}`)
+				let monks = which_lord_capability(lord, AOW_TEUTONIC_WARRIOR_MONKS)
+				if (assign_hit_roll(`C${monks}`, protection - crossbow, extra))
 					rout_unit(lord, type)
-				}
 			} else {
 				rout_unit(lord, type)
 			}
 		}
-	} else if (type !== SERFS) {
-		logi(`${FORCE_TYPE_NAME[type]} unprotected`)
-		rout_unit(lord, type)
 	} else {
 		logi(`${FORCE_TYPE_NAME[type]} removed`)
 		remove_serf(lord, type)
