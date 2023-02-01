@@ -2182,8 +2182,7 @@ states.tempest = {
 	ship(lord) {
 		let n = 0
 		if (lord_has_capability(lord, AOW_TEUTONIC_COGS)) {
-			logcap(AOW_TEUTONIC_COGS)
-			log(`Removed half Ships from L${lord}.`)
+			log(`Removed half Ships from L${lord} (C${AOW_TEUTONIC_COGS}).`)
 			n = get_lord_assets(lord, SHIP) >> 1
 		} else {
 			log(`Removed all Ships from L${lord}.`)
@@ -4606,6 +4605,19 @@ states.command = {
 
 // === ACTION: MARCH ===
 
+function format_group_move() {
+	if (game.group.length > 1 || game.pieces.legate_selected) {
+		let list = []
+		for (let lord of game.group)
+			if (lord !== game.command)
+				list.push("L" + lord)
+		if (game.pieces.legate_selected)
+			list.push("Legate")
+		return " with " + list.join(" and ")
+	}
+	return ""
+}
+
 function toggle_legate_selected() {
 	if (game.pieces.legate_selected)
 		game.pieces.legate_selected = 0
@@ -4777,9 +4789,9 @@ function march_with_group_2() {
 		spend_march_action(1)
 
 	if (data.ways[way].name)
-		log(`Marched to %${to} via W${way}.`)
+		log(`Marched to %${to} via W${way}${format_group_move()}.`)
 	else
-		log(`Marched to %${to}.`)
+		log(`Marched to %${to}${format_group_move()}.`)
 
 	for (let lord of game.group) {
 		set_lord_locale(lord, to)
@@ -6480,7 +6492,7 @@ states.sail = {
 	loot: drop_loot,
 	locale(to) {
 		push_undo()
-		log(`Sailed to %${to}.`)
+		log(`Sailed to %${to}${format_group_move()}.`)
 
 		let from = get_lord_locale(game.command)
 
@@ -8946,13 +8958,13 @@ function action_assign_hits(lord, type) {
 
 	let crossbow = 0
 	if (is_armored_force(type) && game.battle.xhits > 0) {
-		extra += " (-2 Crossbow)"
+		extra += " (-2\xa0Crossbow)"
 		crossbow = 2
 	}
 
 	if (type === SERGEANTS || type === MEN_AT_ARMS) {
 		if (lord_has_capability(lord, AOW_TEUTONIC_HALBBRUDER)) {
-			extra += ` (C${which_lord_capability(lord, AOW_TEUTONIC_HALBBRUDER)})`
+			extra += ` (+1\xa0C${which_lord_capability(lord, AOW_TEUTONIC_HALBBRUDER)})`
 			protection += 1
 		}
 	}
