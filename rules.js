@@ -4486,7 +4486,9 @@ function this_lord_has_house_of_suzdal() {
 states.command = {
 	inactive: "Command",
 	prompt() {
-		if (game.actions === 1)
+		if (game.actions === 0)
+			view.prompt = `Command: ${lord_name[game.command]} has no more actions.`
+		else if (game.actions === 1)
 			view.prompt = `Command: ${lord_name[game.command]} has ${game.actions} action.`
 		else
 			view.prompt = `Command: ${lord_name[game.command]} has ${game.actions} actions.`
