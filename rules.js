@@ -8472,7 +8472,7 @@ states.strike_group = {
 			view.prompt = `${format_strike_step()}: Strike with Garrison.`
 			view.actions.garrison = 1
 		} else {
-			view.prompt = `${format_strike_step()}: Strike with a Lord.`
+			view.prompt = `${format_strike_step()}: Strike.`
 			for (let pos of current_strike_positions())
 				if (has_strike(pos))
 					gen_action_lord(game.battle.array[pos])
@@ -8817,7 +8817,7 @@ function prompt_hit_forces() {
 
 states.assign_hits = {
 	get inactive() {
-		return format_strike_step() + " \u2014 Assign Hits"
+		return format_strike_step() + " \u2014 Assign " + format_hits()
 	},
 	prompt() {
 		view.prompt = `${format_strike_step()}: Assign ${format_hits()} to units.`
