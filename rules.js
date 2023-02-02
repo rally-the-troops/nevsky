@@ -9488,8 +9488,8 @@ states.battle_remove = {
 			disband_lord(lord, true)
 			remove_legate_if_endangered(game.battle.where)
 			lift_sieges()
+			goto_battle_remove()
 		}
-		goto_battle_remove()
 	},
 }
 

@@ -1704,7 +1704,7 @@ function update_battle() {
 }
 
 function is_lord_in_battle(lord) {
-	if (view.battle) {
+	if (view.battle && view.battle.array) {
 		for (let i = 0; i < 12; ++i)
 			if (view.battle.array[i] === lord)
 				return true
