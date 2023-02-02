@@ -628,6 +628,9 @@ const ui = {
 	arts_of_war_panel: document.getElementById("arts_of_war_panel"),
 	arts_of_war: document.getElementById("arts_of_war"),
 
+	reserves_panel: document.getElementById("reserves_panel"),
+	reserves: document.getElementById("reserves"),
+
 	events_panel: document.getElementById("events_panel"),
 	events: document.getElementById("events"),
 
@@ -1622,6 +1625,10 @@ function update_battle() {
 		ui.battle_grid_array[i].classList.toggle("action", is_battle_array_action(i))
 	}
 
+	ui.reserves.replaceChildren()
+	for (let lord of view.battle.reserves)
+		ui.reserves.appendChild(ui.lord_mat[lord])
+
 	for (let lord = 0; lord < 12; ++lord) {
 		ui.battle_cylinder[lord].classList.toggle("action", is_lord_action(lord))
 		ui.battle_cylinder[lord].classList.toggle("selected", is_lord_selected(lord))
@@ -1696,11 +1703,14 @@ function update_battle() {
 			att_ui.appendChild(get_cached_element("marker square russian siege"))
 }
 
-function is_lord_in_grid(lord) {
-	if (view.battle)
+function is_lord_in_battle(lord) {
+	if (view.battle) {
 		for (let i = 0; i < 12; ++i)
 			if (view.battle.array[i] === lord)
 				return true
+		if (view.battle.reserves.includes(lord))
+			return true
+	}
 	return false
 }
 
@@ -1714,10 +1724,10 @@ function update_court() {
 	tcourt.replaceChildren()
 	rcourt.replaceChildren()
 	for (let lord = 0; lord < 6; ++lord)
-		if (!is_lord_in_grid(lord) && is_lord_on_map(lord))
+		if (!is_lord_in_battle(lord) && is_lord_on_map(lord))
 			tcourt.appendChild(ui.lord_mat[lord])
 	for (let lord = 6; lord < 12; ++lord)
-		if (!is_lord_in_grid(lord) && is_lord_on_map(lord))
+		if (!is_lord_in_battle(lord) && is_lord_on_map(lord))
 			rcourt.appendChild(ui.lord_mat[lord])
 }
 
@@ -1810,6 +1820,7 @@ function on_update() {
 	ui.veche.classList.toggle("action", is_veche_action())
 
 	if (view.battle && view.battle.array) {
+		ui.reserves_panel.classList.remove("hide")
 		ui.battle_panel.classList.remove("hide")
 		if (view.battle.storm)
 			ui.battle_header.textContent = "Storm at " + data.locales[view.battle.where].name
@@ -1826,6 +1837,11 @@ function on_update() {
 	} else {
 		ui.battle_panel.classList.add("hide")
 	}
+
+	if (view.battle && view.battle.array && view.battle.reserves.length > 0)
+		ui.reserves_panel.classList.remove("hide")
+	else
+		ui.reserves_panel.classList.add("hide")
 
 	update_court()
 
