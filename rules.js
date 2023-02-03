@@ -9480,6 +9480,13 @@ function retreat_2() {
 	lift_sieges()
 	remove_legate_if_endangered(game.battle.where)
 
+	// TODO: clean up ...
+	// Release victorious lords who withdrew before battle...
+	if (is_enemy_stronghold(game.battle.where) && !has_friendly_lord(game.battle.where) && !has_siege_marker(game.battle.where))
+		release_besieged_lords(game.battle.where)
+	if (is_friendly_stronghold(game.battle.where) && !has_enemy_lord(game.battle.where) && !has_siege_marker(game.battle.where))
+		release_besieged_lords(game.battle.where)
+
 	game.battle.retreat_to = 0
 	game.battle.retreat_way = 0
 	end_retreat()
