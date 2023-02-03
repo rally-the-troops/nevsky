@@ -123,10 +123,10 @@ let strongholds = []
 
 function defloc(region, stronghold, type, name) {
 	let [x, y, w, h] = boxes[name]
-	x = Math.round(x * scale)
-	y = Math.round(y * scale)
-	w = Math.round(w * scale)
-	h = Math.round(h * scale)
+	x = Math.floor(x * 75 / 300)
+	y = Math.floor(y * 75 / 300)
+	w = Math.ceil(w * 75 / 300)
+	h = Math.ceil(h * 75 / 300)
 	locmap[name] = locales.length
 	let vp = vp_map[type]
 	let walls = wall_map[type]
