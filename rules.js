@@ -8067,6 +8067,18 @@ function has_garrison() {
 	return game.battle.storm && game.battle.garrison
 }
 
+function has_garrison_strike() {
+	if (is_defender_step() && has_garrison()) {
+		if (is_archery_step() && game.battle.garrison.men_at_arms > 0)
+			if (has_strike_target(D2))
+				return true
+		if (is_melee_step() && game.battle.garrison.men_at_arms + game.battle.garrison.knights > 0)
+			if (has_strike_target(D2))
+				return true
+	}
+	return false
+}
+
 function has_strike_target(S) {
 	if (is_attacker_step() && has_garrison())
 		return true
@@ -8471,21 +8483,24 @@ states.strike_group = {
 		return format_strike_step() + " \u2014 Strike"
 	},
 	prompt() {
-		if (is_defender_step() && has_garrison() && !filled(D2)) {
-			view.prompt = `${format_strike_step()}: Strike with Garrison.`
+		view.prompt = `${format_strike_step()}: Strike.`
+		if (has_garrison_strike()) {
 			view.actions.garrison = 1
-		} else {
-			view.prompt = `${format_strike_step()}: Strike.`
-			for (let pos of current_strike_positions())
-				if (has_strike(pos))
-					gen_action_lord(game.battle.array[pos])
+			if (!has_strike(D2))
+				view.prompt = `${format_strike_step()}: Strike with Garrison.`
 		}
+		for (let pos of current_strike_positions())
+			if (has_strike(pos))
+				gen_action_lord(game.battle.array[pos])
 	},
 	lord(lord) {
 		select_strike_group(get_lord_array_position(lord))
 	},
 	garrison() {
-		select_strike_group(-1)
+		if (has_strike(D2))
+			select_strike_group(D2)
+		else
+			select_strike_group(-1)
 	},
 }
 
