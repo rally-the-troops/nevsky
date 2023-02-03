@@ -4717,38 +4717,49 @@ states.march_laden = {
 		let prov = count_group_assets(PROV)
 		let loot = count_group_assets(LOOT)
 
-		view.prompt = `March: Hindered with ${loot} Loot, ${prov} Provender, and ${transport} Transport.`
 		view.group = game.group
+
+		if (prov > transport * 2 || (prov > transport && view.actions < 2))
+			view.prompt = `March: Hindered with ${loot} Loot, ${prov} Provender, and ${transport} Transport.`
+		else if (loot > 0 || prov > transport)
+			view.prompt = `March: Laden with ${loot} Loot, ${prov} Provender, and ${transport} Transport.`
+		else
+			view.prompt = `March: Unladen.`
 
 		if (prov <= transport * 2) {
 			if (loot > 0 || prov > transport) {
 				if (game.actions >= 2) {
-					view.prompt += " Laden."
 					view.actions.march = 1 // other button?
 					gen_action_laden_march(to)
 				} else {
-					view.prompt += " Laden with 1 action left."
+					view.prompt += " 1 action left."
 				}
 			} else {
 				view.actions.march = 1
 				gen_action_locale(to)
 			}
-		} else {
-			view.prompt += " Too much Provender."
 		}
 
 		if (loot > 0 || prov > transport) {
 			for (let lord of game.group) {
 				if (loot > 0) {
-					if (get_lord_assets(lord, LOOT) > 0)
+					if (get_lord_assets(lord, LOOT) > 0) {
+						view.prompt += " Discard Loot."
 						gen_action_loot(lord)
-					if (prov > transport * 2)
-						if (get_lord_assets(lord, PROV) > 0)
+					}
+					if (prov > transport * 2) {
+						if (get_lord_assets(lord, PROV) > 0) {
+							view.prompt += " Discard Provender."
 							gen_action_prov(lord)
+						}
+					}
 				} else {
-					if (prov > transport)
-						if (get_lord_assets(lord, PROV) > 0)
+					if (prov > transport) {
+						if (get_lord_assets(lord, PROV) > 0) {
+							view.prompt += " Discard Provender."
 							gen_action_prov(lord)
+						}
+					}
 				}
 			}
 		}
@@ -5002,7 +5013,10 @@ states.avoid_battle_laden = {
 		let prov = count_group_assets(PROV)
 		let loot = count_group_assets(LOOT)
 
-		view.prompt = `Avoid Battle: Hindered with ${prov} Provender and ${transport} Transport.`
+		if (loot > 0 || prov > transport)
+			view.prompt = `Avoid Battle: Hindered with ${prov} Provender and ${transport} Transport.`
+		else
+			view.prompt = `Avoid Battle: Unladen.`
 		view.group = game.group
 
 		if (loot > 0) {
@@ -9397,7 +9411,10 @@ states.retreat_laden = {
 		let prov = count_retreat_assets(PROV)
 		let loot = count_retreat_assets(LOOT)
 
-		view.prompt = `Retreat: Hindered with ${prov} Provender and ${transport} Transport.`
+		if (loot > 0 || prov > transport)
+			view.prompt = `Retreat: Hindered with ${prov} Provender and ${transport} Transport.`
+		else
+			view.prompt = `Retreat: Unladen.`
 		view.group = game.battle.retreated
 
 		if (loot > 0) {
