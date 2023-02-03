@@ -130,7 +130,6 @@ function find_locale(name) {
 }
 
 const lord_name = data.lords.map((lord) => lord.name)
-const vassal_name = data.vassals.map((vassal) => vassal.name)
 
 const lord_count = data.lords.length
 const vassal_count = data.vassals.length
@@ -990,10 +989,6 @@ function is_p1_lord(lord) {
 	return lord >= first_p1_lord && lord <= last_p1_lord
 }
 
-function is_p2_lord(lord) {
-	return lord >= first_p2_lord && lord <= last_p2_lord
-}
-
 function is_friendly_lord(lord) {
 	return lord >= first_friendly_lord && lord <= last_friendly_lord
 }
@@ -1462,17 +1457,11 @@ function calculate_distance(start, adjacent) {
 	return distance
 }
 
-for (let loc = 0; loc <= last_locale; ++loc) {
+for (let loc = 0; loc <= last_locale; ++loc)
 	data.locales[loc].distance = calculate_distance(loc, "adjacent")
-	data.locales[loc].distance_by_waterway = calculate_distance(loc, "adjacent_by_waterway")
-}
 
 function locale_distance(from, to) {
 	return data.locales[from].distance[to]
-}
-
-function locale_distance_by_waterway(from, to) {
-	return data.locales[from].distance_by_waterway[to]
 }
 
 // === SETUP ===
