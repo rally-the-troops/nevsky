@@ -8423,6 +8423,9 @@ function action_left_right(lord) {
 }
 
 states.strike_left_right = {
+	get inactive() {
+		return format_strike_step() + " \u2014 Strike"
+	},
 	prompt: prompt_left_right,
 	lord(lord) {
 		action_left_right(lord)
@@ -8431,6 +8434,9 @@ states.strike_left_right = {
 }
 
 states.assign_left_right = {
+	get inactive() {
+		return format_strike_step() + " \u2014 Strike"
+	},
 	prompt: prompt_left_right,
 	lord(lord) {
 		action_left_right(lord)
