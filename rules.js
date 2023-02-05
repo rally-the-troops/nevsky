@@ -5323,7 +5323,7 @@ function goto_surrender() {
 }
 
 function surrender_stronghold(here) {
-	log(`%${here} surrendered.`)
+	log(`%${here} Surrendered.`)
 
 	conquer_stronghold(here)
 
