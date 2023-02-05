@@ -4216,10 +4216,16 @@ states.campaign_plan = {
 		let last = current === P1 ? last_p1_lord : last_p2_lord
 		let upper = plan_selected_lieutenant(first, last)
 
-		view.prompt = "Plan: Designate Lieutenants and build a Plan."
 		view.plan = plan
 		view.who = upper
 		view.actions.plan = []
+
+		if (plan.length === 0)
+			view.prompt = "Plan: Designate Lieutenants and build a Plan."
+		else if (plan.length === max_plan_length())
+			view.prompt = "Plan: All done."
+		else
+			view.prompt = "Plan: Build a Plan."
 
 		if (plan.length < max_plan_length()) {
 			view.actions.end_plan = 0
@@ -4234,20 +4240,23 @@ states.campaign_plan = {
 				view.actions.end_plan = 1
 		}
 
-		if (upper !== NOBODY)
-			gen_action_lord(upper)
+		// Designate Lieutenants only if no plan started.
+		if (plan.length === 0) {
+			if (upper !== NOBODY)
+				gen_action_lord(upper)
 
-		for (let lord = first; lord <= last; ++lord) {
-			if (is_marshal(lord) || is_lord_besieged(lord))
-				continue
-			if (is_upper_lord(lord) || is_lower_lord(lord))
-				continue
-			if (upper === NOBODY) {
-				if (plan_can_make_lieutenant(plan, lord, first, last))
-					gen_action_lord(lord)
-			} else {
-				if (get_lord_locale(upper) === get_lord_locale(lord))
-					gen_action_lord(lord)
+			for (let lord = first; lord <= last; ++lord) {
+				if (is_marshal(lord) || is_lord_besieged(lord))
+					continue
+				if (is_upper_lord(lord) || is_lower_lord(lord))
+					continue
+				if (upper === NOBODY) {
+					if (plan_can_make_lieutenant(plan, lord, first, last))
+						gen_action_lord(lord)
+				} else {
+					if (get_lord_locale(upper) === get_lord_locale(lord))
+						gen_action_lord(lord)
+				}
 			}
 		}
 
@@ -4277,15 +4286,21 @@ states.campaign_plan = {
 	},
 	undo(_, current) {
 		if (current === P1) {
-			for (let lord = first_p1_lord; lord <= last_p1_lord; ++lord)
-				if (is_upper_lord(lord))
-					remove_lieutenant(lord)
-			game.plan1.length = 0
+			if (game.plan1.length > 0) {
+				game.plan1.pop()
+			} else {
+				for (let lord = first_p1_lord; lord <= last_p1_lord; ++lord)
+					if (is_upper_lord(lord))
+						remove_lieutenant(lord)
+			}
 		} else {
-			for (let lord = first_p2_lord; lord <= last_p2_lord; ++lord)
-				if (is_upper_lord(lord))
-					remove_lieutenant(lord)
-			game.plan2.length = 0
+			if (game.plan2.length > 0) {
+				game.plan2.pop()
+			} else {
+				for (let lord = first_p2_lord; lord <= last_p2_lord; ++lord)
+					if (is_upper_lord(lord))
+						remove_lieutenant(lord)
+			}
 		}
 	},
 	end_plan(_, current) {
