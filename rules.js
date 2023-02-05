@@ -10082,6 +10082,7 @@ function has_friendly_lord_who_may_be_paid() {
 }
 
 function goto_pay() {
+	log_br()
 	game.state = "pay"
 	game.who = NOBODY
 	if (!has_friendly_lord_who_may_be_paid())
