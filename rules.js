@@ -7209,8 +7209,11 @@ function resume_battle_events() {
 function could_play_card(c) {
 	if (set_has(game.capabilities, c))
 		return false
-	if (game.pieces.capabilities.includes(c))
-		return false
+	if (!game.hidden) {
+		// TODO: check capabilities on lords revealed in battle if hidden
+		if (game.pieces.capabilities.includes(c))
+			return false
+	}
 	if (set_has(game.events, c))
 		return false
 	if (is_p1_card(c))
