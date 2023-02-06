@@ -1002,10 +1002,10 @@ function used_seat_capability(lord, where, extra) {
 	let seats = data.lords[lord].seats
 	if (extra) {
 		if (set_has(seats, where) && !extra.includes(where))
-			return
+			return -1
 	} else {
 		if (set_has(seats, where))
-			return
+			return -1
 	}
 	if (is_teutonic_lord(lord))
 		if (has_global_capability(AOW_TEUTONIC_ORDENSBURGEN))
@@ -6074,7 +6074,7 @@ states.supply_source = {
 		view.actions.end_supply = 1
 	},
 	locale(source) {
-		if (game.supply.seats.includes(source)) {
+		if (game.supply.available > 0 && game.supply.seats.includes(source)) {
 			array_remove_item(game.supply.seats, source)
 
 			let cap = used_seat_capability(game.command, source, game.supply.seats)
