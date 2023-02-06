@@ -4220,24 +4220,29 @@ states.campaign_plan = {
 		view.who = upper
 		view.actions.plan = []
 
-		if (plan.length === 0)
+		if (plan.length === 0 && upper === NOBODY)
 			view.prompt = "Plan: Designate Lieutenants and build a Plan."
+		else if (plan.length === 0 && upper !== NOBODY)
+			view.prompt = `Plan: Select Lower Lord for ${lord_name[upper]}.`
 		else if (plan.length === max_plan_length())
 			view.prompt = "Plan: All done."
 		else
 			view.prompt = "Plan: Build a Plan."
 
-		if (plan.length < max_plan_length()) {
-			view.actions.end_plan = 0
-			if (count_cards_in_plan(plan, NOBODY) < 3)
-				gen_action_plan(NOBODY)
-			for (let lord = first; lord <= last; ++lord) {
-				if (is_lord_on_map(lord) && count_cards_in_plan(plan, lord) < 3)
-					gen_action_plan(lord)
+		if (upper === NOBODY) {
+			if (plan.length < max_plan_length()) {
+				view.actions.end_plan = 0
+				if (count_cards_in_plan(plan, NOBODY) < 3)
+					gen_action_plan(NOBODY)
+				for (let lord = first; lord <= last; ++lord) {
+					if (is_lord_on_map(lord) && count_cards_in_plan(plan, lord) < 3)
+						gen_action_plan(lord)
+				}
+			} else {
+				view.actions.end_plan = 1
 			}
 		} else {
-			if (upper === NOBODY)
-				view.actions.end_plan = 1
+			view.actions.end_plan = 0
 		}
 
 		// Designate Lieutenants only if no plan started.
