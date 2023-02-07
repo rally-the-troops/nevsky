@@ -3206,7 +3206,6 @@ states.levy_arts_of_war_first = {
 			view.prompt = `Arts of War: No Capability.`
 			view.actions.discard = 1
 		} else if (data.cards[c].this_lord) {
-			view.prompt = `Arts of War: Assign ${data.cards[c].capability} to a Lord.`
 			let discard = true
 			for (let lord of data.cards[c].lords) {
 				if (is_lord_on_map(lord) && !lord_has_capability(lord, c)) {
@@ -3214,8 +3213,12 @@ states.levy_arts_of_war_first = {
 					discard = false
 				}
 			}
-			if (discard)
+			if (discard) {
+				view.prompt = `Arts of War: Discard ${data.cards[c].capability}.`
 				view.actions.discard = 1
+			} else {
+				view.prompt = `Arts of War: Assign ${data.cards[c].capability} to a Lord.`
+			}
 		} else {
 			view.prompt = `Arts of War: Deploy ${data.cards[c].capability}.`
 			view.actions.deploy = 1
