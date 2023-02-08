@@ -1261,6 +1261,17 @@ function update_castle(elt, loc) {
 	}
 }
 
+function is_teutonic_siege_marker(loc) {
+	if (set_has(view.pieces.castles2, loc))
+		return true
+	if (set_has(view.pieces.castles1, loc))
+		return false
+	if (is_p1_locale(loc))
+		return set_has(view.pieces.conquered, loc)
+	else
+		return !set_has(view.pieces.conquered, loc)
+}
+
 function update_locale(loc) {
 	layout_locale_cylinders(loc)
 
@@ -1305,10 +1316,10 @@ function update_locale(loc) {
 	let sieges = map_get(view.pieces.sieges, loc)
 	if (sieges > 0) {
 		let cn
-		if (is_p1_locale(loc) || set_has(view.pieces.castles1, loc))
-			cn = "marker square siege russian"
-		else
+		if (is_teutonic_siege_marker(loc))
 			cn = "marker square siege teutonic"
+		else
+			cn = "marker square siege russian"
 		for (let i = 0; i < sieges; ++i)
 			ui.locale_markers[loc].appendChild(get_cached_element(cn))
 	}
