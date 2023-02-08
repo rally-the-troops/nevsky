@@ -8682,10 +8682,11 @@ function roll_for_siegeworks() {
 	}
 }
 
+
 function roll_for_ravens_rock() {
 	let prot = 2
 	// Trebuchets only count vs Raven's Rock in Sally or Relief Sally battles
-	if (count_siege_markers(game.battle.where) > 0) {
+	if (game.battle.sally || game.battle.relief) {
 		if (enemy_has_trebuchets()) {
 			logi(`C${AOW_TEUTONIC_TREBUCHETS}.`)
 			prot--
