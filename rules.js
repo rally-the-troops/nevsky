@@ -4742,12 +4742,29 @@ states.march_laden = {
 
 		view.group = game.group
 
-		if (prov > transport * 2 || (prov > transport && view.actions < 2))
+		if (prov <= transport * 2 && group_has_teutonic_converts())
+			view.prompt = `March: Converts.`
+		else if (prov > transport * 2 || (prov > transport && view.actions < 2))
 			view.prompt = `March: Hindered with ${loot} Loot, ${prov} Provender, and ${transport} Transport.`
 		else if (loot > 0 || prov > transport)
 			view.prompt = `March: Laden with ${loot} Loot, ${prov} Provender, and ${transport} Transport.`
 		else
 			view.prompt = `March: Unladen.`
+
+		if (group_has_teutonic_converts()) {
+			if (prov <= transport * 2) {
+				view.actions.march = 1
+				gen_action_locale(to)
+			} else {
+				for (let lord of game.group) {
+					if (get_lord_assets(lord, PROV) > 0) {
+						view.prompt += " Discard Provender."
+						gen_action_prov(lord)
+					}
+				}
+			}
+			return
+		}
 
 		if (prov <= transport * 2) {
 			if (loot > 0 || prov > transport) {
