@@ -6652,7 +6652,7 @@ function can_action_stone_kremlin() {
 	let here = get_lord_locale(game.command)
 
 	if (is_fort(here) || is_city(here) || here === LOC_NOVGOROD) {
-		if (has_walls(here))
+		if (has_walls(here) || !is_friendly_locale(here))
 			return false
 		return true
 	}
