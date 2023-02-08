@@ -5166,7 +5166,7 @@ states.march_withdraw = {
 
 		if (lower !== NOBODY) {
 			log(`L${lower} Withdrew.`)
-			set_lord_besieged(lord, 1)
+			set_lord_besieged(lower, 1)
 		}
 	},
 	end_withdraw() {
@@ -9300,7 +9300,7 @@ states.battle_withdraw = {
 
 		if (lower !== NOBODY) {
 			log(`L${lower} Withdrew.`)
-			set_lord_besieged(lord, 1)
+			set_lord_besieged(lower, 1)
 		}
 	},
 	end_withdraw() {
