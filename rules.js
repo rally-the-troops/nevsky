@@ -4532,6 +4532,8 @@ states.command = {
 		if (is_lord_besieged(game.command)) {
 			if (can_action_sally())
 				view.actions.sally = 1
+			if (can_action_stone_kremlin())
+				view.actions.stone_kremlin = 1
 		}
 
 		else {
@@ -6654,7 +6656,7 @@ function can_action_stone_kremlin() {
 	let here = get_lord_locale(game.command)
 
 	if (is_fort(here) || is_city(here) || here === LOC_NOVGOROD) {
-		if (has_walls(here) || !is_friendly_locale(here))
+		if (has_walls(here) || !is_friendly_stronghold(here))
 			return false
 		return true
 	}
