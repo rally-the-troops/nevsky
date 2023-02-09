@@ -4995,6 +4995,7 @@ states.avoid_battle = {
 				game.march.ambush_lords = []
 				game.march.ambush_assets = game.pieces.assets.slice()
 				game.march.ambush_besieged = game.pieces.besieged
+				game.march.ambush_sieges = game.pieces.sieges.slice()
 			}
 		}
 
@@ -5212,6 +5213,7 @@ states.march_ambush = {
 		// Restore assets and spoils and withdrawn lords
 		game.pieces.assets = game.march.ambush_assets
 		game.pieces.besieged = game.march.ambush_besieged
+		game.pieces.sieges = game.march.ambush_sieges
 		game.spoils = 0
 
 		// Restore lords who avoided battle
@@ -5224,12 +5226,14 @@ states.march_ambush = {
 		game.march.ambush_lords = 0
 		game.march.ambush_assets = 0
 		game.march.ambush_besieged = 0
+		game.march.ambush_sieges = 0
 		goto_march_withdraw()
 	},
 	pass() {
 		game.march.ambush_lords = 0
 		game.march.ambush_assets = 0
 		game.march.ambush_besieged = 0
+		game.march.ambush_sieges = 0
 		goto_spoils_after_avoid_battle()
 	},
 }
