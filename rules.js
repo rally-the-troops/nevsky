@@ -4645,7 +4645,6 @@ function release_besieged_lords(loc) {
 }
 
 function lift_sieges() {
-console.log("LIFT SIEGE CHECK!")
 	for (let i = 0; i < game.pieces.sieges.length; i += 2) {
 		let loc = game.pieces.sieges[i]
 		if (is_enemy_stronghold(loc)) {
@@ -5884,7 +5883,6 @@ function search_summer_path_pass2(path, here, end, boats, carts, gate) {
 		return
 
 	if (here === end) {
-		console.log("  path", path.map(wl=>data.locales[wl>>8].name).join(","), boats, carts)
 		let out1 = game.supply.path
 		for (let i = 0; i < path.length; ++i) {
 			let wayloc = path[i]
@@ -8950,8 +8948,6 @@ function rout_lord(lord) {
 	game.battle.array[pos] = NOBODY
 
 	// Strike left or right or defender
-
-console.log("ROUT LORD", pos)
 
 	if (pos >= A1 && pos <= A3) {
 		game.battle.fc = strike_left_or_right(D2, A1, A2, A3)
