@@ -5211,7 +5211,7 @@ states.march_ambush = {
 
 		// Restore assets and spoils and withdrawn lords
 		game.pieces.assets = game.march.ambush_assets
-		game.pieces.besieged = game.march.besieged
+		game.pieces.besieged = game.march.ambush_besieged
 		game.spoils = 0
 
 		// Restore lords who avoided battle
