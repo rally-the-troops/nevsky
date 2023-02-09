@@ -10539,11 +10539,11 @@ function goto_game_end() {
 
 		if (game.scenario === "Watland") {
 			if (vp1 < 20)
-				goto_game_over(P1, `Russians won \u2014 Teutons had less than 10 VP.`)
+				goto_game_over(P2, `Russians won \u2014 Teutons had less than 10 VP.`)
 			else if (vp1 < vp2 * 2)
-				goto_game_over(P1, `Russians won \u2014 Teutons had less than double Russian VP.`)
+				goto_game_over(P2, `Russians won \u2014 Teutons had less than double Russian VP.`)
 			else
-				goto_game_over(P2, `Teutons won with ${frac(vp1)} VP vs ${frac(vp2)} VP.`)
+				goto_game_over(P1, `Teutons won with ${frac(vp1)} VP vs ${frac(vp2)} VP.`)
 			return
 		}
 
