@@ -7505,6 +7505,7 @@ states.concede_storm = {
 	concede() {
 		log(game.active + " Conceded.")
 		game.battle.conceded = game.active
+		game.battle.loser = game.active
 		end_battle()
 	},
 	battle() {
