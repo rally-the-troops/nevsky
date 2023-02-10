@@ -4990,14 +4990,16 @@ states.avoid_battle = {
 		push_undo()
 
 		// Save Assets and Lords in case Ambush cancels Avoid Battle.
-		if (!game.march.ambush_lords) {
+		if (!game.march.ambush) {
 			if (could_enemy_play_ambush()) {
 				// TODO: ambush object...
-				game.march.ambush_lords = []
-				game.march.ambush_assets = game.pieces.assets.slice()
-				game.march.ambush_besieged = game.pieces.besieged
-				game.march.ambush_sieges = game.pieces.sieges.slice()
-				game.march.ambush_conquered = game.pieces.conquered.slice()
+				game.march.ambush = {
+					lords: [],
+					assets: game.pieces.assets.slice(),
+					sieges: game.pieces.sieges.slice(),
+					conquered: game.pieces.conquered.slice(),
+					besieged: game.pieces.besieged,
+				}
 			}
 		}
 
@@ -5100,8 +5102,8 @@ function avoid_battle_2() {
 
 	for (let lord of game.group) {
 		log(`L${lord} Avoided Battle to %${to}.`)
-		if (game.march.ambush_lords)
-			set_add(game.march.ambush_lords, lord)
+		if (game.march.ambush)
+			set_add(game.march.ambush.lords, lord)
 		set_lord_locale(lord, to)
 		set_lord_moved(lord, 1)
 	}
@@ -5196,7 +5198,7 @@ function could_enemy_play_ambush() {
 }
 
 function goto_march_ambush() {
-	if (game.march.ambush_lords && game.march.ambush_lords.length > 0)
+	if (game.march.ambush && game.march.ambush.lords.length > 0)
 		game.state = "march_ambush"
 	else
 		goto_spoils_after_avoid_battle()
@@ -5216,32 +5218,24 @@ states.march_ambush = {
 		play_held_event(c)
 
 		// Restore assets and spoils and withdrawn lords
-		game.pieces.assets = game.march.ambush_assets
-		game.pieces.besieged = game.march.ambush_besieged
-		game.pieces.sieges = game.march.ambush_sieges
-		game.pieces.conquered = game.march.ambush_conquered
+		game.pieces.assets = game.march.ambush.assets
+		game.pieces.besieged = game.march.ambush.besieged
+		game.pieces.sieges = game.march.ambush.sieges
+		game.pieces.conquered = game.march.ambush.conquered
 		game.spoils = 0
 
 		// Restore lords who avoided battle
-		for (let lord of game.march.ambush_lords) {
+		for (let lord of game.march.ambush.lords) {
 			set_lord_locale(lord, game.march.to)
 			set_lord_moved(lord, 0)
 		}
 
 		set_active_enemy()
-		game.march.ambush_lords = 0
-		game.march.ambush_assets = 0
-		game.march.ambush_besieged = 0
-		game.march.ambush_sieges = 0
-		game.march.ambush_conquered = 0
+		game.march.ambush = 0
 		goto_march_withdraw()
 	},
 	pass() {
-		game.march.ambush_lords = 0
-		game.march.ambush_assets = 0
-		game.march.ambush_besieged = 0
-		game.march.ambush_sieges = 0
-		game.march.ambush_conquered = 0
+		game.march.ambush = 0
 		goto_spoils_after_avoid_battle()
 	},
 }
