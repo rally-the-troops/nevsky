@@ -4879,9 +4879,8 @@ function march_with_group_3() {
 		spend_all_actions() // ENCAMP
 	}
 
-	if (is_trade_route(here)) {
+	if (is_trade_route(here))
 		conquer_trade_route(here)
-	}
 
 	game.march = 0
 
@@ -4993,10 +4992,12 @@ states.avoid_battle = {
 		// Save Assets and Lords in case Ambush cancels Avoid Battle.
 		if (!game.march.ambush_lords) {
 			if (could_enemy_play_ambush()) {
+				// TODO: ambush object...
 				game.march.ambush_lords = []
 				game.march.ambush_assets = game.pieces.assets.slice()
 				game.march.ambush_besieged = game.pieces.besieged
 				game.march.ambush_sieges = game.pieces.sieges.slice()
+				game.march.ambush_conquered = game.pieces.conquered.slice()
 			}
 		}
 
@@ -5104,6 +5105,9 @@ function avoid_battle_2() {
 		set_lord_locale(lord, to)
 		set_lord_moved(lord, 1)
 	}
+
+	if (is_trade_route(to))
+		conquer_trade_route(to)
 
 	lift_sieges()
 
@@ -5215,6 +5219,7 @@ states.march_ambush = {
 		game.pieces.assets = game.march.ambush_assets
 		game.pieces.besieged = game.march.ambush_besieged
 		game.pieces.sieges = game.march.ambush_sieges
+		game.pieces.conquered = game.march.ambush_conquered
 		game.spoils = 0
 
 		// Restore lords who avoided battle
@@ -5228,6 +5233,7 @@ states.march_ambush = {
 		game.march.ambush_assets = 0
 		game.march.ambush_besieged = 0
 		game.march.ambush_sieges = 0
+		game.march.ambush_conquered = 0
 		goto_march_withdraw()
 	},
 	pass() {
@@ -5235,6 +5241,7 @@ states.march_ambush = {
 		game.march.ambush_assets = 0
 		game.march.ambush_besieged = 0
 		game.march.ambush_sieges = 0
+		game.march.ambush_conquered = 0
 		goto_spoils_after_avoid_battle()
 	},
 }
@@ -9529,6 +9536,9 @@ function retreat_2() {
 		set_lord_locale(lord, to)
 		set_lord_moved(lord, 1)
 	}
+
+	if (is_trade_route(to))
+		conquer_trade_route(to)
 
 	lift_sieges()
 	remove_legate_if_endangered(game.battle.where)
