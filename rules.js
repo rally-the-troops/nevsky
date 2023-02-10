@@ -7897,7 +7897,7 @@ function assemble_melee_forces(lord) {
 		forces.light_horse = 0
 	}
 
-	if (game.battle.bridge && (game.battle.bridge.lord1 === lord || game.battle.bridge.lord12 === lord)) {
+	if (game.battle.bridge && (game.battle.bridge.lord1 === lord || game.battle.bridge.lord2 === lord)) {
 		let n = is_p1_lord(lord) ? game.battle.bridge.n1 : game.battle.bridge.n2
 
 		log(`Bridge L${lord}`)
