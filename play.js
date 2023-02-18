@@ -271,15 +271,17 @@ function is_lord_on_left_or_right(lord) {
 
 function is_lord_ambushed(lord) {
 	if (view.battle) {
+		// ambush & 2 = attacker played ambush
+		// ambush & 1 = defender played ambush
 		if (view.battle.attacker === "Teutons") {
-			if ((view.battle.ambush & 2) && is_p1_lord(lord))
+			if ((view.battle.ambush & 1) && is_p1_lord(lord))
 				return is_lord_on_left_or_right(lord)
-			if ((view.battle.ambush & 1) && is_p2_lord(lord))
-				return is_lord_on_left_or_right(lord)
-		} else {
 			if ((view.battle.ambush & 2) && is_p2_lord(lord))
 				return is_lord_on_left_or_right(lord)
-			if ((view.battle.ambush & 1) && is_p1_lord(lord))
+		} else {
+			if ((view.battle.ambush & 1) && is_p2_lord(lord))
+				return is_lord_on_left_or_right(lord)
+			if ((view.battle.ambush & 2) && is_p1_lord(lord))
 				return is_lord_on_left_or_right(lord)
 		}
 	}
