@@ -60,6 +60,16 @@ exports.scenarios = [
 	"Crusade on Novgorod",
 ]
 
+const scenario_first_turn = {
+	"Pleskau": 1,
+	"Watland": 4,
+	"Peipus": 13,
+	"Return of the Prince": 9,
+	"Return of the Prince (Nicolle)": 9,
+	"Crusade on Novgorod": 1,
+	"Pleskau (Quickstart)": 1,
+}
+
 const scenario_last_turn = {
 	"Pleskau": 2,
 	"Watland": 8,
@@ -11096,8 +11106,8 @@ exports.view = function (state, current) {
 		log: game.log,
 		reveal: 0,
 
+		scenario: (scenario_first_turn[game.scenario] << 5) + (scenario_last_turn[game.scenario]),
 		turn: game.turn,
-		end: scenario_last_turn[game.scenario],
 		events: game.events,
 		capabilities: game.capabilities,
 		pieces: game.pieces,

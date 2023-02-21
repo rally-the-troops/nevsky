@@ -1682,10 +1682,12 @@ function on_update() {
 
 	update_court()
 
+	let first_turn = view.scenario >> 5
+	let last_turn = view.scenario & 31
 	for (let i = 0; i <= 17; ++i) {
 		ui.calendar[i].classList.toggle("action", is_action("calendar", i))
 		if (i >= 1 && i <= 16)
-			ui.calendar[i].classList.toggle("end", i > view.end)
+			ui.calendar[i].classList.toggle("end", i < first_turn || i > last_turn)
 	}
 
 	// Misc
