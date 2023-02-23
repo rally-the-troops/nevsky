@@ -1839,7 +1839,6 @@ function sub_way_name(match, p1) {
 	return `<span class="way_tip" onmouseenter="on_focus_way_tip(${x})" onmouseleave="on_blur_way_tip(${x})" onclick="on_click_way_tip(${x})">${n}</span>`
 }
 
-
 function on_log(text) {
 	let p = document.createElement("div")
 

@@ -4596,7 +4596,7 @@ states.command = {
 	},
 
 	end_command() {
-		clear_undo()
+		push_undo()
 		end_command()
 	},
 
@@ -10057,6 +10057,7 @@ states.feed = {
 		set_lord_unfed(lord, 0)
 	},
 	end_feed() {
+		push_undo()
 		end_feed()
 	},
 	card: action_held_event,
@@ -10098,7 +10099,6 @@ states.feed_lord_shared = {
 }
 
 function end_feed() {
-	clear_undo()
 	goto_pay()
 }
 
