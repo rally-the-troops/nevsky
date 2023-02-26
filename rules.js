@@ -10285,6 +10285,10 @@ states.disband = {
 	inactive: "Disband",
 	prompt() {
 		view.prompt = "Disband: You must Disband Lords at their Service limit."
+
+		if (is_campaign_phase())
+			prompt_held_event()
+
 		let done = true
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 			if (is_lord_on_map(lord) && get_lord_service(lord) <= current_turn()) {
@@ -10312,6 +10316,7 @@ states.disband = {
 	end_disband() {
 		end_disband()
 	},
+	card: action_held_event,
 }
 
 function end_ransom_disband() {
