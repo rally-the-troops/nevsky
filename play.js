@@ -981,8 +981,10 @@ function layout_calendar() {
 			let e = list[i]
 			let x = cx, y = cy, z = 60 - i
 			let d = 46 - 24
-			if (loc === expand_calendar)
+			if (loc === expand_calendar) {
 				d = 46
+				z += 100
+			}
 			if (loc === 0) {
 				x += -6 + 46 * i
 				z = 1
