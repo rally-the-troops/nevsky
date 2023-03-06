@@ -2774,7 +2774,15 @@ function count_set_bits(x) {
 }
 
 function can_play_heinrich_sees_the_curia() {
-	return is_lord_on_map(LORD_HEINRICH)
+	return (
+		is_lord_on_map(LORD_HEINRICH) && (
+			is_lord_on_map(LORD_ANDREAS) ||
+			is_lord_on_map(LORD_HERMANN) ||
+			is_lord_on_map(LORD_KNUD_ABEL) ||
+			is_lord_on_map(LORD_RUDOLF) ||
+			is_lord_on_map(LORD_YAROSLAV)
+		)
+	)
 }
 
 states.heinrich_sees_the_curia = {
@@ -10104,6 +10112,11 @@ function can_pay_lord(lord) {
 }
 
 function has_friendly_lord_who_may_be_paid() {
+	if (game.active === TEUTONS) {
+		// Open a window to play Heinrich sees the Curia.
+		if (could_play_card(EVENT_TEUTONIC_HEINRICH_SEES_THE_CURIA) && can_play_heinrich_sees_the_curia())
+			return true
+	}
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
 		if (is_lord_on_map(lord) && can_pay_lord(lord))
 			return true
@@ -10269,8 +10282,7 @@ states.disband = {
 	prompt() {
 		view.prompt = "Disband: You must Disband Lords at their Service limit."
 
-		if (is_campaign_phase())
-			prompt_held_event()
+		prompt_held_event()
 
 		let done = true
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
