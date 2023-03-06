@@ -5506,6 +5506,14 @@ function find_lodya_lord_in_group() {
 	return NOBODY
 }
 
+function init_lodya_sail_silent() {
+	let lord = find_lodya_lord_in_group()
+	if (lord !== NOBODY)
+		game.flags.lodya = -Math.min(2, get_lord_assets(lord, BOAT))
+	else
+		game.flags.lodya = 0
+}
+
 function init_lodya_sail() {
 	let lord = find_lodya_lord_in_group()
 	if (lord !== NOBODY) {
@@ -6480,6 +6488,7 @@ function can_action_sail() {
 		return false
 
 	// with enough ships to carry all the horses
+	init_lodya_sail_silent()
 	if (!has_enough_available_ships_for_horses())
 		return false
 
