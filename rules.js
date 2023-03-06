@@ -5631,7 +5631,6 @@ function log_lodya() {
 
 // === ACTION: SUPPLY (SEARCHING) ===
 
-let _supply_stat = 0
 let _supply_stop = new Array(last_locale+1)
 let _supply_reached = new Array(last_locale+1)
 
@@ -5652,7 +5651,6 @@ function is_supply_forbidden(here) {
 }
 
 function init_supply_forbidden() {
-	_supply_stat = 0
 	for (let here = 0; here <= last_locale; ++here) {
 		if (is_supply_forbidden(here))
 			_supply_stop[here] = 1
@@ -5738,7 +5736,6 @@ function search_supply_winter(start, sleds, exit) {
 				}
 			}
 		}
-		_supply_stat++
 	}
 	return 0
 }
@@ -5769,14 +5766,11 @@ function search_supply_rasputitsa(start, boats, exit) {
 				}
 			}
 		}
-		_supply_stat++
 	}
 	return 0
 }
 
 function search_supply_summer(here, boats, carts, exit) {
-	_supply_stat++
-
 	// Been here before with same or more transports remaining
 	if (_supply_boats[here] >= boats && _supply_carts[here] >= carts)
 		return 0
@@ -5827,19 +5821,15 @@ function init_summer_path() {
 		boats: new Array(game.supply.boats+1).fill(0),
 		carts: new Array(game.supply.carts+1).fill(0),
 	}
-	_supply_stat = 0
 	_supply_boats.fill(-1)
 	_supply_carts.fill(-1)
 	search_summer_path_pass1(game.supply.here, game.supply.end, game.supply.boats, game.supply.carts, gate)
-	console.log("SUMMER GATE", _supply_stat, JSON.stringify(gate))
 
 	// Second pass which lists acceptable paths
-	_supply_stat = 0
 	_supply_boats.fill(-1)
 	_supply_carts.fill(-1)
 	game.supply.path = []
 	search_summer_path_pass2([], game.supply.here, game.supply.end, game.supply.boats, game.supply.carts, gate)
-	console.log("SUMMER PATH", _supply_stat, JSON.stringify(game.supply.path).length)
 
 	// Auto-pick path if only one choice.
 	if (AUTOWALK && game.supply.path.length === 2)
@@ -5847,8 +5837,6 @@ function init_summer_path() {
 }
 
 function search_summer_path_pass1(here, end, boats, carts, gate) {
-	_supply_stat++
-
 	if (here === end) {
 		for (let c = 0; c <= carts; ++c)
 			if (boats > gate.boats[c])
@@ -5889,8 +5877,6 @@ function search_summer_path_pass1(here, end, boats, carts, gate) {
 }
 
 function search_summer_path_pass2(path, here, end, boats, carts, gate) {
-	_supply_stat++
-
 	// Worse than the best path found
 	if (boats < gate.boats[carts] || carts < gate.carts[boats])
 		return
@@ -5971,14 +5957,12 @@ function update_supply_possible() {
 		update_supply_possible_lodya(0)
 	} else {
 		update_supply_possible_pass()
-		console.log("POSSIBLE SEARCH", _supply_stat, game.supply)
 	}
 }
 
 function update_supply_possible_lodya(x) {
 	game.flags.lodya = x
 	update_supply_possible_pass()
-	console.log("LODYA POSSIBLE SEARCH", _supply_stat, x, game.supply)
 	return game.supply
 }
 
@@ -6024,7 +6008,6 @@ function search_supply_cost() {
 			search_supply_rasputitsa(get_lord_locale(game.command), game.supply.boats, null)
 			break
 	}
-	console.log("SUPPLY COST", _supply_stat)
 }
 
 function can_action_supply() {
