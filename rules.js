@@ -2836,10 +2836,12 @@ states.heinrich_sees_the_curia_2 = {
 		if (game.count > 0) {
 			view.actions.take_prov = 1
 			view.actions.take_coin = 1
-			view.actions.take_ship = 1
 			view.actions.take_boat = 1
 			view.actions.take_cart = 1
 			view.actions.take_sled = 1
+			// NOTE: Card text overrides general rule,
+			// so Curia can give ships to inland lords
+			view.actions.take_ship = 1
 		}
 		view.actions.done = 1
 	},
@@ -5279,8 +5281,6 @@ function prompt_spoils() {
 		view.actions.take_loot = 1
 	if (get_spoils(COIN) > 0)
 		view.actions.take_coin = 1
-	if (get_spoils(SHIP) > 0)
-		view.actions.take_ship = 1
 	if (get_spoils(BOAT) > 0)
 		view.actions.take_boat = 1
 	if (get_spoils(CART) > 0)
