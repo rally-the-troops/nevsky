@@ -65,6 +65,8 @@ const LORD_ANDREAS = find_lord("Andreas")
 const LORD_HERMANN = find_lord("Hermann")
 const LORD_ALEKSANDR = find_lord("Aleksandr")
 const LORD_ANDREY = find_lord("Andrey")
+const LORD_KNUD_ABEL = find_lord("Knud & Abel")
+const LORD_RUDOLF = find_lord("Rudolf")
 
 const first_p1_lord = 0
 const last_p1_lord = 5
@@ -82,6 +84,8 @@ const first_p2_locale = 24
 const last_p2_locale = 52
 
 const R1 = find_card("R1")
+const R11 = find_card("R11")
+const R17 = find_card("R17")
 const T4 = find_card("T4")
 const T10 = find_card("T10")
 const T14 = find_card("T14")
@@ -89,6 +93,8 @@ const EVENT_RUSSIAN_BRIDGE = R1
 const EVENT_TEUTONIC_BRIDGE = T4
 const EVENT_TEUTONIC_FIELD_ORGAN = T10
 const AOW_TEUTONIC_TREBUCHETS = T14
+const EVENT_RUSSIAN_VALDEMAR = R11
+const EVENT_RUSSIAN_DIETRICH_VON_GRUNINGEN = R17
 
 const A1 = 0, A2 = 1, A3 = 2, D1 = 3, D2 = 4, D3 = 5, SA1 = 6, SA2 = 7, SA3 = 8, RG1 = 9, RG2 = 10, RG3 = 11
 
@@ -194,16 +200,29 @@ function get_locale_tip(id) {
 	return tip
 }
 
+function is_event_in_play(c) {
+	return set_has(view.events, c)
+}
+
 function on_focus_cylinder(evt) {
 	let lord = evt.target.my_id
 	let info = data.lords[lord]
 	let loc = view.pieces.locale[lord]
 	let tip = info.name
+
 	if (loc >= CALENDAR) {
 		if (lord !== LORD_ALEKSANDR)
 			tip += ` - ${info.fealty} Fealty`
 		tip += ` - ${info.service} Service`
 	}
+
+	if (lord === LORD_KNUD_ABEL)
+		if (is_event_in_play(EVENT_RUSSIAN_VALDEMAR))
+			tip += ` - No Muster because of Valdemar!`
+	if (lord === LORD_ANDREAS || lord === LORD_RUDOLF)
+		if (is_event_in_play(EVENT_RUSSIAN_DIETRICH_VON_GRUNINGEN))
+			tip += ` - No Muster because of Dietrich von Grüningen!`
+
 	on_focus(tip)
 }
 
