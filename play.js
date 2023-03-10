@@ -1755,6 +1755,7 @@ function on_update() {
 	action_button("hold", "Hold")
 	action_button("play", "Play")
 
+	action_button("approach", "Approach")
 	action_button("concede", "Concede")
 	action_button("battle", "Battle")
 

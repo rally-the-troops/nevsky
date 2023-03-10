@@ -1659,6 +1659,9 @@ exports.setup = function (seed, scenario, options) {
 		spoils: 0,
 	}
 
+	if (options.skip_confirm_approach)
+		game.skip_confirm_approach = 1
+
 	update_aliases()
 
 	log_h1(scenario)
@@ -4867,7 +4870,7 @@ function march_with_group_2() {
 	remove_legate_if_endangered(from)
 
 	if (has_unbesieged_enemy_lord(to)) {
-		goto_avoid_battle()
+		goto_confirm_approach()
 	} else {
 		march_with_group_3()
 	}
@@ -4906,6 +4909,26 @@ function march_with_group_3() {
 
 	resume_command()
 	update_supply_possible()
+}
+
+function goto_confirm_approach() {
+	if (game.skip_confirm_approach) {
+		goto_avoid_battle()
+		return
+	}
+	game.state = "confirm_approach"
+}
+
+states.confirm_approach = {
+	inactive: "March",
+	prompt() {
+		view.prompt = `March: Confirm Approach to enemy Lord.`
+		view.group = game.group
+		view.actions.approach = 1
+	},
+	approach() {
+		goto_avoid_battle()
+	}
 }
 
 // === ACTION: MARCH - AVOID BATTLE ===
