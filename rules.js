@@ -1659,6 +1659,9 @@ exports.setup = function (seed, scenario, options) {
 		spoils: 0,
 	}
 
+	// Hidden options for backward compatibility
+	if (options.sea_trade_before_veche)
+		game.sea_trade_before_veche = 1
 	if (options.skip_confirm_approach)
 		game.skip_confirm_approach = 1
 
