@@ -3962,7 +3962,10 @@ function count_all_russian_ships() {
 
 function goto_russian_call_to_arms() {
 	log_h2("Call to Arms - Novgorod Veche")
-	goto_black_sea_trade()
+	if (game.sea_trade_before_veche)
+		goto_black_sea_trade()
+	else
+		goto_novgorod_veche()
 }
 
 function goto_black_sea_trade() {
@@ -4014,7 +4017,7 @@ function goto_baltic_sea_trade() {
 				logi(`%${LOC_NEVA} Conquered`)
 		}
 	}
-	goto_novgorod_veche()
+	end_baltic_sea_trade()
 }
 
 states.baltic_sea_trade = {
@@ -4031,15 +4034,22 @@ states.baltic_sea_trade = {
 			log("Added 2 Coin to Veche.")
 			game.pieces.veche_coin += 2
 		}
-		goto_novgorod_veche()
+		end_baltic_sea_trade()
 	},
+}
+
+function end_baltic_sea_trade() {
+	if (game.sea_trade_before_veche)
+		goto_novgorod_veche()
+	else
+		end_levy_call_to_arms()
 }
 
 function goto_novgorod_veche() {
 	if (game.pieces.veche_vp > 0 || is_lord_ready(LORD_ALEKSANDR) || is_lord_ready(LORD_ANDREY)) {
 		game.state = "novgorod_veche"
 	} else {
-		end_levy_call_to_arms()
+		end_novgorod_veche()
 	}
 }
 
@@ -4110,7 +4120,7 @@ states.novgorod_veche = {
 	},
 	end_call_to_arms() {
 		clear_undo()
-		end_levy_call_to_arms()
+		end_novgorod_veche()
 	},
 	card: action_held_event,
 }
@@ -4123,8 +4133,15 @@ states.novgorod_veche_done = {
 	},
 	end_call_to_arms() {
 		clear_undo()
-		end_levy_call_to_arms()
+		end_novgorod_veche()
 	},
+}
+
+function end_novgorod_veche() {
+	if (game.sea_trade_before_veche)
+		end_levy_call_to_arms()
+	else
+		goto_black_sea_trade()
 }
 
 // === CAMPAIGN: CAPABILITY DISCARD ===
