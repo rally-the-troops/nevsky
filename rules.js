@@ -658,6 +658,15 @@ function set_lord_moved(lord, x) {
 	game.pieces.moved = pack2_set(game.pieces.moved, lord, x)
 }
 
+function set_lord_fought(lord) {
+	set_lord_moved(lord, 1)
+	game.battle.fought = pack1_set(game.battle.fought, lord, 1)
+}
+
+function get_lord_fought(lord) {
+	return pack1_get(game.battle.fought, lord)
+}
+
 function set_lord_unfed(lord, n) {
 	// reuse "moved" flag for hunger
 	set_lord_moved(lord, n)
@@ -6824,6 +6833,7 @@ function init_battle(here, is_storm, is_sally) {
 		ambush: 0,
 		conceded: 0,
 		loser: 0,
+		fought: 0, // flag all lords who participated
 		array: [
 			-1, game.command, -1,
 			-1, -1, -1,
@@ -6853,7 +6863,7 @@ function start_battle() {
 	// All attacking lords to reserve
 	for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
 		if (get_lord_locale(lord) === here && !is_lord_besieged(lord)) {
-			set_lord_moved(lord, 1)
+			set_lord_fought(lord)
 			if (lord !== game.command)
 				set_add(game.battle.reserves, lord)
 		}
@@ -6868,7 +6878,7 @@ function start_battle() {
 	// All defending lords to reserve
 	for (let lord = first_enemy_lord; lord <= last_enemy_lord; ++lord) {
 		if (get_lord_locale(lord) === here && !is_lord_besieged(lord)) {
-			set_lord_moved(lord, 1)
+			set_lord_fought(lord)
 			set_add(game.battle.reserves, lord)
 		}
 	}
@@ -6886,7 +6896,7 @@ function start_sally() {
 	// NOTE: All besieged lords sally in Nevsky
 	for (let lord = first_lord; lord <= last_lord; ++lord) {
 		if (get_lord_locale(lord) === here) {
-			set_lord_moved(lord, 1)
+			set_lord_fought(lord)
 			if (lord !== game.command)
 				set_add(game.battle.reserves, lord)
 		}
@@ -6920,7 +6930,7 @@ function start_storm() {
 	// All lords must storm
 	for (let lord = first_lord; lord <= last_lord; ++lord) {
 		if (get_lord_locale(lord) === here) {
-			set_lord_moved(lord, 1)
+			set_lord_fought(lord)
 			if (lord !== game.command)
 				set_add(game.battle.reserves, lord)
 		}
@@ -6964,7 +6974,7 @@ states.relief_sally = {
 	lord(lord) {
 		push_undo()
 		log(`L${lord} Sallied.`)
-		set_lord_moved(lord, 1)
+		set_lord_fought(lord)
 		set_add(game.battle.reserves, lord)
 		game.battle.relief = 1
 	},
@@ -9578,10 +9588,8 @@ function retreat_2() {
 	else
 		log(`Retreated to %${to}.`)
 
-	for (let lord of game.battle.retreated) {
+	for (let lord of game.battle.retreated)
 		set_lord_locale(lord, to)
-		set_lord_moved(lord, 1)
-	}
 
 	if (is_trade_route(to))
 		conquer_trade_route(to)
@@ -9914,7 +9922,6 @@ states.battle_service = {
 			add_lord_service(lord, -3)
 		log(`L${lord} ${HIT[die]}, shifted to ${get_lord_service(lord)}.`)
 		set_delete(game.battle.retreated, lord)
-		set_lord_moved(lord, 1)
 		resume_battle_service()
 	},
 }
@@ -10452,7 +10459,7 @@ states.ransom = {
 			view.prompt = `Ransom ${lord_name[game.who]}: Add ${game.count} Coin to a Russian Lord.`
 		if (game.battle) {
 			for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord)
-				if (get_lord_moved(lord))
+				if (get_lord_fought(lord))
 					gen_action_lord(lord)
 		} else {
 			let here = get_lord_locale(game.who)
