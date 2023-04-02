@@ -5608,31 +5608,21 @@ function init_lodya_supply() {
 	if (!is_winter()) {
 		let lord = find_lodya_lord_in_shared()
 		if (lord !== NOBODY) {
-			let boats = get_lord_assets(lord, BOAT)
-			let ships = get_lord_assets(lord, SHIP)
-
-			// Automatic choice if Novgorod is unavailable for seaport supply.
-			if (is_supply_forbidden(LOC_NOVGOROD)) {
-				if (boats < ships) {
-					game.flags.lodya = -ships
-					log_lodya()
-					return false
-				} else {
-					game.flags.lodya = 0
-					log_lodya()
-					return false
-				}
-			}
-
-			// Automatic choice if enough ships and 2x boats >= boats + extra ships.
-			if (ships >= 2 && boats >= ships - 2) {
+			if (has_lodya_choice_for_supply(lord)) {
+				// Manual choice.
 				game.flags.lodya = 0
+				return true
+			} else {
+				// Choose boats.
+				let boats = get_lord_assets(lord, BOAT)
+				let ships = Math.min(2, get_lord_assets(lord, SHIP))
+				if (boats < ships)
+					game.flags.lodya = ships
+				else
+					game.flags.lodya = 0
 				log_lodya()
 				return false
 			}
-
-			// Manual choice.
-			return true
 		}
 	}
 	// No choice.
@@ -6000,6 +5990,68 @@ function search_summer_path_pass2(path, here, end, boats, carts, gate) {
 }
 
 // === ACTION: SUPPLY ===
+
+function has_lodya_choice_for_supply(lord) {
+	game.flags.lodya = 0
+	let here = get_lord_locale(lord)
+	let boats = get_lord_assets(lord, BOAT)
+	let ships = get_lord_assets(lord, SHIP)
+	let all_ships = get_shared_assets(here, SHIP)
+	let extra = all_ships - Math.min(2, ships)
+
+	// Novgorod is unavailable for seaport supply...
+	if (is_supply_forbidden(LOC_NOVGOROD))
+		return false
+
+	// More ships than we need...
+	if (extra >= 2)
+		return false
+
+	// If we max boats, and still have 2 ships left over...
+	if (boats < Math.min(2, ships))
+		game.flags.lodya = Math.min(2, ships)
+	else
+		game.flags.lodya = 0
+	if (ships - game.flags.lodya >= 2)
+		return false
+
+	// Manual choice if we can supply from Novgorod
+
+	// ... with some ships as boats
+	if (ships >= 1 && is_supply_from_novgorod_possible_with_lodya_choice(1))
+		return true
+	if (ships >= 2 && is_supply_from_novgorod_possible_with_lodya_choice(2))
+		return true
+
+	// ... or with boats as ships
+	if (all_ships < 2) {
+		if (boats >= 2 && is_supply_from_novgorod_possible_with_lodya_choice(-2))
+			return true
+		if (boats >= 1 && is_supply_from_novgorod_possible_with_lodya_choice(-1))
+			return true
+	}
+
+	// Novgorod is unreachable
+	return false
+}
+
+function is_supply_from_novgorod_possible_with_lodya_choice(lodya) {
+	game.flags.lodya = lodya
+	if (count_shared_ships() < 1)
+		return false
+	let here = get_lord_locale(game.command)
+	init_supply_forbidden()
+	_supply_reached.fill(0)
+	switch (current_season()) {
+		case SUMMER:
+			_supply_boats.fill(-1)
+			_supply_carts.fill(-1)
+			return search_supply_summer(here, count_shared_boats(), get_shared_assets(here, CART), [ LOC_NOVGOROD ])
+		case RASPUTITSA:
+			return search_supply_rasputitsa(here, count_shared_boats(), [ LOC_NOVGOROD ])
+	}
+	return false
+}
 
 function update_supply_possible() {
 	if (game.actions < 1) {
