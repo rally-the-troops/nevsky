@@ -3751,6 +3751,7 @@ function goto_levy_call_to_arms() {
 }
 
 function end_levy_call_to_arms() {
+	clear_undo()
 	clear_lords_moved()
 	set_active_enemy()
 	if (game.active === P2)
@@ -4127,7 +4128,7 @@ states.novgorod_veche = {
 		}
 	},
 	end_call_to_arms() {
-		clear_undo()
+		push_undo()
 		end_novgorod_veche()
 	},
 	card: action_held_event,
@@ -4140,7 +4141,7 @@ states.novgorod_veche_done = {
 		view.actions.end_call_to_arms = 1
 	},
 	end_call_to_arms() {
-		clear_undo()
+		push_undo()
 		end_novgorod_veche()
 	},
 }
