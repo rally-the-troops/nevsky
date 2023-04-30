@@ -433,6 +433,7 @@ let lords = [
 			militia: 1,
 		},
 		assets: {
+			coin: 1,
 			ship: 2,
 			prov: 2,
 		},

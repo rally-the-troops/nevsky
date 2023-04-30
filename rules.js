@@ -1744,12 +1744,12 @@ function setup_watland() {
 	muster_lord(LORD_KNUD_ABEL, LOC_WESENBERG, 6)
 	muster_lord(LORD_DOMASH, LOC_NOVGOROD, 7)
 	muster_lord(LORD_VLADISLAV, LOC_LADOGA, 6)
+	muster_lord(LORD_YAROSLAV, LOC_PSKOV, 5)
 
+	set_lord_cylinder_on_calendar(LORD_HEINRICH, 4)
 	set_lord_cylinder_on_calendar(LORD_RUDOLF, 4)
 	set_lord_cylinder_on_calendar(LORD_KARELIANS, 4)
-	set_lord_cylinder_on_calendar(LORD_YAROSLAV, 5)
 	set_lord_cylinder_on_calendar(LORD_ANDREY, 5)
-	set_lord_cylinder_on_calendar(LORD_HEINRICH, 7)
 	set_lord_cylinder_on_calendar(LORD_ALEKSANDR, 7)
 	set_lord_cylinder_on_calendar(LORD_HERMANN, 8)
 }
@@ -10666,8 +10666,8 @@ function goto_game_end() {
 		let vp2 = count_vp2()
 
 		if (game.scenario === "Watland") {
-			if (vp1 < 20)
-				goto_game_over(P2, `Russians won \u2014 Teutons had less than 10 VP.`)
+			if (vp1 < 14)
+				goto_game_over(P2, `Russians won \u2014 Teutons had less than 7 VP.`)
 			else if (vp1 < vp2 * 2)
 				goto_game_over(P2, `Russians won \u2014 Teutons had less than double Russian VP.`)
 			else

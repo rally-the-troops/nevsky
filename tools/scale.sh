@@ -10,3 +10,16 @@ do
 	O=${F/300/150}
 	convert $F -colorspace RGB -resize 50% -colorspace sRGB $O
 done
+
+mkdir -p service75
+mkdir -p service150
+for F in service300/*.png
+do
+	echo $F
+
+	O=${F/300/75}
+	convert $F -colorspace RGB -resize 25% -colorspace sRGB $O
+
+	O=${F/300/150}
+	convert $F -colorspace RGB -resize 50% -colorspace sRGB $O
+done
