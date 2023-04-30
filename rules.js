@@ -10481,7 +10481,10 @@ function goto_ransom(lord) {
 	push_state("ransom")
 	game.who = lord
 	game.count = data.lords[lord].service
-	log(`Ransomed L${lord}.`)
+	if (is_teutonic_lord(lord))
+		log(`L${lord} C${AOW_RUSSIAN_RANSOM}.`)
+	else
+		log(`L${lord} C${AOW_TEUTONIC_RANSOM}.`)
 }
 
 function end_ransom() {
