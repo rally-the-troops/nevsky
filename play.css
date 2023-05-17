@@ -749,6 +749,11 @@ body.shift .mustered_vassals {
 	background-color: #fff6;
 }
 
+.box.calendar.box0.action,
+.box.calendar.box17.action {
+	z-index: 200;
+}
+
 .box.way.action {
 	border-color: dodgerblue;
 }
