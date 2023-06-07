@@ -3008,7 +3008,7 @@ states.teutonic_fervor = {
 }
 
 states.teutonic_dietrich_von_gruningen = {
-	inactive: "Deitrich von Grüningen",
+	inactive: "Dietrich von Grüningen",
 	prompt() { prompt_shift_cylinder([ LORD_ANDREAS, LORD_RUDOLF ], 2) },
 	lord: action_select_lord,
 	calendar: action_shift_cylinder_calendar,
