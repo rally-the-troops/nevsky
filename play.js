@@ -103,10 +103,10 @@ const force_type_count = 7
 const force_action_name = [ "knights", "sergeants", "light_horse", "asiatic_horse", "men_at_arms", "militia", "serfs" ]
 const routed_force_action_name = [ "routed_knights", "routed_sergeants", "routed_light_horse", "routed_asiatic_horse", "routed_men_at_arms", "routed_militia", "routed_serfs" ]
 
-const COIN = 1
-const asset_type_count = 7
+const PROV = 0, COIN = 1, LOOT = 2, CART = 3, SLED = 4, BOAT = 5, SHIP = 6
 const asset_action_name = [ "prov", "coin", "loot", "cart", "sled", "boat", "ship" ]
 const asset_type_x3 = [ 1, 1, 1, 0, 0, 0, 0 ]
+const asset_order = [ COIN, SLED, CART, BOAT, SHIP, PROV, LOOT ]
 
 const VECHE = 100
 const SUMMER = 0, EARLY_WINTER = 1, LATE_WINTER = 2, RASPUTITSA = 3
@@ -1097,7 +1097,7 @@ function update_forces(parent, forces, lord_ix, routed) {
 
 function update_assets(id, parent, assets) {
 	parent.replaceChildren()
-	for (let i = 0; i < asset_type_count; ++i) {
+	for (let i of asset_order) {
 		let n = pack4_get(assets, i)
 		while (n >= 4) {
 			add_asset(parent, i, 4, id)
