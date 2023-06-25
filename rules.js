@@ -10691,6 +10691,7 @@ function goto_game_end() {
 function goto_plow_and_reap() {
 	let turn = current_turn()
 	if (turn === 2 || turn === 10 || turn === 6 || turn === 14) {
+		clear_lords_moved()
 		game.state = "plow_and_reap"
 	} else {
 		end_plow_and_reap()
@@ -10698,6 +10699,7 @@ function goto_plow_and_reap() {
 }
 
 function flip_and_discard_half(lord, from_type, to_type) {
+	set_lord_moved(lord, 3)
 	add_lord_assets(lord, to_type, get_lord_assets(lord, from_type))
 	set_lord_assets(lord, from_type, 0)
 	set_lord_assets(lord, to_type, Math.ceil(get_lord_assets(lord, to_type) / 2))
@@ -10706,22 +10708,32 @@ function flip_and_discard_half(lord, from_type, to_type) {
 states.plow_and_reap = {
 	inactive: "Plow & Reap",
 	prompt() {
-		let from_type
+		let from_type, to_type
 		let turn = current_turn()
 		if (turn === 2 || turn === 10) {
 			view.prompt = "Plow and Reap: Flip Carts to Sleds and discard half."
 			from_type = CART
+			to_type = SLED
 		} else {
 			view.prompt = "Plow and Reap: Flip Sleds to Carts and discard half."
 			from_type = SLED
+			to_type = CART
 		}
 		let done = true
 		for (let lord = first_friendly_lord; lord <= last_friendly_lord; ++lord) {
+			if (get_lord_moved(lord))
+				continue
 			if (get_lord_assets(lord, from_type) > 0) {
 				done = false
 				if (from_type === CART)
 					gen_action_cart(lord)
 				if (from_type === SLED)
+					gen_action_sled(lord)
+			} else if (get_lord_assets(lord, to_type) > 1) {
+				done = false
+				if (to_type === CART)
+					gen_action_cart(lord)
+				if (to_type === SLED)
 					gen_action_sled(lord)
 			}
 		}
@@ -10731,10 +10743,18 @@ states.plow_and_reap = {
 		}
 	},
 	cart(lord) {
-		flip_and_discard_half(lord, CART, SLED)
+		let turn = current_turn()
+		if (turn === 2 || turn === 10)
+			flip_and_discard_half(lord, CART, SLED)
+		else
+			flip_and_discard_half(lord, SLED, CART)
 	},
 	sled(lord) {
-		flip_and_discard_half(lord, SLED, CART)
+		let turn = current_turn()
+		if (turn === 2 || turn === 10)
+			flip_and_discard_half(lord, CART, SLED)
+		else
+			flip_and_discard_half(lord, SLED, CART)
 	},
 	end_plow_and_reap() {
 		end_plow_and_reap()
