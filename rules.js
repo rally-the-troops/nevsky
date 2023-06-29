@@ -4991,10 +4991,10 @@ function spoil_loot(lord) {
 }
 
 function can_any_avoid_battle() {
-        let here = game.march.to
-        for (let [to, way] of data.locales[here].ways)
-                if (can_avoid_battle(to, way))
-                        return true
+	for (let way of data.locales[game.march.to].ways)
+		for (let i = 1; i < way.length; ++i)
+			if (can_avoid_battle(way[0], way[i]))
+				return true
         return false
 }
 
@@ -5045,10 +5045,10 @@ states.avoid_battle = {
 				gen_action_lord(lord)
 
 		if (game.group.length > 0) {
-			for (let [to, way] of data.locales[here].ways) {
-				if (can_avoid_battle(to, way))
-					gen_action_locale(to)
-			}
+			for (let way of data.locales[here].ways)
+				for (let i = 1; i < way.length; ++i)
+					if (can_avoid_battle(way[0], way[i]))
+						gen_action_locale(way[0])
 		}
 
 		view.actions.end_avoid_battle = 1
@@ -9468,9 +9468,10 @@ function can_retreat() {
 		// Battle after March
 		if (is_attacker())
 			return can_retreat_to(game.march.from)
-		for (let [to, way] of data.locales[game.battle.where].ways)
-			if (way !== game.march.approach && can_retreat_to(to))
-				return true
+		for (let way of data.locales[game.battle.where].ways)
+			for (let i = 1; i < way.length; ++i)
+				if (way[i] !== game.march.approach && can_retreat_to(way[0]))
+					return true
 	} else {
 		// Battle after Sally
 		for (let to of data.locales[game.battle.where].adjacent)
@@ -9508,9 +9509,10 @@ states.retreat = {
 			if (is_attacker()) {
 				gen_action_locale(game.march.from)
 			} else {
-				for (let [to, way] of data.locales[game.battle.where].ways)
-				if (way !== game.march.approach && can_retreat_to(to))
-					gen_action_locale(to)
+				for (let way of data.locales[game.battle.where].ways)
+					for (let i = 1; i < way.length; ++i)
+						if (way[i] !== game.march.approach && can_retreat_to(way[0]))
+							gen_action_locale(way[0])
 			}
 		} else {
 			// after Sally
