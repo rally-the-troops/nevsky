@@ -9848,7 +9848,9 @@ states.battle_losses_remove = {
 	lord(lord) {
 		set_delete(game.battle.retreated, lord)
 		if (game.active === game.battle.loser)
-			transfer_assets_except_ships(lord)
+			// 4.5.2 Attackers losing a Storm do not give up spoils.
+			if (!(game.battle.storm && game.active === game.battle.attacker))
+				transfer_assets_except_ships(lord)
 		if (can_ransom_lord_battle(lord)) {
 			goto_ransom(lord)
 		} else {
