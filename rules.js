@@ -10373,6 +10373,9 @@ function disband_lord(lord, permanently = false) {
 
 	remove_lieutenant(lord)
 
+	if (game.group)
+		set_delete(game.group, lord)
+
 	// Smerdi - serfs go back to card
 	game.pieces.smerdi += get_lord_forces(lord, SERFS)
 
