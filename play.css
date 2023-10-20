@@ -685,10 +685,23 @@ body.shift .mustered_vassals {
 
 .card_info {
 	border-bottom: 1px solid black;
+	padding: 12px;
+	overflow: clip;
 }
 
 .card_info .card {
-	margin: 12px auto;
+	margin: 0 auto;
+}
+
+@media (max-height: 800px) {
+	.card_info { height: 95px; }
+	.card_info:hover { height: auto; }
+}
+
+@media (max-height: 600px) {
+	.card_info {
+		display: none;
+	}
 }
 
 .card.disabled {
@@ -703,24 +716,21 @@ body.shift .mustered_vassals {
 
 /* MAP */
 
-#mapwrap {
-	width: 1275px;
-	height: 1650px;
-	box-shadow: 0px 1px 10px #0008;
-	z-index: 3;
-}
-
 #map {
+	margin: 0 auto ;
+	position: relative;
 	background-repeat: no-repeat;
 	background-size: cover;
 	width: 1275px;
 	height: 1650px;
 	overflow: clip;
+	box-shadow: 0px 1px 10px #0008;
+	z-index: 3;
 }
 
 #map { background-image: url(map75.jpg) }
 @media (min-resolution: 97dpi) {
-#map { background-image: url(map150.jpg) }
+	#map { background-image: url(map150.jpg) }
 }
 
 .box {
